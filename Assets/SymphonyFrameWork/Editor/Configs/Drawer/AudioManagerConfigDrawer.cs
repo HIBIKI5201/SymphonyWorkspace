@@ -5,8 +5,9 @@ using SymphonyFrameWork.Config;
 
 namespace SymphonyFrameWork.Editor
 {
+    /// <summary> AudioManagerConfigとオーディオグループenumの再生成操作を描画する。 </summary>
     [CustomEditor(typeof(AudioManagerConfig))]
-    public class AudioManagerConfigDrawer : UnityEditor.Editor
+    public sealed class AudioManagerConfigDrawer : UnityEditor.Editor
     {
         /// <summary>
         /// InspectorのGUIを上書きします。

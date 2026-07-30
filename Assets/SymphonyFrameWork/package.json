@@ -1,6 +1,6 @@
 {
   "name": "symphonyframework",
-  "version": "1.27.17",
+  "version": "2.4.2",
   "displayName": "Symphony Framework",
   "description": "This is Symphony Framework",
   "unity": "6000.0",
@@ -12,5 +12,37 @@
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "3.2.1",
     "com.unity.addressables": "1.21.19"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Service Locator Sample",
+      "description": "サービスの登録、必須取得、非同期待機を行うService Locatorサンプルが含まれています。",
+      "path": "Samples~/Runtime/ServiceLocatorSample"
+    },
+    {
+      "displayName": "Save Data System Sample",
+      "description": "SaveDataRegistry と SaveDataContent を使用したセーブデータ管理のサンプルが含まれています。",
+      "path": "Samples~/Runtime/SaveDataSystemSample"
+    },
+    {
+      "displayName": "Scene Loader Sample",
+      "description": "SceneLoader を使用した追加ロード、優先度によるActive Scene切り替え、ロード完了待機のサンプルが含まれています。",
+      "path": "Samples~/Runtime/SceneLoaderSample"
+    },
+    {
+      "displayName": "Pause Manager Sample",
+      "description": "PauseManager を使用したポーズ状態の切り替え、IPausable、Pause対応の待機処理のサンプルが含まれています。",
+      "path": "Samples~/Runtime/PauseManagerSample"
+    },
+    {
+      "displayName": "Audio Manager Sample",
+      "description": "AudioManager を使用したAudioSource取得と音量制御のサンプルが含まれています。",
+      "path": "Samples~/Runtime/AudioManagerSample"
+    },
+    {
+      "displayName": "Debugger Sample",
+      "description": "SymphonyDebugLogger のログ出力、SymphonyDebugHUD の表示と追加テキスト、SymphonyStopWatch の計測のサンプルが含まれています。",
+      "path": "Samples~/Runtime/DebuggerSample"
+    }
+  ]
 }

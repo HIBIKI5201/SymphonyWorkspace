@@ -8,12 +8,15 @@ namespace SymphonyFrameWork.Attribute
     ///     プロパティを変更不可にする
     /// </summary>
     [CustomPropertyDrawer(typeof(ReadOnlyAttribute))]
-    public class ReadOnlyDrawer : PropertyDrawer
+    public sealed class ReadOnlyDrawer : PropertyDrawer
     {
+        /// <summary> 対象プロパティを無効化した状態で描画する。 </summary>
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            GUI.enabled = false;
-            EditorGUI.PropertyField(position, property, label, true);
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUI.PropertyField(position, property, label, true);
+            }
         }
     }
 
@@ -21,8 +24,9 @@ namespace SymphonyFrameWork.Attribute
     ///     ReadOnryが表示されない場合に警告を出す
     /// </summary>
     [CustomEditor(typeof(MonoBehaviour), true)]
-    public class ReadOnlyInspector : UnityEditor.Editor
+    public sealed class ReadOnlyInspector : UnityEditor.Editor
     {
+        /// <summary> ReadOnly属性のシリアライズ漏れを警告して既定Inspectorを描画する。 </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();

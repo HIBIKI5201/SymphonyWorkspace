@@ -7,7 +7,7 @@ namespace SymphonyFrameWork.Utility
     /// <summary>
     ///     ServiceLocatorに登録されているインスタンスを保持する。
     /// </summary>
-    public class SymphonyLocateObject<T> where T : class
+    public sealed class SymphonyLocateObject<T> where T : class
     {
         /// <summary>
         ///     インスタンスを初期化して生成する。
@@ -17,13 +17,13 @@ namespace SymphonyFrameWork.Utility
         /// <summary>
         ///     初期インスタンスをセットして生成する。
         /// </summary>
-        /// <param name="instance"></param>
+        /// <param name="instance"> 初期キャッシュとして保持するインスタンス。 </param>
         public SymphonyLocateObject(T instance) => _instance = instance;
 
         /// <summary>
         ///     取得する。
         /// </summary>
-        /// <returns></returns>
+        /// <returns> キャッシュまたはService Locatorから取得したインスタンス。 </returns>
         public T GetInstance()
         {
             T instance = _instance;
@@ -41,10 +41,10 @@ namespace SymphonyFrameWork.Utility
         /// <summary>
         ///     非同期で取得する。
         /// </summary>
-        /// <param name="grace"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
-        public async Task<T> GetInstanceAsync(byte grace = 120, CancellationToken token = default)
+        /// <param name="grace"> 登録を待機する最大秒数。 </param>
+        /// <param name="token"> 待機を中断するためのトークン。 </param>
+        /// <returns> キャッシュまたは待機後に取得したインスタンス。 </returns>
+        public async ValueTask<T> GetInstanceAsync(byte grace = 120, CancellationToken token = default)
         {
             T instance = _instance;
 
@@ -61,8 +61,8 @@ namespace SymphonyFrameWork.Utility
         /// <summary>
         ///     インスタンスの取得を試みる。
         /// </summary>
-        /// <param name="instance"></param>
-        /// <returns></returns>
+        /// <param name="instance"> 取得できたインスタンス。 </param>
+        /// <returns> インスタンスを取得できた場合はtrue。 </returns>
         public bool TryGetInstance(out T instance)
         {
             instance = _instance;

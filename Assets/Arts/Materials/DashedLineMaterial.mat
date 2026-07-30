@@ -41,11 +41,11 @@ Material:
     m_Floats:
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _Speed: 2
-    - _Stripe: 8
-    - _Thickness: 0.462
+    - _Speed: 11.11
+    - _Stripe: 25.13
+    - _Thickness: 0.07
     m_Colors:
-    - _Color: {r: 1, g: 0, b: 0, a: 1}
+    - _Color: {r: 1, g: 0.116292104, b: 0, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &7775294836868266549

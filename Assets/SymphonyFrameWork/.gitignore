@@ -1,0 +1,36 @@
+# --- AI agent / local dev tooling (not part of the shipped package) ---
+.claude/
+.agents/
+# CLAUDE.md はCONTRIBUTING.md／AGENTS.mdへの案内だけを持つClaude Code固有ファイル。
+# ルールの実体は追跡対象のドキュメント側にあるため、ここでは共有しない。
+/CLAUDE.md
+/CLAUDE.md.meta
+
+# --- IDE / editor local settings ---
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+
+# --- OS generated files ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Stray Unity project files (this folder is a package, not a Unity project root) ---
+obj/
+*.csproj
+*.sln
+*.unityproj
+*.pidb
+*.booproj
+
+# --- Runtime-generated cache (SymphonyDebugLogger file output, etc.) ---
+/Cache/
+/Cache.meta

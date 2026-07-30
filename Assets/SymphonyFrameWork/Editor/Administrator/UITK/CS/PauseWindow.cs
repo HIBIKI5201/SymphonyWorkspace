@@ -7,19 +7,22 @@ using UnityEngine.UIElements;
 
 namespace SymphonyFrameWork.Editor
 {
+    /// <summary> PauseManagerの状態表示と操作を提供する管理パネル。 </summary>
     [UxmlElement]
-    public partial class PauseWindow : SymphonyVisualElement
+    public sealed partial class PauseWindow : SymphonyVisualElement
     {
         private FieldInfo _pauseInfo;
         private Label _pauseText;
         private VisualElement _pauseVisual;
 
+        /// <summary> 管理パネル用UXMLの非同期初期化を開始する。 </summary>
         public PauseWindow() : base(
             SymphonyAdministrator.UITK_UXML_PATH + "PauseWindow.uxml",
             InitializeType.None,
             LoadType.AssetDataBase)
         { }
 
+        /// <summary> PauseManagerへの操作ボタンと状態表示要素を構成する。 </summary>
         protected override ValueTask Initialize_S(VisualElement container)
         {
             // _pause フィールドを取得
@@ -34,6 +37,7 @@ namespace SymphonyFrameWork.Editor
             return default;
         }
 
+        /// <summary> 現在のポーズ状態を表示色と文字列へ反映する。 </summary>
         public void Update()
         {
             if (_pauseVisual != null && _pauseInfo != null)

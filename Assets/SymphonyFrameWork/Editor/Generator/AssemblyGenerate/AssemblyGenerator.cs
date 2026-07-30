@@ -12,6 +12,7 @@ namespace SymphonyFrameWork.Editor
     /// </summary>
     public static class AssemblyGenerator
     {
+        /// <summary> 指定パスに存在しないAssembly Definitionファイルを生成する。 </summary>
         public static void GenerateAssembly(string path, AssemblyDefinitionData data)
         {
             string AsmdefPath = path + ".asmdef";
@@ -27,6 +28,7 @@ namespace SymphonyFrameWork.Editor
             }
         }
 
+        /// <summary> 対象Assembly DefinitionへのGUID参照を重複なしで追加する。 </summary>
         public static void AddAsssemblyReference(string mainAsmdefPath, string targetAsmdefPath)
         {
             const string GUID_PREFIX = "GUID:";
@@ -56,6 +58,7 @@ namespace SymphonyFrameWork.Editor
             AssetDatabase.ImportAsset(mainAsmdefPath); // アセットデータベースにインポート。
         }
 
+        /// <summary> 自動生成enum用Assembly Definitionを作成し、必要ならFrameworkから参照する。 </summary>
         internal static void CreateEnumAssembly(string selfPath, string mainPath = "")
         {
             string selfAsmdefPath = selfPath + ".asmdef";

@@ -1,0 +1,10 @@
+ai.navigation
+animation.rigging
+addressables
+cinemachine
+behavior
+formats.fbx
+probuilder
+postprocessing
+memoryprofiler
+visualeffectgraph

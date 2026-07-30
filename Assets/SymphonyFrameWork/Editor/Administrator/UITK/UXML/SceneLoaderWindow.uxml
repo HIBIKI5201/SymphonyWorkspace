@@ -1,0 +1,7 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/SymphonyFrameWork/Editor/Administrator/UITK/SymphonyWIndow.uss?fileID=7433441132597879392&amp;guid=16c3f611d15eda644b63e276b16e6925&amp;type=3#SymphonyWIndow"/>
+    <ui:VisualElement class="base">
+        <ui:Label text="SceneLoader&#10;" class="title"/>
+        <ui:ListView fixed-item-height="50" name="scene-list" class="text" style="width: 100%; height: 180px; margin-top: 15px; margin-right: 0; margin-bottom: 15px; margin-left: 0; border-top-width: 1px; border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-left-color: rgb(0, 0, 0); border-right-color: rgb(0, 0, 0); border-top-color: rgb(0, 0, 0); border-bottom-color: rgb(0, 0, 0);"/>
+    </ui:VisualElement>
+</ui:UXML>

@@ -7,9 +7,11 @@ using UnityEngine;
 
 namespace SymphonyFrameWork.Editor
 {
+    /// <summary> stringフィールドをプロジェクトのタグ選択欄として描画する。 </summary>
     [CustomPropertyDrawer(typeof(TagSelectorAttribute))]
-    public class TagSelectorDrawer : PropertyDrawer
+    public sealed class TagSelectorDrawer : PropertyDrawer
     {
+        /// <summary> 登録済みタグを選択するポップアップを描画する。 </summary>
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             // string型のみ対応。

@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using SymphonyFrameWork.Config;
 using SymphonyFrameWork.Core;
-using SymphonyFrameWork.Debugger;
+using SymphonyFrameWork.Debugger.Logger;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,11 +12,13 @@ namespace SymphonyFrameWork.Editor
     /// </summary>
     public static class SymphonyConfigManager
     {
+        /// <summary> Runtime用とEditor用のすべての設定アセットが存在することを保証する。 </summary>
         internal static void AllConfigCheck()
         {
             // Runtime用 (ScriptableObject)
             FileCheck<SceneManagerConfig>();
             FileCheck<AudioManagerConfig>();
+            FileCheck<SaveSystemConfig>();
             
             // Editor用 (ScriptableSingleton)
             // GetConfigを呼ぶだけで、アセットが存在しなければ自動生成、あればロードされる
@@ -26,7 +28,7 @@ namespace SymphonyFrameWork.Editor
         /// <summary>
         ///     Runtimeファイルが存在するか確認する (Resources内)
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T"> 存在を保証するRuntime設定アセットの型。 </typeparam>
         private static void FileCheck<T>() where T : ScriptableObject
         {
             string path = SymphonyConfigLocator.GetFullPath<T>();
@@ -54,9 +56,10 @@ namespace SymphonyFrameWork.Editor
             // アセットを保存
             AssetDatabase.SaveAssets();
 
-            SymphonyDebugLogger.DirectLog($"'{path}' に新しい {typeof(T).Name} を作成しました。");
+            SymphonyDebugLogger.LogDirect($"'{path}' に新しい {typeof(T).Name} を作成しました。");
         }
 
+        /// <summary> Editor用ScriptableSingletonを取得して必要に応じて生成する。 </summary>
         private static void EditorFileCheck<T>() where T : ScriptableSingleton<T>
         {
             _ = SymphonyEditorConfigLocator.GetConfig<T>();

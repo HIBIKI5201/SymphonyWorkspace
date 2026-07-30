@@ -11,9 +11,9 @@ namespace SymphonyFrameWork
         /// <summary>
         ///     リッチテキストにカラータグを挿入する。
         /// </summary>
-        /// <param name="text"></param>
-        /// <param name="color"></param>
-        /// <returns></returns>
+        /// <param name="text"> 装飾する文字列。 </param>
+        /// <param name="color"> 適用する文字色。 </param>
+        /// <returns> colorタグで囲んだ文字列。 </returns>
         public static string AddRichTextColor(this string text, Color color)
         {
             // ColorをRGBに変換する。
@@ -22,7 +22,7 @@ namespace SymphonyFrameWork
         }
 
         /// <summary>
-        ///     一番外側の <color> タグを削除する。
+        ///     一番外側の &lt;color&gt; タグを削除する。
         ///     多重の場合は最外層のみ。
         /// </summary>
         public static string RemoveRichTextColor(this string text)
@@ -44,16 +44,16 @@ namespace SymphonyFrameWork
         /// <summary>
         ///     リッチテキストに太文字タグを挿入する。
         /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
+        /// <param name="text"> 装飾する文字列。 </param>
+        /// <returns> bタグで囲んだ文字列。 </returns>
         public static string AddRichTextBold(this string text) => $"<b>{text}</b>";
 
         /// <summary>
-        ///     一番外側の <b> タグを削除する。
+        ///     一番外側の &lt;b&gt; タグを削除する。
         ///     多重の場合は最外層のみ。
         /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
+        /// <param name="text"> 最外層のbタグを除去する文字列。 </param>
+        /// <returns> 最外層のbタグを除去した文字列。 </returns>
         public static string RemoveRichTextBold(this string text)
         {
             // 正規表現で太文字のタグを検索。
@@ -73,16 +73,16 @@ namespace SymphonyFrameWork
         /// <summary>
         ///     リッチテキストに下線タグを挿入する。
         /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
+        /// <param name="text"> 装飾する文字列。 </param>
+        /// <returns> uタグで囲んだ文字列。 </returns>
         public static string AddRichTextUnderline(this string text) => $"<u>{text}</u>";
 
         /// <summary>
-        ///     一番外側の <u> タグを削除する。
+        ///     一番外側の &lt;u&gt; タグを削除する。
         ///     多重の場合は最外層のみ。
         /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
+        /// <param name="text"> 最外層のuタグを除去する文字列。 </param>
+        /// <returns> 最外層のuタグを除去した文字列。 </returns>
         public static string RemoveRichTextUnderline(this string text)
         {
             // 正規表現で下線のタグを検索。
