@@ -58,24 +58,26 @@ Editor ────> Runtime ────> Core
 
 ### レイヤー間の参照ルール
 
-Domainを最も内側とし、Applicationをその外側に置きます。AdaptorとViewはUnityまたは利用側から処理を受け取る外側の入口です。Infrastructureは内側が定義する契約を実装し、Compositionが具象型を結合します。
+Domainを最も内側とし、Applicationをその外側に置きます。AdaptorはCommandの公開入口と、読み取り結果を変換するQueryを持ちます。ViewはAdaptorのQueryから表示用データを取得します。Infrastructureは内側が定義する契約を実装し、Compositionが具象型を結合します。
 
 ```text
 利用側コード ───────────────> Adaptor（公開エントリポイント・公開Component）
-Unityライフサイクル ──> Adaptor / View
-                              │
-                              v
-                         Application ──> Domain
-                              ^
-                              │ 契約を実装
+Unityライフサイクル ────────> Adaptor / View
+                                  │ Command
+                                  v
+                             Application ──> Domain
+                             Service / Registry
+                                  ^
+                                  │ 契約を実装
 Infrastructure（Unity API・I/O・Config）
 
+View（表示・診断）────────────> Adaptor（Query）
 Composition ──生成・注入・終了処理──> 各レイヤー
-View（表示・診断）──────────────> Application / Domainの読み取り契約
 ```
 
 - 内側のDomainとApplicationは、Adaptor、View、Infrastructure、Compositionの具象型を参照しない。
-- Adaptorは利用側へ公開する操作面であり、処理をApplicationへ委譲する。
+- Adaptorは利用側へ公開する操作面とQueryを持ち、CommandをApplicationのServiceへ委譲し、読み取り結果をInfoまたはDtoへ変換する。
+- ViewはAdaptorのQueryを参照できるが、ApplicationのRegistryやDomain Entityを直接参照しない。
 - Viewは表示と診断に限定し、状態変更はApplicationまたは公開エントリポイントへ委譲する。
 - InfrastructureはUnity APIや外部I/Oを呼び、Applicationが定義する契約を実装する。
 - Compositionだけが具象型の選択、生成、注入順を知る。
@@ -90,38 +92,40 @@ View（表示・診断）──────────────> Application
 - 外部I/O、サービス検索、Resources、Addressablesを参照しない。
 - 不正な状態を作る経路を限定し、状態遷移の前後条件を明確にする。
 - EntityはすべてDomainに置き、Unity APIや外部I/Oを参照させない。
-- 例: `SceneLoadEntity`、`ServiceRegistrationEntity`、`SaveDataEntryEntity`、`SceneLoadState`、`LocateType`。
+- 例: `SceneLoadEntity`、`ServiceRegistrationEntity`、`SaveDataEntryEntity`。
 
 ### Application
 
-Domainの値と規則を組み合わせ、サブシステムが提供する処理を実行します。処理を担う`Service`と、状態を保持・検索する`Registry`はこの層に属します。
+Domainの値と規則を組み合わせ、サブシステムが提供する処理を実行します。Applicationの実行構造は、Command処理を担う`Service`と、状態を保持・検索する`Registry`で構成します。差し替え可能なアルゴリズムの契約としてStrategyをServiceへ注入できますが、読み取り変換を担うQueryは置きません。
 
 - `SceneLoadService`、`ServiceLocateService`のようなServiceは、入力検証、処理順、失敗時の復旧を担当する。
 - `SceneLoadRegistry`、`ServiceLocateRegistry`のようなRegistryは、Domain Entityの登録、検索、更新、無効化を担当する。
+- RegistryとEntityからInfoやDtoを生成せず、読み取り結果の変換はAdaptorのQueryへ委ねる。
 - Unity API、ファイル、PlayerPrefs、Addressablesを直接呼ばない。必要な操作は契約として定義し、Infrastructureから注入する。
 - 表示、GameObjectの所有、Unityコールバックを担当しない。
 - 戻り値、例外、キャンセルの意味を公開契約と一致させる。
 
 ### Adaptor
 
-利用側プロジェクトへ公開する唯一の操作面です。サービス名をそのまま型名にした静的な**公開エントリポイント**と、InspectorやUnityライフサイクルを公開契約として受ける`Component`が属します。
+利用側プロジェクトへ公開する唯一の操作面です。サービス名をそのまま型名にした静的な**公開エントリポイント**、InspectorやUnityライフサイクルを公開契約として受ける`Component`、読み取り結果を変換する`Query`が属します。
 
 - `SceneLoader`、`AudioPlayer`、`PauseController`、`ServiceLocator`、`SaveStore`は、利用側がサブシステムを操作する入口になる。
 - `ServiceInjector`のような補助エントリポイントは、主エントリポイントと機能が重複せず、責務を分ける理由が明確な場合だけ設ける。
 - `ServiceLocateComponent`のような公開Componentは、Unityコールバックを受けて登録・解除などの処理をApplicationへ委譲する。
 - CommandメソッドはApplicationのServiceを呼び、利用側向けの戻り値、例外、Try形式へ変換する。
-- RegistryまたはEntityの管理状態を照会するQueryメソッドは、AdaptorのInfoへ変換して返す。Infoの抽出ロジックはInfo自身へ置ける。
+- QueryだけがRegistryとDomain Entityを読み取り、公開API向けInfoまたはViewModel向けDtoへ変換する。
+- 公開エントリポイントの管理状態照会メソッドはRegistryやEntityを直接読まず、Queryが返したInfoまたは公開payloadをそのまま返す。
 - `ServiceLocator.GetInstance<T>`や`SaveStore.Get<T>`のように、登録された公開payload自体の取得が契約であるQueryはpayloadを返せる。ただし、その登録を管理するEntityは返さない。
 - 公開エントリポイントは累積する業務状態を保持しない。
 - 公開ComponentはUnityオブジェクトへの参照を保持できるが、サブシステムの規則を重複実装しない。
-- Domainの不変な値やApplicationの読み取り結果を公開APIで直接受け渡してよい。
+- Domainの不変な値やQueryが生成したInfoを公開APIで受け渡してよい。
 
 ### View
 
 表示、可視化、デバッグ、Editor UIなど、利用者または開発者へ状態を見せる表層機能を担当します。
 
 - UGUI、UI Toolkit、デバッグHUD、EditorWindow、表示用のGameObjectを扱う。
-- ViewModelはApplicationのQueryが生成したDTOを表示状態へ変換し、`IReadOnlyReactiveProperty<T>`としてViewとEditor UIへ公開する。
+- ViewModelはAdaptorのQueryが生成したDtoを表示状態へ変換し、`IReadOnlyReactiveProperty<T>`としてViewとEditor UIへ公開する。
 - Editor UIはViewModelのReactivePropertyを購読し、値の変更をポーリングせずに反映する。
 - Unityライフサイクルは表示の開始・停止、購読・解除、描画更新の同期に使う。
 - 状態変更を独自に実装せず、Applicationまたは公開エントリポイントへ委譲する。
@@ -133,11 +137,11 @@ Domainの値と規則を組み合わせ、サブシステムが提供する処�
 永続化、外部パッケージ、Resources、Addressables、Unity API、**Config用ScriptableObject**などの技術的詳細を担当します。
 
 - Scene操作は`SceneManager`を直接呼ぶ実装へ分離し、`SceneLoadService`へ注入する。
-- `SaveDataLoader`の具象実装は保存形式や保存先へのI/Oを担当する。
+- `JsonUtilitySaveDataLoader`や`NewtonsoftSaveDataLoader`などの具象Loaderは保存形式や保存先へのI/Oを担当する。
 - Configは利用側プロジェクトごとの設定値を保持し、Compositionが読み取る。
 - Unityアセットや外部ライブラリの値を、内側が理解できる値へ変換する。
 - ロードしたハンドル、ストリーム、購読などの所有者と解放方法を明確にする。
-- 例: `JsonUtilitySaveDataLoader`、`NewtonsoftSaveDataLoader`、`PlayerPrefsSaveDataLoader`、`SceneLoadConfig`、`AudioConfig`。
+- 例: `JsonUtilitySaveDataLoader`、`NewtonsoftSaveDataLoader`、`SceneLoadConfig`、`AudioConfig`。
 
 ### Composition
 
@@ -159,12 +163,12 @@ Domainの値と規則を組み合わせ、サブシステムが提供する処�
 内側の規則から外側の詳細を利用したい場合は、内側に最小の契約を定義し、外側が実装します。Compositionが具象実装を注入します。
 
 ```text
-Application ──定義──> ISaveDataLoader
+Application ──利用──> SaveDataLoaderStrategy（public abstract）
                             ^
-                            │ 実装
-Infrastructure ─────────────┘
+                            │ 継承・実装
+Infrastructure ──> JsonUtilitySaveDataLoader / NewtonsoftSaveDataLoader
                             ^
-                            │ 注入
+                            │ 選択・注入
 Composition ────────────────┘
 ```
 
@@ -185,6 +189,7 @@ OrchestratorはComposition層に属し、UnityまたはEditorのホストライ�
 - Editorの`SymphonyEditorOrchestrator`だけが`[InitializeOnLoad]`または`[InitializeOnLoadMethod]`を持ち、Config確認、enum生成監視、ログ、Editor用LoaderなどのEditorモジュールを初期化する。
 - Unity属性を持つメソッドとstatic constructorは、対応するOrchestratorの通常メソッドを呼ぶだけの入口にする。
 - `MenuItem`、`SettingsProvider`、`CustomEditor`、`UxmlElement`などUnityが型やfactoryを発見するための属性は自動初期化属性と区別し、そのcallback内でpackage-wideな初期化を行わない。
+- `AssetPostprocessor`もUnityが発見するhost callbackとして許可し、自動初期化属性の禁止対象には含めない。ただし任意のタイミングで再入するため、初期化、Asset生成、Refresh、購読を所有せず、変更種別を`SymphonyEditorOrchestrator`へ通知してcoalesceするだけにする。
 - package-wideな`destroyCancellationToken`、Editor終了、assembly reload、Play Mode遷移を集約し、同じ終了処理を複数経路から呼ばれても1回だけ実行する。
 - `Uninitialized`、`Initializing`、`Ready`、`ShuttingDown`の状態を明示し、`Ready`以外では通常の公開操作を許可しない。
 - Editor初期化中にAssetPostprocessorなどのhost callbackが再入した場合は、その場で再初期化せず変更をcoalesceして`Ready`後に1回処理する。
@@ -201,7 +206,7 @@ OrchestratorはComposition層に属し、UnityまたはEditorのホストライ�
 
 - 公開APIは原則としてサブシステムごとのstaticな公開エントリポイントへ集約する。
 - Commandメソッドは同じ入力を対応するServiceへ転送し、Serviceの結果を利用側向けの戻り値、Try形式、明確な例外へ変換する。
-- RegistryまたはEntityの管理状態を照会するQueryメソッドは、Infoの生成処理を呼び出す。
+- 管理状態照会と登録payload取得のメソッドは、対応するQueryを呼び出して結果を返す。Registry、Entity、Info、Dtoの変換ロジックを持たない。
 - 登録された公開payload自体を取得するQueryは、そのpayloadを返せるが、管理用Entityや内部コレクションを公開しない。
 - Compositionから注入されたService、Registryを保持しているかという初期化状態は持ってよい。
 - 累積状態とDomainの判断を持たない。
@@ -226,21 +231,24 @@ StrategyはApplication層に属し、継承またはConfig選択によって差�
 
 - 利用側による継承、または複数の具象実装からの選択が実際に必要な場合だけ作る。
 - 抽象基底型またはinterfaceとして、差し替えるアルゴリズムの最小契約を定義する。
+- 利用側が継承するpublic abstractな拡張点は`Strategy`で終える。I/Oを扱う拡張点でも、抽象契約は`SaveDataLoaderStrategy`、Infrastructureのsealed具象実装は`JsonUtilitySaveDataLoader`のように`Loader`で終える。
+- `PlayerPrefsSaveDataLoaderStrategy`はPlayerPrefs用I/Oの一部を実装していても、利用側がJSON変換を継承実装するpublic abstractな中間拡張点であるためStrategy規則を優先する。
 - 状態の所有、Unity API呼び出し、具象依存の生成を行わない。
 - ServiceがStrategyを実行し、Compositionが具象Strategyを選択して注入する。
 - abstractであるだけの内部補助型へ`Strategy`サフィックスを付けない。
-- 例: `SceneLoadStrategy`。
+- 例: `SaveDataLoaderStrategy`、`PlayerPrefsSaveDataLoaderStrategy`。
 
 ### Query
 
-QueryはApplication層に属し、RegistryとDomain Entityを読み取ってViewModel向けDTOを生成します。
+QueryはAdaptor層に属し、RegistryとDomain Entityの読み取り結果を外側の契約へ変換する唯一の型です。公開API向けInfoとViewModel向けDtoの両方を生成します。
 
 - 状態を変更せず、I/O、ログ出力、遅延初期化などの副作用を起こさない。
-- ViewModelは初期化時と、Commandを実行したServiceの状態変更eventを受けた時にQueryを呼ぶ。
-- QueryはDTOを戻り値として返し、ViewModelを直接参照しない。
-- 公開API向けInfoは生成しない。Infoへの変換はAdaptorの公開エントリポイントが担当する。
+- 公開エントリポイントは管理状態照会と登録payload取得のどちらでもQueryを呼び、RegistryやEntityを直接参照しない。
+- ViewModelは初期化時と、Commandを実行したServiceの状態変更eventを受けた時に同じQueryを呼ぶ。
+- Queryは用途別のメソッドからInfoまたはDtoを返し、公開エントリポイントとViewModelを直接参照しない。
+- RegistryやEntityから値を抽出・派生するロジックはQueryへ置く。InfoとDtoは渡された値を保持する不変データに限定する。
 - DTOが複数のViewModelで共通にならない限り、対象ViewModelに対応する最小の形にする。
-- 例: `SceneLoadQuery`、`ServiceLocateQuery`、`SaveDataQuery`。
+- 例: `SceneLoadQuery`、`ServiceLocateQuery`、`SaveDataQuery`、`PauseQuery`。
 
 ### Registry
 
@@ -250,9 +258,9 @@ RegistryはApplication層に属し、キーに対応するEntityの所有と検�
 - Entityの生成、無効化、全消去の条件を明確にする。
 - Entityの状態遷移や処理順を重複実装しない。
 - I/Oを行わず、ロードや保存はServiceからLoaderへ依頼する。
-- Registry自身はEntityやInfoを公開APIへ返さない。利用側向けの管理状態照会は、公開エントリポイントがRegistryまたはEntityからInfoを生成して返す。
+- Registry自身はEntity、Info、Dtoを公開APIへ返さない。利用側とView向けの読み取り変換はAdaptorのQueryへ委ねる。
 - staticな公開Registryを作らない。利用側の入口は公開エントリポイントにする。
-- 例: `SceneLoadRegistry`、`ServiceLocateRegistry`、`SaveDataRegistry`。
+- 例: `SceneLoadRegistry`、`ServiceLocateRegistry`、`SaveDataEntryRegistry`。
 
 ### Entity
 
@@ -269,21 +277,21 @@ EntityはDomain層に属し、識別子によってRegistryから検索され、
 
 ### Info
 
-InfoはAdaptor層に属し、公開エントリポイントの管理状態を照会するQueryメソッドがEntityまたはRegistryの現在状態から生成して返す不変なスナップショットです。取得後に内部状態が変化しても、既に返したInfoの内容は変化しません。
+InfoはAdaptor層に属し、AdaptorのQueryがRegistryまたはEntityから生成して公開エントリポイントへ返す不変なスナップショットです。取得後に内部状態が変化しても、既に返したInfoの内容は変化しません。
 
 - 原則として`readonly struct`で実装する。参照共有が必要な大きな値では、不変な`sealed class`を選択できる。
 - Entityの識別子と、利用側が観測できる状態だけを含める。
 - public setter、状態変更メソッド、Unity API、外部I/Oを持たない。
 - Entityや内部の可変コレクション、変更可能な`SaveDataContent`などをプロパティから直接公開しない。
-- Entityから必要な値を抽出し、公開用の派生値へ整形するロジックを持てる。ただしDomainの判断、状態変更、I/Oは行わない。
-- 生成は公開エントリポイントが担当し、Entityを受け取るコンストラクタまたはfactory methodは`internal`にする。
+- EntityやRegistryを受け取らず、Queryが抽出・変換した値だけを受け取る。軽量な値の検証や表示名の正規化は持てるが、読み取り変換の分岐を重複させない。
+- 生成はQueryが担当し、値を受け取るコンストラクタまたはfactory methodは`internal`にする。
 - 例: `SceneLoadInfo`、`ServiceRegistrationInfo`、`SaveDataEntryInfo`。
 
 ### ViewModel
 
-ViewModelはView層に属し、RuntimeまたはEditorの表示に必要な状態を保持します。ApplicationのQueryから受け取ったDTOを表示用の形へ変換し、変更を`ReactiveProperty<T>`として公開します。
+ViewModelはView層に属し、RuntimeまたはEditorの表示に必要な状態を保持します。AdaptorのQueryから受け取ったDtoを表示用の形へ変換し、変更を`ReactiveProperty<T>`として公開します。
 
-- Entity、Registry、Infoを参照せず、ApplicationのQueryが返すDTOから表示状態を構築する。
+- Entity、Registry、Infoを参照せず、AdaptorのQueryが返すDtoから表示状態を構築する。
 - Commandを実行したServiceの状態変更eventだけを購読し、通知時にQueryを呼び直してReactivePropertyを更新する。
 - 状態の更新権限はViewModel自身だけが持ち、ViewとEditor UIには`IReadOnlyReactiveProperty<T>`を公開する。
 - Commandを実行しない。Runtime ViewやEditor Windowの操作は公開エントリポイントを直接呼ぶ。
@@ -320,35 +328,45 @@ ComponentはUnityライフサイクルを受ける`MonoBehaviour`または表示
 
 ### Value Object
 
-Value Objectは、境界を越えて受け渡す不変の値です。`readonly struct`だけでなく、不変なenumも含みます。
+Value Objectは、値そのものに意味と制約があり、同一性ではなく値で比較する不変の`readonly struct`です。enumはValue Objectへ含めず、独立した[Enum](#enum)として扱います。
 
 - 値の意味と制約が型名から読み取れるようにする。
 - 生成時の検証が必要な値は、コンストラクタまたはFactoryに集約する。
 - 値として比較する必要がある場合に限り`IEquatable<T>`を実装する。
 - 順序に意味がある場合だけ`IComparable<T>`と比較演算子を実装する。
 - 単位や制約が異なる値を、同じprimitive型のまま受け渡さない。
-- 例: `SceneLoadState`、`LocateType`。
+- 例: 現行の`readonly ref struct`である`AssetStoreToolsPackageContext`。保持する配列も変更不能なスナップショットとして扱う。
+
+### Enum
+
+Enumは、有限個の選択肢や状態を表す独立した型カテゴリです。
+
+- 型名は必ず`Enum`で終える。入れ子enumにも同じ規則を適用する。
+- 列挙値の追加・削除・数値変更がシリアライズ互換性へ影響する場合は、[バージョニング](#バージョニング)に従う。
+- 3.0.0では`LocateTypeEnum`、`SceneLoadStateEnum`、`SaveDataOperationEnum`、`LogKindEnum`、`InitializeTypeEnum`、`LoadTypeEnum`、`PackageModeEnum`へ統一する。
+- 自動生成済みの`SceneListEnum`、`TagsEnum`、`LayersEnum`、`AudioGroupTypeEnum`は既に規則へ適合しているため変更しない。
 
 ### DTO
 
-DTOはApplicationのQueryが生成し、ViewModelへ渡す不変の更新データです。この用途に限定し、公開APIやInfrastructureとの汎用転送形式には使用しません。
+DtoはAdaptorのQueryが生成し、ViewModelへ渡す不変の更新データです。この用途に限定し、公開APIやInfrastructureとの汎用転送形式には使用しません。
 
 - 原則として`readonly struct`を使用する。
 - 同期呼び出しだけで使い、保持や非同期境界越えがない場合は`readonly ref struct`を使用できる。
 - 状態変更ロジックや外部参照を持たせない。
 - 対応するViewModelが必要とするデータだけを含める。
 - 型名は対象 + `Dto`とし、`Data`だけで終わる曖昧な名前を付けない。
-- Infoが利用側へ公開するAdaptor契約であるのに対し、DTOはApplicationからViewへの内部通知データとする。
+- Infoが利用側へ公開するAdaptor契約であるのに対し、DtoはAdaptorからViewへの内部更新データとする。
 - 例: `SceneLoadDto`、`ServiceLocateDto`、`SaveDataDto`。
 
 ### Loader
 
 LoaderはInfrastructure層に属し、特定データの読み書き、変換、Unityリソース取得の手順を担当します。
 
-- 契約は利用する内側の層、具象実装はInfrastructureへ置く。
+- 利用側が継承する抽象契約にはLoaderを付けずStrategyとし、`SaveDataLoaderStrategy`のように表す。
+- `Loader`はInfrastructureの具象実装に使用し、継承を拡張点にしない場合は`sealed`にする。
 - 外部I/Oの失敗、キャンセル、リソース解放を明確にする。
 - 読み込んだ値をApplicationが理解できる形式へ変換する。
-- 例: `SaveDataLoader`、`UnitySceneLoader`。
+- 例: `JsonUtilitySaveDataLoader`、`NewtonsoftSaveDataLoader`、`UnitySceneLoader`。
 
 ### Factory
 
@@ -364,6 +382,8 @@ Factoryは、依存解決や複数段階の生成規則を伴うオブジェク�
 ConfigはInfrastructure層に属し、利用側プロジェクトごとのカスタマイズ値を保持します。
 
 - DomainやApplicationから直接検索しない。Compositionが読み取り、必要な値だけを注入する。
+- Runtimeの`SymphonyConfigLocator`は既存ConfigをResourcesから検索する`internal`なInfrastructure型、`SymphonyEditorConfigLocator`はEditor用`ScriptableSingleton`を検索する`internal`なEditor型として名称を維持する。どちらもConfigを生成せず、自動初期化を開始しない。
+- 現行`SymphonyConfigManager.AllConfigCheck()`の責務はEditorの`SymphonyConfigInitializer`へ移す。この型は3つのRuntime Config（現行の`SceneManagerConfig`、`AudioManagerConfig`、`SaveSystemConfig`。移行後は各新Config名）とEditor Configの存在保証・生成を担当する`internal`なCompositionモジュールとし、`SymphonyEditorOrchestrator`から明示的に実行する。
 - 動的な再読み込みが必要な場合は、Compositionが更新と再注入を統括する。
 - `ScriptableObject`のシリアライズ値は外部から変更させず、読み取り専用プロパティを公開する。
 - シリアライズ済みフィールドを変更する場合は、[バージョニング](#バージョニング)の規約に従う。
@@ -399,9 +419,9 @@ DebuggerはViewに属し、EditorまたはDevelopmentビルドで診断情報と
 - CommandはServiceが実行し、状態を変更して必要な場合だけ成功可否や結果を返す。
 - Commandを実行したServiceは、観測可能な状態変更が確定するたびに状態変更eventを論理更新1回につき1回だけ発行する。複数の変更を1つの原子的更新として確定する場合は最後に1回だけ発行する。
 - 失敗またはキャンセルをEntityの状態として確定した場合はeventを発行し、状態が何も変わらなかった場合は発行しない。
-- ApplicationのQueryは状態を変更せず、RegistryとEntityからViewModel向けDTOを生成する。
+- AdaptorのQueryは状態を変更せず、RegistryとEntityから公開API向けInfoまたはViewModel向けDtoを生成する唯一の読み取り変換箇所とする。
 - ViewModelは初期化時にQueryを1回実行し、その後はCommand側のeventを受けるたびにQueryを再実行する。
-- 公開エントリポイントの管理状態QueryはRegistryまたはEntityからAdaptorのInfoを生成する。登録された公開payload自体を返す既存の取得契約は維持できるが、EntityとDTOを公開APIへ返さない。
+- 公開エントリポイントの管理状態照会はQueryが生成したInfoを返す。登録された公開payload自体を返す既存の取得契約もQueryを経由し、EntityとDtoを公開APIへ返さない。
 - property getterでロード、保存、登録、ログ出力などの副作用を起こさない。
 - `GetXxx`と`SetXxx`を機械的に作らず、利用者の意図を表す操作名を選ぶ。
 - `TryXxx`は失敗が通常の分岐である場合に使い、例外の代替として乱用しない。
@@ -507,8 +527,8 @@ Symphony Frameworkは他プロジェクトが依存するパッケージであ�
 
 - Adaptor層の公開エントリポイント。例: `SceneLoader`、`ServiceLocator`、`SaveStore`、`AudioPlayer`、`PauseController`。
 - Unity上で利用側が配置または生成するAdaptor層のComponent。例: `ServiceLocateComponent`。
-- 利用側が実装・継承する契約。例: ApplicationのStrategy、`SaveDataLoader`、`SaveDataContent`、`IInitializeAsync`、`IPausable`。
-- 公開エントリポイントの引数・戻り値として境界を越えるInfo、Value Object、enum。
+- 利用側が実装・継承する契約。例: ApplicationのStrategy、`SaveDataLoaderStrategy`、`PlayerPrefsSaveDataLoaderStrategy`、`SaveDataContent`、`IInitializeAsync`、`IPausable`。
+- 公開エントリポイントの引数・戻り値として境界を越えるInfo、Value Object、Enum。
 - 回復方法の異なる失敗を通知する専用例外。
 - 利用側が自身のフィールドや型へ付けるInspector属性。
 - サブシステムに依存しない汎用ユーティリティ。例: `SymphonyAwaitable`、`SymphonyStringUtil`。
@@ -517,7 +537,7 @@ Symphony Frameworkは他プロジェクトが依存するパッケージであ�
 
 - 利用側が実装するメンバーは`protected abstract`、公開エントリポイントやServiceだけが駆動するメンバーは`internal`を基本とする。
 - フレームワーク側だけが生成する不変値は、型を`public`、コンストラクタを`internal`にできる。
-- Composition Root、Config、Domain Entity、Query、DTO、ViewModel、ReactiveProperty、内部Service、Registry、Infrastructureの具象実装は`internal`にする。Editorからの参照は`InternalsVisibleTo`で許可する。
+- Composition Root、Config、Domain Entity、Adaptor Query、Dto、ViewModel、ReactiveProperty、内部Service、Registry、Infrastructureの具象実装は`internal`にする。Editorからの参照は`InternalsVisibleTo`で許可する。
 - Editor専用の初期化、リセット、内部アクセサを公開APIへ広げず、`InternalsVisibleTo`で必要なアセンブリだけに許可する。
 - 補助エントリポイントは主エントリポイントと操作が重複しない場合だけ認める。
 
@@ -573,6 +593,9 @@ Symphony Frameworkは他プロジェクトが依存するパッケージであ�
 - 役割を表さない`Manager`や`Data`を新しい型名へ使う。
 - EntityをDomain以外へ置く、DTOをQueryからViewModelへの受け渡し以外に流用する。
 - ViewModelからCommandを実行する、またはInfoをViewModelの更新データとして使う。
+- 公開エントリポイントやViewModelがRegistry／Entityを直接読み、Queryと同じInfo／Dto変換を重複実装する。
+- public abstractな拡張点をLoaderと呼ぶ、またはInfrastructureの具象LoaderをStrategyと呼ぶ。
+- enumをValue Objectとして扱う、または`Enum`で終わらないenum型を追加する。
 - `Awaitable`を保存、再await、複数の待機者で共有する。
 
 ## 設計判断のチェックリスト
@@ -588,13 +611,16 @@ Symphony Frameworkは他プロジェクトが依存するパッケージであ�
 - [ ] Serviceの状態保持をRegistryへ分離したか。
 - [ ] Registryが管理する個別要素に同一性とライフサイクルがある場合、Entityとして表現したか。
 - [ ] EntityがDomainに置かれ、Unity APIや外部I/Oへ依存していないか。
-- [ ] 公開エントリポイントの管理状態QueryがEntityや可変オブジェクトを返さず、不変なInfoを返しているか。
+- [ ] AdaptorのQueryだけがRegistry／Entityを読み取り、InfoまたはDtoへ変換しているか。
+- [ ] 公開エントリポイントの管理状態照会がQueryを呼び、Entityや可変オブジェクトではなく不変なInfoを返しているか。
 - [ ] 登録payloadを返すQueryが、payloadを管理するEntityや内部コレクションまで公開していないか。
-- [ ] ApplicationのQueryがViewModel専用DTOを生成し、DTOを公開APIへ漏らしていないか。
+- [ ] ViewModelがAdaptorのQueryから専用Dtoを受け取り、Dtoを公開APIへ漏らしていないか。
 - [ ] Commandを実行するServiceだけが状態変更eventを所有し、観測可能な論理更新の確定後に過不足なく発行しているか。
 - [ ] CompositionがViewModelを所有し、Editor Windowは購読だけを所有しているか。
 - [ ] コレクションを持つReactivePropertyへ内容比較用comparerを指定したか。
 - [ ] 継承によって拡張可能なApplication型はStrategyとして、固定処理のServiceと区別されているか。
+- [ ] public abstractなSave Data拡張点がStrategy、sealed具象I/O実装がLoaderとして命名されているか。
+- [ ] enum型が`Enum`で終わり、Value Objectと区別されているか。
 - [ ] 依存方向は内側の規則を外側の詳細から守っているか。
 - [ ] Runtimeの各レイヤーがOrchestratorを呼ばず、必要なComponentやFactoryをCompositionから注入されているか。
 - [ ] interfaceは実際の境界または交換理由を表しているか。

@@ -26,14 +26,13 @@
 | --- | --- | --- |
 | `Core/` | RuntimeとEditorで共有する最小限の基盤と内部ヘルパー | 上位機能へ依存させない。`ReactiveProperty<T>`などの`internal`な型は`Core/AssemblyInfo.cs`の`InternalsVisibleTo`でRuntime／Editorへ公開する |
 | `Runtime/` | Playerビルドに含まれる機能 | `UnityEditor` を参照しない |
-| `Runtime/System/<Subsystem>/` | サブシステムの公開エントリポイント、公開Component、公開契約、Infoと不変な値 | 利用側が参照する型だけを直下へ置く |
-| `*/Internal/` | 各フォルダのDomain、Application、Infrastructure、Compositionの内部実装 | `internal`なEntity、Service、Strategy、Query、Dto、Registry、Unity API実装を置く。名前空間には`Internal`を含めない（→ `## 名前空間`） |
+| `Runtime/System/<Subsystem>/` | サブシステムの公開エントリポイント、公開Component、公開Strategy、Info、Value Object、Enum | 利用側が参照する型だけを直下へ置く |
+| `*/Internal/` | 各フォルダのDomain、Application、Adaptor、View、Infrastructure、Compositionの内部実装 | `internal`なEntity、Service、Registry、Query、Dto、ViewModel、Unity API実装を置く。名前空間には`Internal`を含めない（→ `## 名前空間`） |
 | `Runtime/Obsolete/` | 代替APIへ移行済みの `[Obsolete]` シム | 移行期間のみ存在させ、メジャー更新で削除する |
 | `Editor/` | Inspector、設定画面、Generatorなど | `SymphonyFrameWork.Editor` asmdefに含める |
 | `Samples/` | 利用例 | 製品コードから依存しない |
 
-- RuntimeコードでEditor APIが必要な場合は、可能な限り `Editor/` 側へ処理を分離する。
-- やむを得ず同じファイルでEditor APIを参照する場合は、`using UnityEditor;` と対象コードの両方を `#if UNITY_EDITOR` で囲む。
+- RuntimeコードからEditor APIを参照しない。Editor専用の`MenuItem`、設定、Inspector処理は`Editor/`側の型へ分離する。`#if UNITY_EDITOR`で囲んでもRuntimeファイルへ`UnityEditor`参照を置く例外は作らない。
 - asmdef間の参照は必要な方向にだけ追加し、循環参照を作らない。
 - パッケージ導入とAssets直置きの両方に対応するパスには、`EditorSymphonyConstant.FRAMEWORK_PATH` を使用する。
 - `Assets/SymphonyFrameWork` や `Packages/symphonyframework` を機能コードへ直接埋め込まない。
@@ -64,14 +63,15 @@ SymphonyFrameWork
 - 消費者向けの公開エントリポイントと公開Componentは、属するサブシステムの名前空間へ置く。例: `SaveStore`は`SymphonyFrameWork.System.SaveData`、`SceneLoader`は`SymphonyFrameWork.System.SceneLoad`、`ServiceLocator`と`ServiceInjector`は`SymphonyFrameWork.System.ServiceLocate`。
 - Runtimeの`SymphonyOrchestrator`は`SymphonyFrameWork.Orchestrator`、Editorの`SymphonyEditorOrchestrator`は`SymphonyFrameWork.Editor`へ置く。Editor asmdefからRuntime asmdefへの一方向参照を維持する。
 - 特定サブシステムの専用例外は、その公開エントリポイントと同じ名前空間へ置く。複数サブシステムで共通する例外は`SymphonyFrameWork.Exception`へ置く。
-- 公開型と内部実装の区別は、名前空間ではなくフォルダで表す。Adaptorの公開エントリポイントとInfoはサブシステム直下、Domain、Application、View、Infrastructureの内部実装は同じフォルダの`Internal/`配下へ置く。
+- 公開型と内部実装の区別は、名前空間ではなくフォルダで表す。Adaptorの公開エントリポイントとInfo、公開Strategyはサブシステム直下、Domain、Application、Adaptor Query／Dto、View、Infrastructureの内部実装は同じフォルダの`Internal/`配下へ置く。
 - Sampleは`SymphonyFrameWork.Samples.<SampleName>`とする。
 - ファイルの配置と名前空間を一致させる。
 - 名前空間はディレクトリ構成を反映する。並び順を示す数字など、コード上の責務を表さないディレクトリ名は除外する。
-- `internal`な型は、所属するフォルダ直下の`Internal/`へ置く。`Internal`は可視性だけを表すため、名前空間には含めない。例: `Runtime/System/SceneLoad/Internal/SceneLoadService.cs`の名前空間は`SymphonyFrameWork.System.SceneLoad`。
+- `internal`な型は、所属するフォルダ直下の`Internal/`へ置く。`Internal`と概念レイヤー名は名前空間には含めない。例: `Runtime/System/SceneLoad/Internal/Application/SceneLoadService.cs`の名前空間は`SymphonyFrameWork.System.SceneLoad`。
   - 横断的で最小限の内部ヘルパーは`Core/Internal/`へ置く。
   - Domain Entityは`Runtime/System/<Subsystem>/Internal/Domain/`へ置く。
-  - ApplicationのService、Strategy、Query、Dto、RegistryとInfrastructureの具象実装は、対応する`Runtime/System/<Subsystem>/Internal/`へ置く。
+  - ApplicationのServiceとRegistryは`Runtime/System/<Subsystem>/Internal/Application/`、AdaptorのQueryとDtoは`Internal/Adaptor/`へ置く。
+  - 利用側が継承するpublic abstractなStrategyはサブシステム直下、内部Strategyは`Internal/Application/`へ置く。Infrastructureの具象Loaderは`Internal/Infrastructure/`へ置く。
   - ViewModelと内部表示Componentは`Runtime/System/<Subsystem>/Internal/View/`へ置く。`View`は責務を表すフォルダだが、名前空間には追加しない。
   - RuntimeのComposition Rootとライフタイム用Componentは`Runtime/Orchestrator/Internal/`、EditorのComposition Rootは`Editor/Orchestrator/Internal/`へ置く。
   - `internal`なConfig用`ScriptableObject`は`Runtime/Configs/Internal/`へ置く。
@@ -106,13 +106,14 @@ public static bool TryGetScene(string sceneName, out Scene scene)
 
 | 対象 | 規則 | 例 |
 | --- | --- | --- |
-| class、struct、enum | PascalCase | `SceneLoadState` |
+| class、struct | PascalCase | `SceneLoadInfo` |
+| enum | PascalCase + `Enum` | `SceneLoadStateEnum` |
 | interface | `I` + PascalCase | `IInitializeAsync` |
 | 公開操作クラス | 利用側が認識するサービス名をそのまま使う | `SceneLoader`、`SaveStore`、`AudioPlayer`、`PauseController` |
 | ホストライフサイクルを統括するComposition Root | 対象 + `Orchestrator` | `SymphonyOrchestrator`、`SymphonyEditorOrchestrator` |
 | Applicationの処理クラス | 対象 + `Service` | `SceneLoadService` |
-| 継承・差し替え可能なApplicationクラス | 対象 + `Strategy` | `SceneLoadStrategy` |
-| ViewModel向け読み取りクラス | 対象 + `Query` | `SceneLoadQuery` |
+| 利用側が継承するApplicationの抽象拡張点 | 対象 + `Strategy` | `SaveDataLoaderStrategy`、`PlayerPrefsSaveDataLoaderStrategy` |
+| Registry／Entityを読み取り変換するAdaptorクラス | 対象 + `Query` | `SceneLoadQuery` |
 | QueryからViewModelへ渡す更新データ | 対象 + `Dto` | `SceneLoadDto` |
 | 状態保持・検索クラス | 対象 + `Registry` | `SceneLoadRegistry` |
 | Registryが管理する同一性とライフサイクルを持つクラス | 対象 + `Entity` | `SceneLoadEntity` |
@@ -120,7 +121,7 @@ public static bool TryGetScene(string sceneName, out Scene scene)
 | View層の表示状態クラス | 対象 + `ViewModel` | `SceneLoadViewModel` |
 | 値変更を通知するCoreクラス | 対象 + `ReactiveProperty` | `ReactiveProperty<T>` |
 | Unityライフサイクルを受けるクラス | 対象 + `Component` | `ServiceLocateComponent` |
-| I/O・変換クラス | 対象 + `Loader` | `SaveDataLoader` |
+| Infrastructureの具象I/O・変換クラス | 対象 + `Loader` | `JsonUtilitySaveDataLoader` |
 | 複雑な生成クラス | 対象 + `Factory` | `ModuleFactory` |
 | 設定用ScriptableObject | 対象 + `Config` | `SceneLoadConfig` |
 | method | 動詞から始まるPascalCase | `LoadScene` |
@@ -139,14 +140,16 @@ public static bool TryGetScene(string sceneName, out Scene scene)
 - コレクションには複数形、または内容が分かる名前を付ける。例: `loadedScenes`。
 - 公開エントリポイントには一律のサフィックスを付けず、利用側が認識するサービス名をそのまま使用する。`Loader`、`Locator`、`Injector`、`Player`、`Controller`などがサービス名の一部である場合は維持できる。
 - 公開エントリポイント以外の操作や可変状態を持つclassには、実際の役割を表すサフィックスを付ける。`Manager`や`Data`だけで終わる新しい型名は禁止する。
-- `Entity`はDomainの可変な登録単位、`Service`はApplicationのCommand処理、`Strategy`は差し替え可能なApplication処理、`Registry`はEntityの保持と検索、`Query`はViewModel向けDtoの生成、`Info`はAdaptorの公開管理状態Query、`ViewModel`はViewの表示状態、`Component`はUnityライフサイクル境界に限定する。単なる改名で責務の混在を隠さない。
+- `Entity`はDomainの可変な登録単位、`Service`はApplicationのCommand処理、`Strategy`は利用側が継承・差し替えできるApplicationの抽象拡張点、`Registry`はEntityの保持と検索、`Query`はRegistry／EntityからInfoまたはDtoを生成するAdaptorの唯一の読み取り変換、`Info`は公開管理状態の不変スナップショット、`ViewModel`はViewの表示状態、`Component`はUnityライフサイクル境界に限定する。単なる改名で責務の混在を隠さない。
+- 抽象拡張点はI/Oを扱っていても`Strategy`で終え、Infrastructureの利用側が継承しないsealed具象実装だけを`Loader`で終える。`PlayerPrefsSaveDataLoaderStrategy`はI/Oの一部を実装していても、利用側がJSON変換を継承実装するpublic abstractな中間拡張点なのでStrategyを優先する。
+- enumはValue Objectへ含めず独立した型カテゴリとして扱い、入れ子型を含め必ず`Enum`で終える。自動生成される`SceneListEnum`、`TagsEnum`、`LayersEnum`、`AudioGroupTypeEnum`は既に適合している。
 - abstractなApplicationクラスでも、利用側による差し替えを拡張点として設計していない場合は`Strategy`と呼ばない。
 - `Factory`は複数依存や生成規則がある場合だけ使用し、単なる`new`の置き換えにしない。
 - Entityを公開APIへ直接返さない。利用側へ状態を見せる場合は、可変参照を含まないInfoへ変換する。
 - EntityはすべてDomainへ置き、Unity APIや外部I/Oを参照させない。
 - Commandを実行するServiceだけが、観測可能な状態変更の確定後に標準C#の状態変更eventを論理更新1回につき1回発行する。失敗やキャンセルを状態へ反映した場合も通知し、状態が変わらなければ通知しない。RegistryとQueryは変更eventを持たない。
-- ViewModelはServiceのeventを受けてQueryを呼び、DtoからReactivePropertyを更新する。ApplicationからViewModelを参照しない。
-- 型の種類が役割を表す`Exception`、`Attribute`、`Window`、`Drawer`、`State`、`Operation`、`Content`、`Utility`も適切なサフィックスとして認める。
+- ViewModelはServiceのeventを受けてAdaptorのQueryを呼び、DtoからReactivePropertyを更新する。ApplicationからQuery、ViewModel、ReactivePropertyを参照しない。
+- class／structでは、型の種類が役割を表す`Exception`、`Attribute`、`Window`、`Drawer`、`State`、`Operation`、`Content`、`Utility`も適切なサフィックスとして認める。enumには適用せず、必ず`Enum`で終える。
 - 型名と同じ意味を繰り返す曖昧な変数名を避ける。例: `data`、`info`、`manager`はスコープが広い場所では具体化する。
 - UXMLとUSSの要素名、class名にはlower-kebab-caseを使用する。例: `save-data-panel`。
 
@@ -213,13 +216,14 @@ public static Awaitable<bool> LoadSceneAsync(
 - 操作の失敗が通常起こり得る場合は、`bool` またはTry patternを使用する。
 - 呼び出し側の実装ミスを示す場合は、`ArgumentNullException`、`ArgumentException`、`InvalidOperationException` など適切な例外を使用する。
 - 内部コレクションは直接公開せず、`IReadOnlyList<T>` など読み取り専用の型で返す。
-- 公開エントリポイントの管理状態Queryは、RegistryまたはDomain Entityを読み取り、取得時点の状態を表すAdaptorのInfoを生成して返す。Entityや内部の可変参照を公開しない。
-- `ServiceLocator.GetInstance<T>`や`SaveStore.Get<T>`のように登録された公開payload自体の取得が契約であるQueryはpayloadを返せるが、それを管理するEntityや内部コレクションは返さない。
-- ApplicationのQueryは、RegistryまたはDomain Entityを読み取り、ViewModelの更新に必要なDtoだけを生成して返す。Infoを生成せず、ViewModelを参照しない。
+- AdaptorのQueryだけがRegistryまたはDomain Entityを読み取り、公開API向けInfoまたはViewModel向けDtoへ変換する。InfoとDtoはQueryから渡された値だけを保持し、抽出ロジックを重複させない。
+- 公開エントリポイントの管理状態照会メソッドは対応するQueryを呼んでInfoを返すだけにし、Registry／Entityを直接参照したり自分で変換したりしない。
+- `ServiceLocator.GetInstance<T>`や`SaveStore.Get<T>`のように登録された公開payload自体の取得が契約である場合もQueryを経由する。payloadは返せるが、それを管理するEntityや内部コレクションは返さない。
+- ViewModelは初期化時とServiceの状態変更event受信時にAdaptorのQueryを呼び、専用Dtoを受け取る。Queryは公開エントリポイントとViewModelを参照しない。
 - 状態を変更するプロパティにpublic setterを設けない。`SetXxx`、`RecordXxx`、`ChangeXxx` など意図が分かるメソッドを公開する。
 - generic APIと `Type` を受け取るAPIを併設する場合は、検証と本処理を共通化する。
 - 新しいoverloadは既存の既定値と意味を変えないようにする。
-- 非推奨APIには `[Obsolete]` を付け、代替APIをメッセージに含める。
+- 安全に転送できる非推奨APIには`[Obsolete]`を付け、代替APIをメッセージに含める。名前、シグネチャ、意味が同時に変わり旧契約を安全に維持できないAPIは、メジャー更新で直接削除し、CHANGELOGのBreaking項目と移行ガイドへ明記する。
 - 公開APIの追加・変更時はREADME、Sample、XMLドキュメントの更新要否を確認する。
 
 ## Unity固有のルール
@@ -232,7 +236,7 @@ public static Awaitable<bool> LoadSceneAsync(
 - データコンテナとして使用する `ScriptableObject` は、Inspectorだけから値を設定し、外部には読み取り専用プロパティを公開する。
 - 既存のシリアライズ済みフィールド名を変更する場合は、データ移行のため `[FormerlySerializedAs]` を使用する。
 - polymorphicな設定値には、必要に応じて `[SerializeReference]` と `[SubclassSelector]` を使用する。
-- `ScriptableObject` の設定値は `SymphonyConfigLocator` を通して取得する。
+- `ScriptableObject`の設定値は、CompositionまたはInfrastructureのinternalな`SymphonyConfigLocator`を通して取得し、利用側やApplicationからLocatorを直接呼ばない。Configアセットの生成はEditor Orchestratorから呼ばれる`SymphonyConfigInitializer`だけが行う。
 
 ```csharp
 [SerializeField, Tooltip("再生開始時にロードするシーン名。")]
@@ -246,6 +250,9 @@ public string InitialSceneName => _initialSceneName;
 - `[RuntimeInitializeOnLoadMethod]`は`SymphonyOrchestrator`だけ、`[InitializeOnLoad]`と`[InitializeOnLoadMethod]`は`SymphonyEditorOrchestrator`だけに付ける。個別サブシステムやInitializerには付けない。
 - 自動初期化属性を持つメソッドとOrchestratorのstatic constructorは、同じOrchestratorの明示的な初期化メソッドを呼ぶ入口に限定する。
 - `MenuItem`、`SettingsProvider`、`CustomEditor`、`UxmlElement`などの発見用属性は使用できるが、そのcallbackからpackage-wideな初期化を開始しない。
+- `AssetPostprocessor`はUnityが発見して任意のタイミングで呼ぶhost callbackとして使用でき、自動初期化属性の禁止対象には含めない。ただし初期化、Asset生成、`AssetDatabase.Refresh`、購読を所有せず、変更種別を`SymphonyEditorOrchestrator`へ通知してcoalesceするだけにする。
+- `SymphonyConfigInitializer`などのEditor初期化モジュールは自動初期化属性を持たず、`SymphonyEditorOrchestrator`から明示的に開始される。`SymphonyConfigLocator`と`SymphonyEditorConfigLocator`はinternalな検索専用Infrastructureとし、生成や初期化を開始しない。
+- Runtimeの`SymphonyDebugHUD`などに`MenuItem`や`UnityEditor`参照を置かない。メニュー入口はEditor専用型へ分離し、Runtimeの公開操作を呼ぶだけにする。
 - サブシステムは副作用を持つstatic constructor、static field initializer、独自の遅延初期化を使わず、Orchestratorから呼ばれる`Initialize`と`Shutdown`または`Dispose`を提供する。
 - Runtimeの各サブシステムから`SymphonyOrchestrator`を呼ばない。Orchestratorは汎用Factoryや`DontDestroyOnLoad` helperとして公開せず、必要なComponent、値、Infrastructure契約をBuild時に注入する。
 - Editor WindowがRuntime ViewModelを取得するための`internal`な読み取り専用accessorだけは例外とし、そこから生成、初期化、終了を実行できない契約にする。
@@ -368,9 +375,12 @@ public string InitialSceneName => _initialSceneName;
 - [ ] RuntimeのサブシステムからOrchestratorの生成・永続化helperを呼んでおらず、依存がCompositionから注入されている。
 - [ ] `Shutdown`が同期・非ブロッキングで、途中の例外後も残りの解放を継続している。
 - [ ] Registryの登録単位に同一性とライフサイクルがある場合は、DomainのEntityとして表現されている。
-- [ ] 公開エントリポイントの管理状態QueryがEntityや可変参照ではなく、AdaptorのInfoを生成して返している。
+- [ ] AdaptorのQueryだけがRegistry／Domain Entityを読み取り、公開API向けInfoまたはViewModel向けDtoへ変換している。
+- [ ] 公開エントリポイントの管理状態照会がQueryを呼ぶだけで、Entityや可変参照ではなく不変なInfoを返している。
 - [ ] 登録payloadを返すQueryが、それを管理するEntityや内部コレクションまで公開していない。
-- [ ] ApplicationのQueryがViewModel更新専用のDtoを返し、InfoやViewModelへ依存していない。
+- [ ] ApplicationがServiceとRegistryで構成され、Query、Dto、ViewModelへ依存していない。
+- [ ] public abstractな拡張点が`Strategy`、internal sealedの具象I/O実装が`Loader`で終わっている。
+- [ ] enum型が入れ子型を含め`Enum`で終わり、Value Objectと混同されていない。
 - [ ] Commandを実行するServiceだけが、観測可能な論理更新の確定後に変更eventを過不足なく発行している。
 - [ ] ViewModelがCommandを実行せず、Serviceのeventを受けてQueryを呼び、読み取り専用ReactivePropertyだけをViewへ公開している。
 - [ ] RuntimeのViewModelをCompositionが所有し、Editor Windowは購読だけを所有している。
