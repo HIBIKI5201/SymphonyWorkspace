@@ -14,8 +14,19 @@
 | [../AGENTS.md](../AGENTS.md) | ワークスペースの構成、環境設定、自動生成物の区別を知りたいとき |
 | [../Assets/SymphonyFrameWork/AGENTS.md](../Assets/SymphonyFrameWork/AGENTS.md) | 公開APIを変更したとき。更新対象として |
 | [../Assets/SymphonyFrameWork/CHANGELOG.md](../Assets/SymphonyFrameWork/CHANGELOG.md) | 直近の変更の経緯を知りたいとき。記述の粒度の参考にもする |
+| [../.claude/skills/implement/SKILL.md](../.claude/skills/implement/SKILL.md) | 機能を**追加・変更**するとき。設計書からコミットまでの実装フロー |
 
 既存コードの修正だけであれば、このファイルと CodeGuidelines.md で足ります。
+
+### 機能の追加・変更は実装フローに従う
+
+パッケージ本体へ機能を追加・変更する場合は、次のフローを踏みます。手順の詳細は [`.claude/skills/implement/SKILL.md`](../.claude/skills/implement/SKILL.md)（Claude Code からは `/implement`）にあります。
+
+```text
+1. 設計書を書く  →  2. Codex に実装させる  →  3. 実装を確認する  →  4. バージョンを更新する  →  5. コミットする
+```
+
+設計書は [`Documentation/Designs/`](./Designs/) に機能ごとの1ファイルとして置き、実装後も設計判断の記録として残します。既存コードの小さな修正や、ホスト側（`Assets/Scripts/` など）のコードにはこのフローを使いません。
 
 ## 1. リポジトリの構造上の前提
 

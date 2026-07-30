@@ -1,0 +1,169 @@
+---
+name: implement
+description: "設計書を書き、Codex CLI に実装させ、実装を確認し、バージョンを更新してコミットするまでの実装フロー。SymphonyFramework 本体に機能を追加・変更するときに使う。"
+---
+
+# 実装フロー
+
+SymphonyFramework 本体（`Assets/SymphonyFrameWork/`）へ機能を追加・変更するときの標準フロー。
+
+```text
+1. 設計書を書く  →  2. Codex に実装させる  →  3. 実装を確認する  →  4. バージョンを更新する  →  5. コミットする
+```
+
+各ステップは前のステップの完了を前提にする。**ステップを飛ばさない。** 特に 1 を飛ばして Codex を呼ばないこと。設計判断が残らず、レビューの基準も失われる。
+
+ホスト側（`Assets/Scripts/` など、パッケージを利用するだけのコード）の変更にはこのフローを使わない。通常どおり直接実装する。
+
+---
+
+## 1. 設計書を書く
+
+`Documentation/Designs/<機能名>.md` を作成する。命名は PascalCase（例: `EventBus.md`、`SceneTransitionEffect.md`）。
+
+書く前に必ず読む:
+
+- `Documentation/DesignPhilosophy.md` — レイヤー、依存方向、公開範囲の判断基準。特に `## クラス設計` と `## 公開APIとバージョニング`
+- `Documentation/CodeGuidelines.md` `## 名前空間` — 配置先の決定に必要
+
+設計書の構成:
+
+```markdown
+# <機能名>
+
+## 目的
+何を解決するか。既存の何では足りないか。
+
+## 公開API
+利用側から見えるシグネチャ。Facade のメソッド、Value Object、例外、interface。
+`public` にする根拠を DesignPhilosophy の「公開範囲」に照らして書く。
+
+## ファイル構成
+新規・変更するファイルのパスと名前空間。`Internal/` の内外を明示する。
+
+## 依存方向
+どのレイヤーに属し、何を参照するか。Core → Runtime → Editor の向きを崩していないこと。
+
+## エラー処理
+通常起こり得る失敗（戻り値・Try pattern）と、不変条件違反（例外）の区別。
+
+## 影響範囲
+既存の公開API・シリアライズ形式への影響。互換性を壊す場合は移行方法。
+
+## 動作確認手順
+Play Mode で何をどう確認すれば成功と言えるか。期待するログや状態。
+
+## バージョン判断
+破壊的変更=メジャー / 後方互換な追加=マイナー / 実装のみ=パッチ のどれか。理由も書く。
+```
+
+設計書は実装後も設計判断の記録として残す。破棄しない。
+
+**設計書ができたら、実装へ進む前にユーザーへ提示して合意を取る。**
+
+---
+
+## 2. Codex に実装させる
+
+`codex` は PATH に無いため、実行ファイルを解決してから呼ぶ（インストール先のディレクトリ名は更新で変わるので固定しない）。
+
+作業ルート（`-C`）は**ワークスペースのルート**にする。Codex が `Documentation/` の規約と `Assets/SymphonyFrameWork/` のソースの両方を読めるようにするため。
+
+```powershell
+$exe = (Get-ChildItem "$env:LOCALAPPDATA\OpenAI\Codex\bin\*\codex.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
+& $exe exec -s workspace-write -C "C:\Sinfonia Studio\SymphonyFrameworkWorkspace" "<プロンプト>"
+```
+
+実装は数分以上かかるため、**`run_in_background: true` で実行する**こと。前景で走らせるとタイムアウトする。
+
+### プロンプトのテンプレート
+
+設計書の中身をコマンドラインへ展開せず、パスを渡して Codex に読ませる。
+
+```text
+Documentation/Designs/<機能名>.md の設計に従って実装してください。
+
+必ず先に読むもの:
+- Documentation/CodeGuidelines.md（命名、書式、メンバー順、XMLドキュメント、非同期処理、Unity固有ルール）
+- Documentation/DesignPhilosophy.md（レイヤー、依存方向、公開範囲）
+- Documentation/CONTRIBUTING.md の「2. .metaファイルの扱い」と「3. 文字コードと改行」
+
+制約:
+- 変更してよいのは Assets/SymphonyFrameWork/ 配下だけ。それ以外のファイルは触らない。
+- .cs は UTF-8 BOM付きで保存する。
+- .meta は生成しない。手書きもしない。新規ファイルの .meta は後で Unity Editor に生成させる。
+- package.json と CHANGELOG.md は変更しない。バージョン更新は別ステップで行う。
+- 設計書に書かれていない public API を追加しない。迷ったら internal にする。
+- Runtime/ と Core/ から UnityEditor を参照しない。
+
+実装が完了したら、追加・変更したファイルのパスを一覧で報告してください。
+```
+
+### オプション
+
+| 用途 | オプション |
+| --- | --- |
+| 最終メッセージをファイルへ保存 | `-o <ファイルパス>` |
+| 進行をJSONLで取得 | `--json` |
+| セッションを保存しない | `--ephemeral` |
+| モデルを変える | `-m <モデル名>`（既定は `~/.codex/config.toml` の設定） |
+
+`-s workspace-write` はファイル書き込みに必須。`--dangerously-bypass-approvals-and-sandbox` は使わない。
+
+---
+
+## 3. 実装を確認する
+
+Codex の報告を鵜呑みにしない。**必ず差分を自分で読む。**
+
+1. **差分レビュー** — `git -C "Assets/SymphonyFrameWork" status` と `git -C "Assets/SymphonyFrameWork" diff` で全変更を確認する。設計書に無い変更、範囲外のファイル、`public` の増加を特に見る。
+2. **規約チェック** — `Documentation/CodeGuidelines.md` の `## レビュー用チェックリスト` を通す。名前空間とフォルダの一致、`Internal/` の使い分け、XMLドキュメント、CancellationToken の伝播、登録と解除の対。
+3. **コンパイル** — `uloop-clear-console` → `uloop-compile` → `uloop-get-logs`。エラー0件、意図しない警告なし。
+4. **ランタイム確認** — `uloop-control-play-mode` で設計書の「動作確認手順」を実行し、`uloop-get-logs` で期待値と照合する。**Domain Reload が無効なので、Play Mode の開始・終了を2回繰り返し、static 状態のゴースト参照が残らないことを確認する。**
+5. **`.meta` の生成** — 新規ファイルを追加した場合、`.meta` は Unity Editor がフォーカスを得たときに生成される。`uloop-focus-window` を使うか、ユーザーへ依頼する。`git status` で `.cs` と `.meta` が対で揃っていることを確認してからコミットへ進む。
+
+問題があれば Codex へ差し戻す（同じ `codex exec` に修正内容を渡す）か、軽微なら自分で直す。**設計書と実装が食い違った場合は、どちらが正しいかをユーザーに確認する。**
+
+---
+
+## 4. バージョンを更新する
+
+`Assets/SymphonyFrameWork/package.json` の `version` と `CHANGELOG.md` の見出しを**同時に**更新する。SemVer の判断は設計書の「バージョン判断」と `Documentation/DesignPhilosophy.md` の `### バージョニング` に従う。
+
+CHANGELOG の形式:
+
+```markdown
+## [x.y.z] - YYYY-MM-DD
+### Add
+- 追加したものと、それが何を解決するか。
+
+### Change
+- 変えた内容と、利用側への影響（影響がないならその理由）。
+```
+
+見出しは `Add` / `Change` / `Fix` / `Deprecated` / `Breaking`。`Breaking` と `Deprecated` には**移行方法を必ず書く**。「何をしたか」だけでなく「なぜそうしたか」「利用側にどう影響するか」まで書く。
+
+公開APIを変更した場合は、`Documentation/CONTRIBUTING.md` の `## 6. 変更に応じて同時に更新するもの` の表にあるファイル（`README.md`、`AGENTS.md`、該当する Sample）も同じ変更内で更新する。
+
+---
+
+## 5. コミットする
+
+submodule と親リポジトリの2段階。**順序を守る。**
+
+1. submodule で作業ブランチを切る（未作成なら）
+   ```
+   git -C "Assets/SymphonyFrameWork" switch -c feature/<機能名>
+   ```
+2. submodule でコミット
+   ```
+   git -C "Assets/SymphonyFrameWork" add -A
+   git -C "Assets/SymphonyFrameWork" commit -m "[add]<日本語の要約>"
+   ```
+   prefix は `[add]` / `[update]` / `[fix]`。prefix と本文の間にスペースを入れない。メッセージは日本語。
+3. submodule を push する。**push しないまま親の gitlink を更新すると、他の開発者が解決できない参照になる。**
+4. 親リポジトリで gitlink と、設計書（`Documentation/Designs/<機能名>.md`）をコミットする。
+
+`.meta` の追加は対応する `.cs` と同じコミットに含める。1コミットは1つの意図にまとめる。
+
+**コミットとpushはユーザーの指示があってから行う。** 勝手に実行しない。
