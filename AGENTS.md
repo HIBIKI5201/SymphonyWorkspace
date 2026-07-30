@@ -8,7 +8,7 @@
 
 | やること | 読むもの |
 | --- | --- |
-| パッケージ本体（`Assets/SymphonyFrameWork/` の `Runtime/` `Editor/` `Core/`）に**機能を追加・変更する** | [.claude/skills/implement/SKILL.md](./.claude/skills/implement/SKILL.md)（`/implement`）。設計書 → Codex による実装 → 確認 → バージョン更新 → コミットの一連のフロー |
+| パッケージ本体（`Assets/SymphonyFrameWork/` の `Runtime/` `Editor/` `Core/`）に**機能を追加・変更する** | [.claude/skills/implement/SKILL.md](./.claude/skills/implement/SKILL.md)（`/implement`）。設計書 → Codex による実装 → 確認 → バージョン更新 → コミット → 振り返り の一連のフロー |
 | パッケージ本体のソースを修正する（小さな修正、上記フローに乗らないもの） | [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md)。コードを書く前に [Documentation/CodeGuidelines.md](./Documentation/CodeGuidelines.md)、型や名前空間を新設する前に [Documentation/DesignPhilosophy.md](./Documentation/DesignPhilosophy.md) |
 | パッケージを**使う**コードをホスト側（`Assets/Scripts/` など）に書く | [Assets/SymphonyFrameWork/AGENTS.md](./Assets/SymphonyFrameWork/AGENTS.md)。機能一覧とクイックスタートは [Assets/SymphonyFrameWork/README.md](./Assets/SymphonyFrameWork/README.md) |
 | ホストプロジェクトの設定・シーン・アセットを触る | このファイル |

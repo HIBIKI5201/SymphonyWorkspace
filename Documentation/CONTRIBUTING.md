@@ -23,7 +23,7 @@
 パッケージ本体へ機能を追加・変更する場合は、次のフローを踏みます。手順の詳細は [`.claude/skills/implement/SKILL.md`](../.claude/skills/implement/SKILL.md)（Claude Code からは `/implement`）にあります。
 
 ```text
-1. 設計書を書く  →  2. Codex に実装させる  →  3. 実装を確認する  →  4. バージョンを更新する  →  5. コミットする
+1. 設計書を書く  →  2. Codex に実装させる  →  3. 実装を確認する  →  4. バージョンを更新する  →  5. コミットする  →  6. 振り返る
 ```
 
 設計書は [`Documentation/Designs/`](./Designs/) に機能ごとの1ファイルとして置き、実装後も設計判断の記録として残します。既存コードの小さな修正や、ホスト側（`Assets/Scripts/` など）のコードにはこのフローを使いません。
