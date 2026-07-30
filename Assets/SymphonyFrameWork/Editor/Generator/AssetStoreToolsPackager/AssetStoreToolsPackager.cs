@@ -314,7 +314,7 @@ namespace SymphonyFrameWork.Editor
                 // AssetStoreToolsは除外して依存関係を追う
                 if (!string.IsNullOrEmpty(normalizedExcludedRootPath)
                     && (path.Equals(normalizedExcludedRootPath, StringComparison.Ordinal)
-                       || path.StartsWith(normalizedExcludedRootPath + "/", StringComparison.Ordinal)))
+                        || path.StartsWith(normalizedExcludedRootPath + "/", StringComparison.Ordinal)))
                 {
                     continue;
                 }
