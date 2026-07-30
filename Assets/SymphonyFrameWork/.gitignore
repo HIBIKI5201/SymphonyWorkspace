@@ -1,8 +1,8 @@
 # --- AI agent / local dev tooling (not part of the shipped package) ---
 .claude/
 .agents/
-# CLAUDE.md はCONTRIBUTING.md／AGENTS.mdへの案内だけを持つClaude Code固有ファイル。
-# ルールの実体は追跡対象のドキュメント側にあるため、ここでは共有しない。
+# CLAUDE.md はClaude Code固有のローカルファイル。利用者向けの案内はAGENTS.md、
+# 本体開発の規約は開発用ワークスペース側にあるため、ここでは共有しない。
 /CLAUDE.md
 /CLAUDE.md.meta
 

@@ -1,9 +1,0 @@
-﻿<Solution>
-  <Project Path="SymphonyFrameWork.csproj" />
-  <Project Path="SymphonyFrameWork.Editor.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
-  <Project Path="SymphonyFrameWork.Core.csproj" />
-  <Project Path="Assembly-CSharp-firstpass.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
-  <Project Path="SymphonyFrameWork.Enum.csproj" />
-</Solution>

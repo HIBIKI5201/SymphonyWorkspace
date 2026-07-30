@@ -3,7 +3,7 @@
 Unity プロジェクトで繰り返し必要になる、シーン遷移、サービス管理、セーブデータ、オーディオ、ポーズ、デバッグ機能をまとめたゲーム開発向けフレームワークです。
 
 - 対応 Unity: **Unity 6（6000.0）以降**
-- 現在のバージョン: **2.4.0**
+- 現在のバージョン: **2.4.3**
 - ライセンス: **MIT**
 
 ## 主な機能
@@ -290,7 +290,6 @@ Runtime/    ビルドに含まれるシステム、Component、Utility、属性
   */Internal/ 各フォルダのinternalな実装（利用側から使う型はInternal/の外にある）
 Editor/     設定画面、管理ウィンドウ、Drawer、Generator
 Samples/    利用例
-Documentation~/ 開発向けドキュメント（末尾の~によりUnityのインポート対象外）
 ```
 
 ## ドキュメント
@@ -298,9 +297,8 @@ Documentation~/ 開発向けドキュメント（末尾の~によりUnityのイ�
 - [Symphony Framework Document](https://lying-foxglove-81a.notion.site/Symphony-Framework-Document-19b7c2c6cc02806b9b97cb8a97c9f11a?pvs=74)
 - [変更履歴](./CHANGELOG.md)
 - [AGENTS.md（AIエージェント向け利用ガイド）](./AGENTS.md)
-- [設計思想](./Documentation~/DesignPhilosophy.md)
-- [コーディングガイドライン](./Documentation~/CodeGuidelines.md)
-- [本体開発ガイド（コントリビューター・AIエージェント向け）](./Documentation~/CONTRIBUTING.md)
+
+本体開発（コントリビューター・AIエージェント）向けの作業手順、コーディングガイドライン、設計思想は、開発用ワークスペースリポジトリ [SymphonyWorkspace](https://github.com/HIBIKI5201/SymphonyWorkspace) の `Documentation/` にあります。
 
 ## コントリビューター
 

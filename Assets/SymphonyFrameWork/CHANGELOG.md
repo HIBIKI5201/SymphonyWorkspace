@@ -1,11 +1,17 @@
 # Changelog
 
+## [2.4.3] - 2026-07-31
+### Change
+- 本体開発向けのドキュメント（`Documentation~/CONTRIBUTING.md`、`CodeGuidelines.md`、`DesignPhilosophy.md`）を、開発用ワークスペースリポジトリ [SymphonyWorkspace](https://github.com/HIBIKI5201/SymphonyWorkspace) の `Documentation/` へ移設。本パッケージはそのワークスペースへ submodule として組み込まれて開発されるようになり、Unityプロジェクト・検証環境・開発手順はワークスペース側が持つ責務になったため。このリポジトリには**パッケージ利用者向けの内容だけ**を残し、`Documentation~/` は削除した。本体開発ドキュメントの所在は README の「ドキュメント」節が案内する。
+- `AGENTS.md` から「本体を変更する立場か、利用する立場か」を読者に判定させる前置きと、本体開発者向けの注意書きを削除。本ファイルは利用者向けの内容のみになった。記載しているAPI・作法・検証手順に変更はない。
+- `README.md` の「ドキュメント」節から設計思想・コーディングガイドライン・本体開発ガイドへのリンクを削除し、ワークスペースリポジトリへの案内に置き換え。あわせて `package.json` と乖離していたバージョン表記を修正した。
+
 ## [2.4.2] - 2026-07-31
 ### Change
 - `SymphonyOrchestrator` の管理オブジェクトを、実行時に生成する専用の `SymphonySystem` シーンからUnity標準の `DontDestroyOnLoad` に変更。専用シーンの生成・待機とScene Loader側の除外処理が不要になり、`LoadSceneMode.Single` 相当の遷移でもフレームワークのランタイム状態をUnity標準の永続化機構で保持する。公開API、設定アセット、セーブデータ形式の変更はない。
 
 ## [2.4.1] - 2026-07-30
-Save Systemの公開範囲を、DesignPhilosophy.mdの[公開範囲](./Documentation~/DesignPhilosophy.md#公開範囲)へ明記した「サブシステムの機能はすべてFacade経由で呼び出す」原則に合わせました。Facade（`SaveDataRegistry`）以外の公開型から機能を起動できた経路を塞ぎ、Facade以外の`public`をenum、基底クラス、Value Object、例外、Inspector属性だけに揃えます。
+Save Systemの公開範囲を、DesignPhilosophy.mdの[公開範囲](https://github.com/HIBIKI5201/SymphonyWorkspace/blob/main/Documentation/DesignPhilosophy.md#公開範囲)へ明記した「サブシステムの機能はすべてFacade経由で呼び出す」原則に合わせました。Facade（`SaveDataRegistry`）以外の公開型から機能を起動できた経路を塞ぎ、Facade以外の`public`をenum、基底クラス、Value Object、例外、Inspector属性だけに揃えます。
 
 `SaveDataRegistry` の `Exists`／`Get`／`LoadAsync`／`SaveAsync`／`DeleteAsync`／`GetEntries`、`SaveDataContent` の継承、`SaveDataLoader`・`PlayerPrefsSaveDataLoader` の継承、`SaveDataRegistryEntryInfo` の読み取りは、いずれもシグネチャを変更していません。README.mdとSampleに載っている使い方だけでセーブデータを扱っていたコードは、修正なしでそのまま動きます。影響を受けるのは、Facadeを介さずローダーや保存日時を直接操作していたコードと、`SaveSystem<TData, TLoader>` を使っていたコードに限られ、いずれもドキュメントで案内していた利用方法ではありません。この影響範囲からメジャーではなくパッチ更新として扱います。シリアライズ形式（`SaveDataContent` のフィールド構成、保存されるJSON、PlayerPrefsのキー）は変更していないため、既存のセーブデータはそのまま読み込めます。
 
@@ -82,7 +88,7 @@ Facadeの名前空間が2.1.0以前へ戻るだけで、クラス名・メンバ
 - `SymphonyConstant.GetFrameworkAbsolutePath()`（Editor専用）: Framework自身の実配置パス（Assets直置き、またはUPM経由のPackages／Library/PackageCache）を絶対パスで解決するユーティリティ
 
 ## [2.0.0] - 2026-07-22
-設計思想（[`DesignPhilosophy.md`](./Documentation~/DesignPhilosophy.md)）の改訂に合わせて、主要サブシステムの公開範囲とアーキテクチャを再構成しました。破壊的変更を含みます。
+設計思想（[`DesignPhilosophy.md`](https://github.com/HIBIKI5201/SymphonyWorkspace/blob/main/Documentation/DesignPhilosophy.md)）の改訂に合わせて、主要サブシステムの公開範囲とアーキテクチャを再構成しました。破壊的変更を含みます。
 
 ### Add
 - `IInjectable<T...>` を実装したシーンのルートオブジェクトへ、`SceneLoader` がロード完了時に自動注入する機能

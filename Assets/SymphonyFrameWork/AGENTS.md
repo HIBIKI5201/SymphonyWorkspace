@@ -1,16 +1,9 @@
 # AGENTS.md — Symphony Framework 利用ガイド（AIエージェント向け）
 
-> **読み始める前に、自分がどちらの立場か確認してください。**
->
-> - **このリポジトリ（`SymphonyFrameWork` パッケージ本体）のソースを変更する場合** → このファイルではなく **[Documentation~/CONTRIBUTING.md](./Documentation~/CONTRIBUTING.md)** を読んでください。以降の内容は利用者側プロジェクト向けであり、「パッケージ本体を編集しない」といった記述を**自分への指示と誤読しないこと**。作業ディレクトリに `package.json`・`CHANGELOG.md`・`Documentation~/` が並んでいるなら、あなたはこちらです。
-> - **このパッケージを導入した別プロジェクトでコードを書く場合** → このまま読み進めてください。
-
-このファイルは、本パッケージ（`SymphonyFrameWork`）をUPM経由で導入した**別プロジェクト**でコードを書くAIエージェント（Claude Code、Cursor等）向けの実務ガイドです。
-パッケージは通常 `Packages/symphonyframework/` （または `Assets/SymphonyFrameWork/` としてソース導入）に配置されます。このファイル自体もそのままそこに同梱されるので、消費者側プロジェクトを触る前に必ず読んでください。
+このファイルは、本パッケージ（`SymphonyFrameWork`）をUPM経由で導入した**プロジェクト**でコードを書くAIエージェント（Claude Code、Cursor等）向けの実務ガイドです。
+パッケージは通常 `Packages/symphonyframework/` （または `Assets/SymphonyFrameWork/` としてソース導入）に配置されます。このファイル自体もそのままそこに同梱されるので、プロジェクトを触る前に必ず読んでください。
 
 人間向けの機能一覧・詳細クイックスタートは [README.md](./README.md) にあります。本ファイルはそれを前提に、**エージェントが実装・検証する際に踏みがちな誤りと、動作確認の手順**に絞っています。
-
-> **本パッケージ自体（`Runtime/` `Editor/` `Core/`）のソースを変更するエージェントへ**: 公開APIに影響する変更を行った場合は、同じ変更の中で本ファイルと `README.md` を必ず更新してください。作業手順は [Documentation~/CONTRIBUTING.md](./Documentation~/CONTRIBUTING.md)、コードのルールは [Documentation~/CodeGuidelines.md](./Documentation~/CodeGuidelines.md) を参照してください。コンシューマー側プロジェクトでこのパッケージを利用するだけのエージェントはこの節を気にする必要はありません。
 
 ## 0. 最初に確認すること
 
