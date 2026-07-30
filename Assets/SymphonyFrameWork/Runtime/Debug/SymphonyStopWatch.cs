@@ -16,8 +16,8 @@ namespace SymphonyFrameWork.Debugger
         /// <summary>
         ///     指定された文字列のストップウォッチを計測開始する
         /// </summary>
-        /// <param name="id"></param>
-        /// <param name="text"></param>
+        /// <param name="id"> 計測を識別する一意なID。 </param>
+        /// <param name="text"> 計測結果の前に表示する文字列。 </param>
         [Conditional("UNITY_EDITOR")]
         public static void Start(string id, string text = "time is")
         {
@@ -30,7 +30,7 @@ namespace SymphonyFrameWork.Debugger
         /// <summary>
         ///     IDのタイマーを停止しログに出力
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="id"> 停止する計測のID。 </param>
         [Conditional("UNITY_EDITOR")]
         public static void Stop(string id)
         {

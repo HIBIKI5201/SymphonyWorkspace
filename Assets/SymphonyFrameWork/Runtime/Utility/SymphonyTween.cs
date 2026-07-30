@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using SymphonyFrameWork.Debugger;
+using SymphonyFrameWork.Debugger.Logger;
 using SymphonyFrameWork.System;
 using UnityEngine;
 
@@ -16,13 +16,13 @@ namespace SymphonyFrameWork.Utility
         ///     指定した時間の間、AnimationCurveかLerpな曲線で指定した範囲を毎フレーム実行する
         ///     curveを指定した場合はCurveで、指定しないかnullの場合はLerpで実行される
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T"> 補間する値の型。 </typeparam>
         /// <param name="s">スタートの値</param>
         /// <param name="action">実行内容</param>
         /// <param name="e">エンドの値</param>
         /// <param name="d">長さ</param>
         /// <param name="curve">曲線を決める（xの大きさで正規化される）</param>
-        /// <param name="token"></param>
+        /// <param name="token"> Tweenを中断するためのトークン。 </param>
         public static async Task Tweening<T>(T s, Action<T> action, T e, float d,
             AnimationCurve curve = null,
             CancellationToken token = default) where T : struct
@@ -41,7 +41,7 @@ namespace SymphonyFrameWork.Utility
 
                 if (result == null)
                 {
-                    SymphonyDebugLogger.DirectLog($"{typeof(T).Name}型は{nameof(Tweening)}に対応していません");
+                    SymphonyDebugLogger.LogDirect($"{typeof(T).Name}型は{nameof(Tweening)}に対応していません");
                     return;
                 }
 
@@ -58,13 +58,13 @@ namespace SymphonyFrameWork.Utility
         ///     指定した時間の間、AnimationCurveかLerpな曲線で指定した範囲を毎フレーム実行する
         ///     curveを指定した場合はCurveで、指定しないかnullの場合はLerpで実行される
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T"> 補間する値の型。 </typeparam>
         /// <param name="s">スタートの値</param>
         /// <param name="action">実行内容</param>
         /// <param name="e">エンドの値</param>
         /// <param name="d">長さ</param>
         /// <param name="curve">曲線を決める（xの大きさで正規化される）</param>
-        /// <param name="token"></param>
+        /// <param name="token"> Tweenを中断するためのトークン。 </param>
         public static async Task PausableTweening<T>(T s, Action<T> action, T e, float d,
             AnimationCurve curve = null,
             CancellationToken token = default) where T : struct
@@ -91,7 +91,7 @@ namespace SymphonyFrameWork.Utility
 
                 if (result == null)
                 {
-                    SymphonyDebugLogger.DirectLog($"{typeof(T).Name}型は{nameof(Tweening)}に対応していません");
+                    SymphonyDebugLogger.LogDirect($"{typeof(T).Name}型は{nameof(Tweening)}に対応していません");
                     return;
                 }
 
@@ -107,11 +107,12 @@ namespace SymphonyFrameWork.Utility
         /// <summary>
         ///     指定した時間の間、Linearな曲線で指定した範囲を毎フレーム実行する
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T"> 線形補間する値の型。 </typeparam>
         /// <param name="s">スタートの値</param>
         /// <param name="action">実行内容</param>
         /// <param name="e">エンドの値</param>
         /// <param name="d">長さ</param>
+        /// <param name="token"> Tweenを中断するためのトークン。 </param>
         [Obsolete("旧型式です。" + nameof(Tweening) + "を使用する事を推奨します")]
         public static async Task TweeningLerp<T>(T s, Action<T> action, T e, float d,
             CancellationToken token = default) where T : struct
@@ -129,7 +130,7 @@ namespace SymphonyFrameWork.Utility
 
                 if (result == null)
                 {
-                    SymphonyDebugLogger.DirectLog($"{typeof(T).Name}型は{nameof(TweeningLerp)}に対応していません");
+                    SymphonyDebugLogger.LogDirect($"{typeof(T).Name}型は{nameof(TweeningLerp)}に対応していません");
                     return;
                 }
 
@@ -146,10 +147,10 @@ namespace SymphonyFrameWork.Utility
         /// <summary>
         ///     対応した型のLerpした値を返す
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="value"></param>
-        /// <param name="t"></param>
-        /// <returns></returns>
+        /// <typeparam name="T"> 線形補間する値の型。 </typeparam>
+        /// <param name="value"> 補間の開始値と終了値。 </param>
+        /// <param name="t"> 0から1までの補間割合。 </param>
+        /// <returns> 対応型の補間値。未対応型の場合はnull。 </returns>
         private static T? LerpValue<T>((T s, T e) value, float t) where T : struct
         {
             //それぞれの型でLerpを実行
@@ -170,11 +171,13 @@ namespace SymphonyFrameWork.Utility
         /// <summary>
         ///     指定した時間の間、Curveに対応した曲線で指定した範囲を毎フレーム実行する
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T"> カーブ補間する値の型。 </typeparam>
         /// <param name="s">スタートの値</param>
         /// <param name="action">実行内容</param>
         /// <param name="e">エンドの値</param>
         /// <param name="d">長さ</param>
+        /// <param name="curve"> 補間割合へ適用するAnimationCurve。 </param>
+        /// <param name="token"> Tweenを中断するためのトークン。 </param>
         [Obsolete("旧型式です。" + nameof(Tweening) + "を使用する事を推奨します")]
         public static async Task TweeningCurve<T>(T s, Action<T> action, T e, float d, AnimationCurve curve,
             CancellationToken token = default) where T : struct
@@ -194,7 +197,7 @@ namespace SymphonyFrameWork.Utility
 
                 if (result == null)
                 {
-                    SymphonyDebugLogger.DirectLog($"{typeof(T).Name}型は{nameof(TweeningCurve)}に対応していません");
+                    SymphonyDebugLogger.LogDirect($"{typeof(T).Name}型は{nameof(TweeningCurve)}に対応していません");
                     return;
                 }
 
@@ -211,11 +214,11 @@ namespace SymphonyFrameWork.Utility
         /// <summary>
         ///     対応した型のCurveのEvaluateした値を返す
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="value"></param>
-        /// <param name="t"></param>
-        /// <param name="curve"></param>
-        /// <returns></returns>
+        /// <typeparam name="T"> カーブ補間する値の型。 </typeparam>
+        /// <param name="value"> 補間の開始値と終了値。 </param>
+        /// <param name="t"> 0から1までの正規化時間。 </param>
+        /// <param name="curve"> 補間割合へ適用するAnimationCurve。 </param>
+        /// <returns> 対応型の補間値。未対応型の場合はnull。 </returns>
         private static T? CurveValue<T>((T s, T e) value, float t, AnimationCurve curve) where T : struct
         {
             //対応する型でカーブの量を掛ける
@@ -235,8 +238,8 @@ namespace SymphonyFrameWork.Utility
         /// <summary>
         ///     カーブのキーをxが0~1になるように正規化する
         /// </summary>
-        /// <param name="curve"></param>
-        /// <returns></returns>
+        /// <param name="curve"> 正規化するAnimationCurve。 </param>
+        /// <returns> 最後のキー時刻が1になるよう正規化した新しいカーブ。 </returns>
         private static AnimationCurve NormalizeCurve(AnimationCurve curve)
         {
             if (curve == null || curve.length == 0)

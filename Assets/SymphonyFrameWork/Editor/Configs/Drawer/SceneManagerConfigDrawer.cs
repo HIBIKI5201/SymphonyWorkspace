@@ -8,11 +8,13 @@ using UnityEngine;
 
 namespace SymphonyFrameWork.Editor
 {
+    /// <summary> SceneManagerConfigのシーン一覧をBuild Settingsから選択可能にする。 </summary>
     [CustomEditor(typeof(SceneManagerConfig))]
-    public class SceneManagerConfigDrawer: UnityEditor.Editor
+    public sealed class SceneManagerConfigDrawer: UnityEditor.Editor
     {
         private string[] _sceneNames;
         
+        /// <summary> Inspector表示時にBuild Settingsのシーン名一覧をキャッシュする。 </summary>
         private void OnEnable()
         {
             _sceneNames = EditorBuildSettings.scenes
@@ -20,6 +22,7 @@ namespace SymphonyFrameWork.Editor
                 .ToArray();
         }
 
+        /// <summary> 起動時シーン設定の専用Inspectorを描画する。 </summary>
         public override void OnInspectorGUI()
         {
             serializedObject.Update();

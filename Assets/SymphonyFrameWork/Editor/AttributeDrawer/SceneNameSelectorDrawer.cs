@@ -7,9 +7,11 @@ using UnityEngine;
 
 namespace SymphonyFrameWork.Editor
 {
+    /// <summary> stringフィールドをBuild Settingsのシーン名選択欄として描画する。 </summary>
     [CustomPropertyDrawer(typeof(SceneNameSelectorAttribute))]
-    public class SceneNameSelectorDrawer : PropertyDrawer
+    public sealed class SceneNameSelectorDrawer : PropertyDrawer
     {
+        /// <summary> Build Settingsのシーン名を選択するポップアップを描画する。 </summary>
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             // string型のみ対応。

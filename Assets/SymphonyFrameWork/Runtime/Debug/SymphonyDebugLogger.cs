@@ -4,42 +4,59 @@ using System.Text;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-namespace SymphonyFrameWork.Debugger
+namespace SymphonyFrameWork.Debugger.Logger
 {
     /// <summary>
     ///     UnityEditor上のみのログを発行する
     /// </summary>
     public static class SymphonyDebugLogger
     {
+        /// <summary> 出力するログの重要度を表す。 </summary>
         public enum LogKind
         {
+            /// <summary> 通常ログとして出力する。 </summary>
             Normal,
+
+            /// <summary> 警告ログとして出力する。 </summary>
             Warning,
+
+            /// <summary> エラーログとして出力する。 </summary>
             Error,
         }
 
         /// <summary>
         ///     直接出力されるデバッグログ。
         /// </summary>
-        /// <param name="text"></param>
+        /// <param name="text"> 出力する文字列。 </param>
+        /// <param name="kind"> 出力するログの重要度。 </param>
+        /// <param name="context"> Consoleから追跡可能にするUnityオブジェクト。 </param>
         [HideInCallstack]
         public static void LogDirect(string text,
             LogKind kind = LogKind.Normal,
             UnityEngine.Object context = null)
         {
-            switch (kind)
+            switch (kind) 
             {
                 case LogKind.Normal: Debug.Log(text, context); break;
                 case LogKind.Warning: Debug.LogWarning(text, context); break;
                 case LogKind.Error: Debug.LogError(text, context); break;
             }
+
+            OnLogDirect?.Invoke(text, kind);
         }
+
+        /// <summary>
+        ///     LogDirectで出力されたログを外部へ通知する内部イベント。
+        ///     ファイル出力など、Runtime層が関知すべきでない後続処理はEditor側の購読者に委ねる。
+        /// </summary>
+        internal static event Action<string, LogKind> OnLogDirect;
 
         /// <summary>
         ///     直接出力されるデバッグログ。
         ///     （エディタのみ）
         /// </summary>
-        /// <param name="text"></param>
+        /// <param name="text"> Editorでのみ出力する文字列。 </param>
+        /// <param name="kind"> 出力するログの重要度。 </param>
         [Conditional("UNITY_EDITOR")]
         [HideInCallstack]
         public static void LogDirectForEditor(string text, LogKind kind = LogKind.Normal)
@@ -52,9 +69,10 @@ namespace SymphonyFrameWork.Debugger
         /// <summary>
         ///     追加されたメッセージをログに出力する。
         /// </summary>
-        /// <param name="kind"></param>
-        /// <param name="text"></param>
-        /// <param name="clearText"></param>
+        /// <param name="kind"> 出力するログの重要度。 </param>
+        /// <param name="text"> 蓄積済み文字列の末尾へ追加する文字列。 </param>
+        /// <param name="clearText"> 出力後に蓄積文字列を消去する場合はtrue。 </param>
+        /// <param name="context"> Consoleから追跡可能にするUnityオブジェクト。 </param>
         [HideInCallstack]
         public static void LogText(LogKind kind = LogKind.Normal,
             string text = null,
@@ -78,9 +96,10 @@ namespace SymphonyFrameWork.Debugger
         ///     追加されたメッセージをログに出力する。
         ///     （エディタのみ）
         /// </summary>
-        /// <param name="kind"></param>
-        /// <param name="text"></param>
-        /// <param name="clearText"></param>
+        /// <param name="kind"> 出力するログの重要度。 </param>
+        /// <param name="text"> 蓄積済み文字列の末尾へ追加する文字列。 </param>
+        /// <param name="clearText"> 出力後に蓄積文字列を消去する場合はtrue。 </param>
+        /// <param name="context"> Consoleから追跡可能にするUnityオブジェクト。 </param>
         [Conditional("UNITY_EDITOR")]
         [HideInCallstack]
         public static void LogTextForEditor(LogKind kind = LogKind.Normal,
@@ -96,7 +115,7 @@ namespace SymphonyFrameWork.Debugger
         /// <summary>
         ///     ログのテキストにメッセージを追加する。
         /// </summary>
-        /// <param name="text"></param>
+        /// <param name="text"> 蓄積する文字列。 </param>
         public static void AddText(string text)
         {
             if (string.IsNullOrEmpty(text)) return;
@@ -115,7 +134,7 @@ namespace SymphonyFrameWork.Debugger
         ///     ログのテキストにメッセージを追加する。
         ///     （エディタのみ）
         /// </summary>
-        /// <param name="text"></param>
+        /// <param name="text"> Editorでのみ蓄積する文字列。 </param>
         [Conditional("UNITY_EDITOR")]
         public static void AddTextForEditor(string text)
         {
@@ -127,7 +146,7 @@ namespace SymphonyFrameWork.Debugger
         /// <summary>
         ///     追加されたメッセージを削除し新しくする。
         /// </summary>
-        /// <param name="text"></param>
+        /// <param name="text"> 初期値として新たに蓄積する文字列。 </param>
         public static void NewText(string text = null)
         {
             // ビルダーを破棄する。
@@ -153,8 +172,8 @@ namespace SymphonyFrameWork.Debugger
         ///     コンポーネントがnullだった場合に警告を表示する。
         ///     戻り値にnullだったかを返す。
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="object"></param>
+        /// <typeparam name="T"> nullを確認する参照型。 </typeparam>
+        /// <param name="object"> nullを確認する対象。 </param>
         /// <returns>nullならtrue、nullではないならfalse</returns>
         [HideInCallstack]
         public static bool LogAndCheckComponentNull<T>(this T @object)
@@ -176,7 +195,8 @@ namespace SymphonyFrameWork.Debugger
         /// <summary>
         ///     エディタ上でのみ出力されるデバッグログ
         /// </summary>
-        /// <param name="text"></param>
+        /// <param name="text"> Editorでのみ出力する文字列。 </param>
+        /// <param name="kind"> 出力するログの重要度。 </param>
         [Obsolete("この機能は旧型式です。" + nameof(LogDirect) + "を使用してください)")]
         [Conditional("UNITY_EDITOR")]
         public static void DirectLog(string text, LogKind kind = LogKind.Normal)
@@ -202,8 +222,8 @@ namespace SymphonyFrameWork.Debugger
         /// <summary>
         ///     コンポーネントだった場合に警告を表示する
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="component"></param>
+        /// <typeparam name="T"> 確認するComponentの型。 </typeparam>
+        /// <param name="component"> nullを確認するComponent。 </param>
         [Obsolete("この機能は旧型式です。" + nameof(LogAndCheckComponentNull) + "を使用してください。")]
         [Conditional("UNITY_EDITOR")]
         public static void CheckComponentNull<T>(this T component) where T : Component
@@ -213,6 +233,7 @@ namespace SymphonyFrameWork.Debugger
 #endif
         }
 
+        /// <summary> Componentが有効か確認し、nullの場合は警告を出力する旧API。 </summary>
         [Obsolete("この機能は安全性が保障されていません。" + nameof(LogAndCheckComponentNull) + "を使用してください")]
         public static bool IsComponentNotNull<T>(this T component) where T : Component
         {

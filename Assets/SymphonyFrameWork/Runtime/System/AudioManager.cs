@@ -1,7 +1,11 @@
-﻿using SymphonyFrameWork.Config;
-using SymphonyFrameWork.Debugger;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+
+using SymphonyFrameWork.Debugger.Logger;
+using SymphonyFrameWork.Exceptions;
+using SymphonyFrameWork.Orchestrator;
+
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -14,17 +18,26 @@ namespace SymphonyFrameWork.System
     {
         private static AudioManagerConfig _config;
         private static GameObject _instance;
+        private static bool _isInitialized;
 
         private static
             Dictionary<string, AudioSettingData> _audioDict = new();
 
         private struct AudioSettingData
         {
+            /// <summary> 対応するAudioMixerGroup。 </summary>
             public readonly AudioMixerGroup Group;
+
+            /// <summary> グループの再生を担当するAudioSource。 </summary>
             public readonly AudioSource Source;
+
+            /// <summary> 音量制御に使用する公開パラメーター名。 </summary>
             public readonly string ExposedName;
+
+            /// <summary> AudioMixerから取得した初期音量。 </summary>
             public readonly float? OriginalVolume;
 
+            /// <summary> ミキサーグループに対応する再生元と初期音量を保持する。 </summary>
             public AudioSettingData(AudioMixerGroup group, AudioSource source, string exposedName, float? originalVolume)
             {
                 Group = group;
@@ -34,25 +47,33 @@ namespace SymphonyFrameWork.System
             }
         }
 
-        internal static void Initialize()
+        /// <summary> Configを受け取り、遅延生成されるランタイム状態を初期化する。 </summary>
+        /// <param name="config"> オーディオミキサーとグループ設定。 </param>
+        internal static void Initialize(AudioManagerConfig config)
         {
+            _isInitialized = false;
             _instance = null;
             _audioDict = null;
-            _config = SymphonyConfigLocator.GetConfig<AudioManagerConfig>();
+            _config = config;
+            _isInitialized = true;
         }
 
+        /// <summary> AudioSourceを所有するシステムオブジェクトを必要な場合だけ生成する。 </summary>
         private static void CreateInstance()
         {
             if (_instance is not null) return;
 
             var instance = new GameObject(nameof(AudioManager));
 
-            SymphonyCoreSystem.MoveObjectToSymphonySystem(instance);
+            SymphonyOrchestrator.PreserveObject(instance);
             _instance = instance;
         }
 
+        /// <summary> Configに定義されたミキサーグループごとのAudioSourceを遅延生成する。 </summary>
         private static void AudioSourceInitialize()
         {
+            EnsureInitialized();
+
             if (_audioDict != null)
             {
                 return;
@@ -121,28 +142,32 @@ namespace SymphonyFrameWork.System
                 }
             }
 
-            SymphonyDebugLogger.TextLog();
+            SymphonyDebugLogger.LogText();
         }
 
         /// <summary>
-        ///     指定したミキサーの音量を割合で変更する
+        ///     指定したミキサーグループの音量を割合で変更する。
         /// </summary>
-        /// <param name="type"></param>
-        /// <param name="value">割合(0~1)</param>
+        /// <param name="name"> Configに登録されたオーディオグループ名。 </param>
+        /// <param name="value"> 0から1までの音量割合。 </param>
         public static void VolumeSliderChanged(string name, float value)
         {
-            AudioSourceInitialize();
+            EnsureInitialized();
 
             if (string.IsNullOrEmpty(name))
             {
-                return;
+                throw new ArgumentException("オーディオグループ名を指定してください。", nameof(name));
             }
 
             if (value < 0 || 1 < value)
             {
-                Debug.LogWarning("入力は無効な値です");
-                return;
+                throw new ArgumentOutOfRangeException(
+                    nameof(value),
+                    value,
+                    "音量割合は0から1の範囲で指定してください。");
             }
+
+            AudioSourceInitialize();
 
             if (!_audioDict.TryGetValue(name, out var data)) return;
 
@@ -159,20 +184,31 @@ namespace SymphonyFrameWork.System
         }
 
         /// <summary>
-        ///     指定されたAudioSourceを取得する
+        ///     指定されたAudioSourceを取得する。
         /// </summary>
-        /// <param name="type"></param>
-        /// <returns></returns>
+        /// <param name="name"> Configに登録されたオーディオグループ名。 </param>
+        /// <returns> 対応するAudioSource。未登録の場合はnull。 </returns>
         public static AudioSource GetAudioSource(string name)
         {
-            AudioSourceInitialize();
+            EnsureInitialized();
 
             if (string.IsNullOrEmpty(name))
             {
-                return null;
+                throw new ArgumentException("オーディオグループ名を指定してください。", nameof(name));
             }
 
+            AudioSourceInitialize();
+
             return _audioDict.TryGetValue(name, out var data) ? data.Source : null;
+        }
+
+        /// <summary> Audio Managerが利用可能な状態か検証する。 </summary>
+        private static void EnsureInitialized()
+        {
+            if (!_isInitialized)
+            {
+                throw new SymphonyNotInitializedException(typeof(AudioManager));
+            }
         }
     }
 }

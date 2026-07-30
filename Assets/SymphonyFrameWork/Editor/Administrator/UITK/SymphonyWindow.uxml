@@ -1,8 +1,10 @@
 <engine:UXML xmlns:engine="UnityEngine.UIElements" noNamespaceSchemaLocation="../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Assets/Scripts/SymphonyFrameWork/SymphonyEditor/Editor/Administrator/UITK/SymphonyWIndow.uss?fileID=7433441132597879392&amp;guid=16c3f611d15eda644b63e276b16e6925&amp;type=3#SymphonyWIndow" />
+    <Style src="project://database/Assets/SymphonyFrameWork/Editor/Administrator/UITK/SymphonyWIndow.uss?fileID=7433441132597879392&amp;guid=16c3f611d15eda644b63e276b16e6925&amp;type=3#SymphonyWIndow"/>
     <engine:ScrollView>
-        <SymphonyFrameWork.Editor.PauseWindow />
-        <SymphonyFrameWork.Editor.ServiceLocatorWindow />
-        <SymphonyFrameWork.Editor.AutoEnumGeneratorWindow />
+        <SymphonyFrameWork.Editor.PauseWindow/>
+        <SymphonyFrameWork.Editor.ServiceLocatorWindow/>
+        <SymphonyFrameWork.Editor.SceneLoaderWindow/>
+        <SymphonyFrameWork.Editor.SaveDataRegistryWindow/>
+        <SymphonyFrameWork.Editor.AutoEnumGeneratorWindow/>
     </engine:ScrollView>
 </engine:UXML>

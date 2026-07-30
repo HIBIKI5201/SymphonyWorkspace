@@ -1,5 +1,5 @@
 ﻿using SymphonyFrameWork.Core;
-using SymphonyFrameWork.Debugger;
+using SymphonyFrameWork.Debugger.Logger;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -40,12 +40,12 @@ namespace SymphonyFrameWork.Editor
         }
 
         private const string ASSETS_PATH = "Assets";
-        private static readonly string STRUCTURE_PATH = EditorSymphonyConstant.FRAMEWORK_PATH() + "/Editor/Generator/FolderGenerate/FolderStructure.md";
+        private static readonly string STRUCTURE_PATH = EditorSymphonyConstant.FRAMEWORK_PATH + "/Editor/Generator/FolderGenerate/FolderStructure.md";
 
         /// <summary>
         ///     パスのフォルダを生成する。
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name="path"> 再帰的に生成するAssets配下のフォルダパス。 </param>
         private static void FolderCreate(string path)
         {
             // フォルダがあれば終了。
@@ -68,7 +68,8 @@ namespace SymphonyFrameWork.Editor
         /// <summary>
         ///     全てのフォルダのパスを生成して返す。
         /// </summary>
-        /// <returns></returns>
+        /// <param name="markdownPath"> フォルダ構成を記述したMarkdownファイルのパス。 </param>
+        /// <returns> Assetsからの相対フォルダパス一覧。 </returns>
         public static string[] LoadFolderPaths(string markdownPath)
         {
             string[] lines = File.ReadAllLines(markdownPath);

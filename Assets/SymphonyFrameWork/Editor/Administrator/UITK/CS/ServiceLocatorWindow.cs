@@ -11,19 +11,22 @@ using UnityEngine.UIElements;
 
 namespace SymphonyFrameWork.Editor
 {
+    /// <summary> Service Locatorの登録状態とデバッグログ設定を表示する管理パネル。 </summary>
     [UxmlElement]
-    public partial class ServiceLocatorWindow : SymphonyVisualElement
+    public sealed partial class ServiceLocatorWindow : SymphonyVisualElement
     {
         private Dictionary<Type, object> _locateDict;
         private FieldInfo _lazyDataField;
         private ListView _locateList;
 
+        /// <summary> 管理パネル用UXMLの非同期初期化を開始する。 </summary>
         public ServiceLocatorWindow() : base(
             SymphonyAdministrator.UITK_UXML_PATH + "ServiceLocatorWindow.uxml",
             InitializeType.None,
             LoadType.AssetDataBase)
         { }
 
+        /// <summary> 登録一覧とService Locatorのログ設定Toggleを構成する。 </summary>
         protected override ValueTask Initialize_S(VisualElement container)
         {
             _lazyDataField = typeof(ServiceLocator).GetField("_data", BindingFlags.Static | BindingFlags.NonPublic);
@@ -73,6 +76,7 @@ namespace SymphonyFrameWork.Editor
             return default;
         }
 
+        /// <summary> ServiceLocator内部の最新登録辞書参照を取得する。 </summary>
         private void UpdateLocateDict()
         {
             if (_lazyDataField == null)
@@ -104,6 +108,7 @@ namespace SymphonyFrameWork.Editor
             }
         }
 
+        /// <summary> 表示時の列挙変更を避けるため、登録辞書のスナップショットを生成する。 </summary>
         private List<KeyValuePair<Type, object>> GetLocateList()
         {
             UpdateLocateDict();
@@ -112,6 +117,7 @@ namespace SymphonyFrameWork.Editor
                 : new List<KeyValuePair<Type, object>>();
         }
 
+        /// <summary> 登録一覧を最新のService Locator状態で再構築する。 </summary>
         public void Update()
         {
             if (_locateList != null)
@@ -121,6 +127,7 @@ namespace SymphonyFrameWork.Editor
             }
         }
 
+        /// <summary> EditorPrefsに保存されるログ設定Toggleを初期化する。 </summary>
         private void InitializeToggle(Toggle toggle, string key, bool defaultValue)
         {
             if (toggle != null)
