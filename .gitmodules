@@ -1,0 +1,4 @@
+[submodule "Assets/SymphonyFrameWork"]
+	path = Assets/SymphonyFrameWork
+	url = https://github.com/HIBIKI5201/SymphonyFramework.git
+	branch = develop
