@@ -1,0 +1,35 @@
+# このドキュメントの概要
+開発者が今後実装を検討している機能についての覚書き
+
+## モジュールドキュメント
+Runtimeの各モジュールごとにドキュメントを配置する。
+現在はREADMEにほぼ全てのドキュメントがあるが、これはAIのコンテキストの効率が悪く、ユーザーの可読性も悪いので、それぞれのモジュールごとにドキュメントを分離する。
+
+## ログをDebugger経由に
+フレームワーク内の全てのログをSymphonyLoggerを使用するようにして、フレームワーク内のログをLog.txtに残すようにする。
+そのためにLoggerにLogExceptionも実装する。
+
+## デバッグHUDの操作設定
+デバッグHUDは使用された時に自動で表示されるが、これを変更し、特定のキーを押された時に表示されるようにする。
+キーの設定はデフォルトはShift+D+Pで、SettingProviderで変更できるようにする。
+変更の際はInputActionで色々なプラットフォーム向けに設定できるようにする。
+
+## Codex、Claude、Geminiのskill統合
+uLoopCLIのスキルはそれぞれに生成されるため、同じスキルが複数ある。
+またimplementはClaudeにしかないため、これを統合し、各AIのスキルはそれのロケーターにする。
+
+## Testを追加
+フレームワーク内のあらゆる機能のTestを行えるようにする。
+
+## AGENTS.mdの改変
+フレームワークのAGENTSはテキスト数が多く、必ず読むものとしては量が多い
+これを分割して、AGENTSはドキュメントの導線にする。
+これはREADMEとAGENTSで重複した内容が出てしまう問題などへも対処したい意図がある。
+
+## Component系とInterface系は、そのモジュールに移行する
+SymphonyLocateやIInjectableはSystem/ServiceLocatorに移動する。
+IInitializeAsyncはSystem/SceneLoaderに移動する。
+モジュールに帰属しないものは残す。
+
+## Systemフォルダ名をServiceフォルダに変更
+Systemという名前は大雑把すぎるので、Serviceフォルダに変更する。
