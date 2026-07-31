@@ -1,5 +1,7 @@
 # SymphonyAwaitableRelease
 
+> **この設計書の判断1（テストをフレームワークの外へ置く）は後に覆した。** 2.11.0 でテストをパッケージ内の `Assets/SymphonyFrameWork/Tests/` へ戻し、`InternalsVisibleTo` により `internal` な内部実装も単体テストできるようにしている。以下はその時点での記録として残す。
+
 ## 目的
 
 `SymphonyAwaitable`（`ArchitectureRevision.md` の Phase 2）は実装済みだが、その後2つの方針が決まったため、リリース前に反映する。

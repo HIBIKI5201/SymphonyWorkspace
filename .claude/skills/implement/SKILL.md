@@ -89,7 +89,9 @@ SymphonyFramework 本体（`Assets/SymphonyFrameWork/`）へ機能を追加・�
 ## テストの置き場と種別
 自動テストを書くか。書くなら EditMode と PlayMode のどちらへ、どのパスへ置くか。
 書かないなら理由を書く（モーダルダイアログを伴う、Unity のコールバックに強く依存する等）。
-テストはパッケージではなくワークスペース側の `Assets/Tests/` へ置く。
+テストは**パッケージ内の `Assets/SymphonyFrameWork/Tests/`** へ置く（EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`）。
+`InternalsVisibleTo` によりテストアセンブリから `internal` な内部実装も検証できるため、
+Entity・Service・Registry など公開されない型も単体テストの対象にする。
 
 **何を検証するかだけでなく、どう書くかを1行で書く。** 検証内容だけを書くと、実現不可能な要件に気づけない。
 過去に「PlayModeテストで Play Mode の開始・終了を2回繰り返す」と書いたが、PlayModeテストは

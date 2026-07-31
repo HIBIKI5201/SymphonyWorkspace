@@ -85,7 +85,13 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 
 ### 自動テストについて
 
-**現時点でこのリポジトリに自動テストは存在しません。** テスト用asmdefもテストコードもないため、`uloop-run-tests` は実行できても0件を返します。回帰確認は次の「サンプルによる確認」で行ってください。
+テストは**パッケージ内の `Assets/SymphonyFrameWork/Tests/`** にあります。EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`。
+
+- 両方の asmdef に `"defineConstraints": ["UNITY_INCLUDE_TESTS"]` を付けており、利用者のビルドには含まれません
+- `Runtime/AssemblyInfo.cs` と `Core/AssemblyInfo.cs` がテストアセンブリへ `InternalsVisibleTo` を与えているため、**`internal` な内部実装も単体テストできます**
+- 実行は `uloop-run-tests --test-mode EditMode` と `--test-mode PlayMode`
+
+コードを変更したら、既存テストが全数成功することを確認してください。挙動を変えた場合はテストの追加も検討します。テストで再現できない範囲（モーダルダイアログ、Unityのホストライフサイクルなど）は次の「サンプルによる確認」と手動確認で担保します。
 
 ### サンプルによる確認
 

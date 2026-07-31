@@ -80,7 +80,9 @@ SymphonyFrameWork.Editor ──> SymphonyFrameWork ──> SymphonyFrameWork.Cor
 
 Domain Reload が無効なため、**Play Modeの開始・終了を2回繰り返し、static状態のゴースト参照が残らないことを確認する**のが定番のチェックです。
 
-**自動テストは現時点で0件です。** テスト用asmdefもテストコードも存在せず、`uloop-run-tests` は実行できても0件を返します。回帰確認は `Assets/SymphonyFrameWork/Samples/Runtime/*Sample/` のサンプルシーンで行ってください。
+**テストは `Assets/SymphonyFrameWork/Tests/` にあります**（EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`）。`uloop-run-tests --test-mode EditMode` と `--test-mode PlayMode` で実行します。`InternalsVisibleTo` によりテストアセンブリから `internal` な内部実装も検証できます。
+
+テストで再現できない範囲（モーダルダイアログ、Unityのホストライフサイクル、Play Mode の往復など）は、`Assets/SymphonyFrameWork/Samples/Runtime/*Sample/` のサンプルシーンと手動確認で担保します。
 
 権限設定は `.uloop/settings.permissions.json`（`allowThirdPartyTools: false`、`dynamicCodeSecurityLevel: 1`）にあります。
 

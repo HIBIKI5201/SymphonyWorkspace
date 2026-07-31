@@ -1,5 +1,7 @@
 # RuntimeComposition
 
+> **「テストアセンブリから `internal` へ届かない」という制約は後に解消した。** 2.11.0 でテストをパッケージ内へ戻し、`InternalsVisibleTo` を与えている。この Round で見送った解放順の自動検証は、後から追加できる状態になっている。
+
 ## 目的
 
 `ArchitectureRevision.md` の Phase 3 のうち、**Runtime 側の Composition 集約**を扱う。Round D（Editor 側）の対になる。
