@@ -113,7 +113,7 @@ SymphonyEditorOrchestrator ──> Editor modules
 
 ### 役割サフィックス
 
-公開エントリポイントだけは一律の役割サフィックスを付けず、利用側が認識するサービス名をそのまま使用します。それ以外の操作や状態を持つclassには役割サフィックスを必須とし、中心となるサフィックスは`Orchestrator`、`Service`、`Strategy`、`Query`、`Registry`、`Entity`、`Info`、`Dto`、`ViewModel`、`Component`、`Loader`、`Factory`です。型の種類自体が役割を表すclass／structには`Config`、`Exception`、`Attribute`、`Window`、`Drawer`、`State`、`Operation`、`Content`、`Utility`も既定サフィックスとして認めます。enumにはこれらを終端サフィックスとして使わず、例外なく`Enum`で終えます。
+公開エントリポイントだけは一律の役割サフィックスを付けず、利用側が認識するサービス名をそのまま使用します。それ以外の操作や状態を持つclassには役割サフィックスを必須とし、中心となるサフィックスは`Orchestrator`、`Service`、`Strategy`、`Query`、`Registry`、`Entity`、`Info`、`Dto`、`ViewModel`、`Component`、`Loader`、`Factory`です。型の種類自体が役割を表すclass／structには`Config`、`Exception`、`Attribute`、`Window`、`Drawer`、`State`、`Operation`、`Content`、`Utility`、`Tools`も既定サフィックスとして認めます。enumにはこれらを終端サフィックスとして使わず、例外なく`Enum`で終えます。
 
 `Loader`、`Locator`、`Injector`、`Player`、`Controller`が公開サービス名の一部である場合は維持できます。既存の型名を機械的に置換せず、実際の責務を分割してから命名します。特に`Manager`を`Service`へ、`Data`を`Registry`へ単純置換してUnity APIやGameObject所有を残すことは禁止します。
 

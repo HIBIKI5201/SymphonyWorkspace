@@ -124,6 +124,7 @@ public static bool TryGetScene(string sceneName, out Scene scene)
 | Infrastructureの具象I/O・変換クラス | 対象 + `Loader` | `JsonUtilitySaveDataLoader` |
 | 複雑な生成クラス | 対象 + `Factory` | `ModuleFactory` |
 | 設定用ScriptableObject | 対象 + `Config` | `SceneLoadConfig` |
+| Editor専用の診断・操作ツール群 | 対象 + `Tools` | `SymphonyMcpTools` |
 | method | 動詞から始まるPascalCase | `LoadScene` |
 | property | PascalCase | `InitializeSceneList` |
 | bool property | `Is`、`Has`、`Can` などから始める | `IsResetAndLoadOnPlay` |
