@@ -113,18 +113,40 @@ Play Mode で何をどう確認すれば成功と言えるか。期待するロ�
 
 ## 2. Codex に実装させる
 
-`codex` は PATH に無いため、実行ファイルを解決してから呼ぶ（インストール先のディレクトリ名は更新で変わるので固定しない）。
+**`scripts/codex_runner.py` を使う。** `codex` を直接呼ばない。このラッパーが次を担う。
 
-作業ルート（`-C`）は**ワークスペースのルート**にする。Codex が `Documentation/` の規約と `Assets/SymphonyFrameWork/` のソースの両方を読めるようにするため。
+- **残量チェック** — Codex の残枠が閾値未満なら API を叩かずに `exit 2` で止まる。無駄打ちを防ぐ
+- **タイムアウト** — 既定2700秒で打ち切る。Codex が Unity 再起動などでハングしたまま何時間も止まる事故を防ぐ
+- **プロンプトを stdin で渡す** — 長文の日本語プロンプトでもコマンドライン長と文字化けの影響を受けない
+- **実行ファイルの解決** — `CODEX_BIN` → PATH → `config.toml` → 同梱バイナリの最新、の順で探す
 
-```powershell
-$exe = (Get-ChildItem "$env:LOCALAPPDATA\OpenAI\Codex\bin\*\codex.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
-& $exe exec -s workspace-write -C "C:\Sinfonia Studio\SymphonyFrameworkWorkspace" "<プロンプト>"
+プロンプトはファイルへ書いてから渡す。作業ルート（`--cd`）は**ワークスペースのルート**にする。Codex が `Documentation/` の規約と `Assets/SymphonyFrameWork/` のソースの両方を読めるようにするため。
+
+```bash
+python scripts/codex_runner.py --prompt-file <プロンプトファイル> --cd . --last-message <保存先>
 ```
+
+終了コードで分岐する。
+
+| コード | 意味 | 対応 |
+| --- | --- | --- |
+| 0 | 正常終了 | ステップ3へ進む |
+| 1 | 実行失敗・タイムアウト | **途中まで書き込まれている可能性がある。** `git status` で確認してから判断する |
+| 2 | 残枠不足でスキップ | Codex を待つか、その Round を自分で実装する |
+
+実行前に残量だけ見たい場合:
+
+```bash
+python scripts/codex_runner.py --check-only --json
+```
+
+`--output` を渡すと単一ファイル生成モードになるが、**このフローでは使わない**。1 Round は複数ファイルを横断的に変更するため。
 
 実装は数分以上かかるため、**`run_in_background: true` で実行する**こと。前景で走らせるとタイムアウトする。
 
 **Codex の検証環境はネットワークが遮断されていることがあり、`npx` が `ENOTCACHED` で失敗する場合がある。** そのため Codex が報告するコンパイル結果やテスト件数は環境差を含む。**報告された数値は必ずステップ3で自分で再実行して確認すること。**
+
+**Codex が長時間応答しない場合は打ち切って自分で引き継ぐ。** 実質的な出力が止まってから30分を目安にする。過去に Unity の再起動待ちで3時間半ハングし、その間コンパイルエラーを1件残したままだった事例がある。`codex_runner.py` のタイムアウトが最終的な歯止めになるが、それ以前に気づいたら待たずに止めてよい。
 
 ### プロンプトのテンプレート
 
