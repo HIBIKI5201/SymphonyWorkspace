@@ -25,6 +25,7 @@
 | ディレクトリ | 用途 | 主な制約 |
 | --- | --- | --- |
 | `Core/` | RuntimeとEditorで共有する最小限の基盤と内部ヘルパー | 上位機能へ依存させない。`ReactiveProperty<T>`などの`internal`な型は`Core/AssemblyInfo.cs`の`InternalsVisibleTo`でRuntime／Editorへ公開する |
+| `Core/Editor/` | Editor APIを使う共有基盤（パス解決、Editor向け定数など） | `#if UNITY_EDITOR`で囲む。**Runtimeから参照しない**（Playerビルドで解決できなくなる）。参照してよいのはEditorアセンブリだけ |
 | `Runtime/` | Playerビルドに含まれる機能 | `UnityEditor` を参照しない |
 | `Runtime/System/<Subsystem>/` | サブシステムの公開エントリポイント、公開Component、公開Strategy、Info、Value Object、Enum | 利用側が参照する型だけを直下へ置く |
 | `*/Internal/` | 各フォルダのDomain、Application、Adaptor、View、Infrastructure、Compositionの内部実装 | `internal`なEntity、Service、Registry、Query、Dto、ViewModel、Unity API実装を置く。名前空間には`Internal`を含めない（→ `## 名前空間`） |
@@ -33,6 +34,8 @@
 | `Samples/` | 利用例 | 製品コードから依存しない |
 
 - RuntimeコードからEditor APIを参照しない。Editor専用の`MenuItem`、設定、Inspector処理は`Editor/`側の型へ分離する。`#if UNITY_EDITOR`で囲んでもRuntimeファイルへ`UnityEditor`参照を置く例外は作らない。
+- **`Core`はRuntimeとEditorの両方から使われる共有アセンブリであり、Editor APIを使うこと自体は許容する。** ただし置き場所と参照方向を守る。Editor APIを使う型は`Core/Editor/`へ置き、`#if UNITY_EDITOR`で囲む。その型をRuntimeから参照してはならない。Runtimeが必要とする値は、Editor側のCompositionからRuntimeへ注入する。
+- Editor設定をRuntimeの挙動へ反映する場合は、Runtime側に`internal`な設定値の入れ物を置き、Editorの初期化処理が読み込んで注入する。Runtimeから設定ストア（`EditorPrefs`、`ScriptableSingleton`など）を直接読まない。
 - asmdef間の参照は必要な方向にだけ追加し、循環参照を作らない。
 - パッケージ導入とAssets直置きの両方に対応するパスには、`EditorSymphonyConstant.FRAMEWORK_PATH` を使用する。
 - `Assets/SymphonyFrameWork` や `Packages/symphonyframework` を機能コードへ直接埋め込まない。
