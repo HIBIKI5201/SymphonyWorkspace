@@ -56,9 +56,58 @@ public static string GetPauseJson();
 
 `Editor/Debug/` は既に診断系の置き場になっているため、新しいフォルダは作らない。
 
+### Runtime への変更（`internal` アクセサの追加）
+
+| パス | 追加するもの |
+| --- | --- |
+| `Runtime/System/ServiceLocator/ServiceLocator.cs` | 初期化状態と登録テーブルを読むための get 専用 `internal static` アクセサ |
+| `Runtime/System/SceneLoader/SceneLoader.cs` | 同上（追跡中シーンと Active Scene） |
+| `Runtime/System/PauseManager.cs` | 初期化状態と `IPausable` 購読数を読む get 専用 `internal static` アクセサ |
+| `Runtime/System/SaveSystem/SaveDataRegistry.cs` | 初期化状態を読む get 専用 `internal static` アクセサ（エントリ列挙は既存の `public GetEntries()` を使う） |
+
+いずれも公開APIは増えない。setter と副作用を持たせない。
+
 ## 依存方向
 
-`Runtime/AssemblyInfo.cs` の `[assembly: InternalsVisibleTo("SymphonyFrameWork.Editor")]` が既に存在するため、**Editor から Runtime の `internal` へ直接アクセスできる。リフレクションを使わない。**
+### 前提の訂正: `InternalsVisibleTo` だけでは届かない
+
+当初この設計書は「`InternalsVisibleTo` があるので Editor から Runtime の内部状態へ直接アクセスできる」としていたが、**誤りだった。**
+
+`ServiceLocateData` や `SceneLoadData` という**型**は `internal` だが、それを保持する**フィールドは `private static`** である。
+
+| Facade | 状態フィールド | 可視性 |
+| --- | --- | --- |
+| `ServiceLocator` | `_data` | `private static` |
+| `SceneLoader` | `_data` | `private static` |
+| `PauseManager` | `_pause`、`_isInitialized`、`_pauseEventDictionary` | `private static` |
+| `SaveDataRegistry` | `_loaderResolver` | `private static` |
+
+既存の `internal` 読み取りアクセサも無い。既存の Editor Window 4枚がリフレクションを使っているのは、まさにこの理由による。
+
+### 採る方針: Runtime へ最小限の `internal` 読み取りアクセサを追加する
+
+`DesignPhilosophy.md` の「公開範囲」は、この用途を明示的に認めている。
+
+> Editor拡張やCompositionのためだけに存在するメンバーは、Facade上にあっても`public`にしない。ローダーやManagerなど**内部実装を取り出すアクセサ**、状態のリセット、初期化・注入のフックは`internal`にし、`[assembly: InternalsVisibleTo("SymphonyFrameWork.Editor")]` など明示的なアセンブリ間許可で参照する。
+
+したがって、各 Facade へ **get のみの `internal static` アクセサ**を最小限追加する。リフレクションは使わない。
+
+- **get 専用。** setter を作らない。Editor から状態を書き換える経路は作らない
+- **副作用を持たない。** 遅延初期化や生成を起こさない
+- **公開APIは1つも増えない。** すべて `internal`
+- `SaveDataRegistry.GetEntries()` は既に `public` なので、Save Data は初期化判定のアクセサだけで足りる
+
+```text
+SymphonyMcpTools（Editor / View層のDebugger）
+        │ InternalsVisibleTo 経由で internal アクセサを参照
+        v
+ServiceLocator, SceneLoader, PauseManager, SaveDataRegistry（Runtime）
+        │ private フィールド
+        v
+ServiceLocateData, SceneLoadData 等（Runtime / internal）
+```
+
+この追加も Phase 3 で Adaptor の `Query` / `Info` に置き換わる暫定措置である。
 
 ```text
 SymphonyMcpTools（Editor / View層のDebugger）

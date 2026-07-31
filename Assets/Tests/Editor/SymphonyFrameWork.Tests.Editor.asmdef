@@ -3,6 +3,7 @@
     "rootNamespace": "SymphonyFrameWork.Tests",
     "references": [
         "SymphonyFrameWork",
+        "SymphonyFrameWork.Editor",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [
@@ -12,10 +13,13 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "nunit.framework.dll"
+        "nunit.framework.dll",
+        "Newtonsoft.Json.dll"
     ],
     "autoReferenced": false,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }
