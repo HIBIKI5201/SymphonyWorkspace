@@ -6,10 +6,8 @@
     <File Path="Documentation/CONTRIBUTING.md" />
     <File Path="Documentation/DesignPhilosophy.md" />
   </Folder>
-  <Folder Name="/Documents/FrameworkDocs/">
-    <File Path="Assets/SymphonyFrameWork/Documentation~/CodeGuidelines.md" />
-    <File Path="Assets/SymphonyFrameWork/Documentation~/CONTRIBUTING.md" />
-    <File Path="Assets/SymphonyFrameWork/Documentation~/DesignPhilosophy.md" />
+  <Folder Name="/ToDo/">
+    <File Path="ToDo.txt" />
   </Folder>
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
