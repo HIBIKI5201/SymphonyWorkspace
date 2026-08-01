@@ -8,12 +8,26 @@ description: "設計書を書き、利用中のAIに応じたワーカーが実�
 SymphonyFramework 本体（`Assets/SymphonyFrameWork/`）へ機能を追加・変更するときの標準フロー。
 
 ```text
-1. 設計書を書く  →  2. ワーカーが実装する  →  3. 実装を確認する  →  4. バージョンを更新する  →  5. コミットする  →  6. 振り返る
+1. 設計書を書く  →  2. ワーカーが実装する  →  3. 実装を確認する  →  4. バージョンを更新する  →  5. コミット・PR  →  6. 振り返る
 ```
 
 各ステップは前のステップの完了を前提にする。**ステップを飛ばさない。** 特に 1 を飛ばしてワーカーに実装させないこと。設計判断が残らず、レビューの基準も失われる。
 
 ホスト側（`Assets/Scripts/` など、パッケージを利用するだけのコード）の変更にはこのフローを使わない。通常どおり直接実装する。
+
+---
+
+## Issue 対応は専用ブランチで行う
+
+特定の GitHub Issue に対応する場合は、**設計や実装へ着手する前に**、submodule の `develop` からその Issue 専用のブランチを作る。複数の無関係な Issue を同じブランチで扱わない。
+
+- 命名規則は `feature/<Issue番号>-<短い機能名>`（例: `feature/101-module-docs`）
+- 修正と検証が完了したらブランチを push し、`develop` をベースとする Pull Request を作成する
+- PR 本文には `Issue: #<Issue番号>` を記載し、マージ後に対応する Issue を閉じる
+
+GitHub の自動クローズ用キーワードは、PR のベースがリポジトリの既定ブランチである場合だけ有効になる。現在の既定ブランチは `main` なので、`develop` 向けPRの `Closes #<Issue番号>` では自動クローズされない。既定ブランチを `develop` へ変更した場合は、`Issue: #<Issue番号>` の代わりに `Closes #<Issue番号>` を使う。
+
+Issue が無い機能追加・変更でも、従来どおり `develop` から `feature/<短い機能名>` を作り、`develop` へ Pull Request を作成する。
 
 ---
 
@@ -282,13 +296,13 @@ CHANGELOG の形式:
 
 ---
 
-## 5. コミットする
+## 5. コミットし、Pull Request を作成する
 
 submodule と親リポジトリの2段階。**順序を守る。**
 
-1. submodule で作業ブランチを切る（未作成なら）
+1. submodule が、この Round 専用の作業ブランチになっていることを確認する。特定の Issue へ対応する場合は、着手前に作成したブランチを使う
    ```
-   git -C "Assets/SymphonyFrameWork" switch -c feature/<機能名>
+   git -C "Assets/SymphonyFrameWork" branch --show-current
    ```
 2. submodule でコミット
    ```
@@ -297,7 +311,9 @@ submodule と親リポジトリの2段階。**順序を守る。**
    ```
    prefix は `[add]` / `[update]` / `[fix]`。prefix と本文の間にスペースを入れない。メッセージは日本語。
 3. submodule を push する。**push しないまま親の gitlink を更新すると、他の開発者が解決できない参照になる。**
-4. 親リポジトリで gitlink と、設計書（`Documentation/Designs/<機能名>.md`）をコミットする。
+4. submodule で `develop` 向けの Pull Request を作成する。Issue 対応の場合は、PR 本文に `Issue: #<Issue番号>` を記載する
+5. PR がマージされたら、対応する Issue を閉じる。既定ブランチが `develop` へ変更されている場合は、PR 本文の `Closes #<Issue番号>` による自動クローズを使う
+6. 親リポジトリで gitlink と、設計書（`Documentation/Designs/<機能名>.md`）をコミットする。
 
 `.meta` の追加は対応する `.cs` と同じコミットに含める。1コミットは1つの意図にまとめる。
 

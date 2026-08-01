@@ -116,6 +116,18 @@ uLoopで確認できない範囲は依頼者へ依頼します。変更を報告
 
 `feature/*` → `develop` → `main` の順にPull Requestでマージします。
 
+### Issue に対応するブランチと Pull Request
+
+特定の GitHub Issue に対応する場合は、**設計や実装へ着手する前に**、submodule の `develop` からその Issue 専用のブランチを作ります。複数の無関係な Issue を同じブランチで扱わないでください。
+
+- 命名規則: `feature/<Issue番号>-<短い機能名>`（例: `feature/101-module-docs`）
+- 修正と検証が完了したらブランチを push し、`develop` をベースとする Pull Request を作成する
+- PR 本文へ `Issue: #<Issue番号>` を記載し、PR がマージされたら対応する Issue を閉じる
+
+GitHub の自動クローズ用キーワードは、PR のベースがリポジトリの既定ブランチである場合だけ有効です。現在の既定ブランチは `main` なので、`develop` 向けPRの `Closes #<Issue番号>` では自動クローズされません。既定ブランチを `develop` へ変更した場合は、`Issue: #<Issue番号>` の代わりに `Closes #<Issue番号>` を使用します。
+
+Issue が無い機能追加・変更では、`feature/<短い機能名>` を使用します。
+
 コミットメッセージは **`[prefix]日本語の要約`** の1行形式です（prefixと本文の間にスペースを入れません）。
 
 | prefix | 用途 | 実例 |

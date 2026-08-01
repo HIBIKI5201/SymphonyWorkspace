@@ -24,6 +24,7 @@
 | 既定ブランチ | `dev` | `develop` |
 
 - **git コマンドを実行する前に、どちらのリポジトリが対象かを必ず確認してください。** submodule 側は `git -C "Assets/SymphonyFrameWork" ...` と明示するのが安全です。
+- パッケージの特定の GitHub Issue に対応する場合は、`develop` から Issue 専用の `feature/*` ブランチを作ります。命名とPull Requestの手順は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §5 に従ってください。
 - パッケージのソース変更は **submodule 側でコミットし、push してから**、親リポジトリで gitlink の更新をコミットします。手順の詳細は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §1 と §5 にあります。
 - クローンは `git clone --recurse-submodules`。忘れた場合は `git submodule update --init --recursive`。
 - `Assets/SymphonyFrameWork.meta` は submodule の**外側**にあり、親リポジトリが管理します。**削除しないでください**（利用側プロジェクトのGUID参照が壊れます）。
