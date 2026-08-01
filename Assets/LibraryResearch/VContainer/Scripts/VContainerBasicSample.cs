@@ -45,7 +45,6 @@ namespace LibraryResearch.VContainerSample
         {
             builder.RegisterInstance(settings);
             builder.Register<ICounterService, CounterService>(Lifetime.Singleton);
-            builder.RegisterInstance(this);
             builder.RegisterEntryPoint<VContainerSamplePresenter>();
         }
     }
