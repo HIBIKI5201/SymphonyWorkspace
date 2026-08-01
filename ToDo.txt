@@ -14,7 +14,7 @@ Runtimeの各モジュールごとにドキュメントを配置する。
 キーの設定はデフォルトはShift+D+Pで、SettingProviderで変更できるようにする。
 変更の際はInputActionで色々なプラットフォーム向けに設定できるようにする。
 
-## Codex、Claude、Geminiのskill統合
+## (完了済)Codex、Claude、Geminiのskill統合
 uLoopCLIのスキルはそれぞれに生成されるため、同じスキルが複数ある。
 またimplementはClaudeにしかないため、これを統合し、各AIのスキルはそれのロケーターにする。
 
@@ -27,10 +27,8 @@ implementのCodexCLI使用という記載は、ワーカーという抽象化し
 ## Testを追加
 フレームワーク内のあらゆる機能のTestを行えるようにする。
 
-## AGENTS.mdの改変
-フレームワークのAGENTSはテキスト数が多く、必ず読むものとしては量が多い
-これを分割して、AGENTSはドキュメントの導線にする。
-これはREADMEとAGENTSで重複した内容が出てしまう問題などへも対処したい意図がある。
+## (完了済)AGENTS.mdの改変
+フレームワークの`AGENTS.md`をドキュメント導線と常時ルールへ縮小した。READMEは人間が概要から試せる構成にし、クラス図と構成は`Documentation~/Architecture.md`、AI向けの利用上の注意は`AgentUsage.md`、検証手順は`AgentVerification.md`を正本とする。
 
 ## Component系とInterface系は、そのモジュールに移行する
 SymphonyLocateやIInjectableはSystem/ServiceLocatorに移動する。
@@ -55,3 +53,19 @@ public static T Constractor<T>()
 	);
 }
 みたいな、VContainerのコンストラクタ注入みたいな感じで生成時に自動注入したい。
+
+## シーンブロックを追加する
+本フレームワークは複数のシーンを同時にロードすることを前提としているが、シーン同士の依存関係などを明示的にするために、シーンブロックという概念を追加する。
+シーンブロックは、複数のシーンをまとめてロードするための単位であり、シーン間の依存関係を管理するためのもの。シーンブロックを使用することで、特定のシーンがロードされる前に必要なシーンを確実にロードすることができる。
+シーンブロックはScriptableObjectとして定義され、シーンのリストを保持する。シーンブロックは、ロード時に指定された順序でシーンをロードし、依存関係を解決する。またSRPのレンダーグラフのように、依存の状態によっては同時にロードすることも可能にする。
+例えばA -> B, CとB -> D, Eのような依存関係がある場合、Aをロードする際にBとCを同時にロードし、Bがロードされた後にDとEをロードすることができる。
+
+## ServiceLocatorの自動破棄機能
+ServiceLocatorは、既に同じ型のサービスが登録されている場合、新しいサービスを破棄するようにする。
+しかし、これは旧Singleton管理システムとしての一面であり、現在それを強制するのは間違い。
+なので、RegisterInstanceWithAutoDisposeメソッドを実装し、これが自動破棄の機能を含めたものとして、通常のRegisterInstanceは登録失敗の戻り値を返すだけにする。
+
+## IProgress使用
+シーンロード時などにIProgressを使用して進行状況を表示する。
+C#機能を使用した方が意図が分かりやすい。
+IProgress以外のC#機能を使用できそうなところも精査したい。
