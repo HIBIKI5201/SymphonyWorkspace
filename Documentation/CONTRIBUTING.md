@@ -14,16 +14,16 @@
 | [../AGENTS.md](../AGENTS.md) | ワークスペースの構成、環境設定、自動生成物の区別を知りたいとき |
 | [../Assets/SymphonyFrameWork/AGENTS.md](../Assets/SymphonyFrameWork/AGENTS.md) | 公開APIを変更したとき。更新対象として |
 | [../Assets/SymphonyFrameWork/CHANGELOG.md](../Assets/SymphonyFrameWork/CHANGELOG.md) | 直近の変更の経緯を知りたいとき。記述の粒度の参考にもする |
-| [../.claude/skills/implement/SKILL.md](../.claude/skills/implement/SKILL.md) | 機能を**追加・変更**するとき。設計書からコミットまでの実装フロー |
+| [../.agents/skills/implement/SKILL.md](../.agents/skills/implement/SKILL.md) | 機能を**追加・変更**するとき。設計書からコミットまでの実装フロー |
 
 既存コードの修正だけであれば、このファイルと CodeGuidelines.md で足ります。
 
 ### 機能の追加・変更は実装フローに従う
 
-パッケージ本体へ機能を追加・変更する場合は、次のフローを踏みます。手順の詳細は [`.claude/skills/implement/SKILL.md`](../.claude/skills/implement/SKILL.md)（Claude Code からは `/implement`）にあります。
+パッケージ本体へ機能を追加・変更する場合は、次のフローを踏みます。手順の詳細は [`.agents/skills/implement/SKILL.md`](../.agents/skills/implement/SKILL.md) にあります。Claude Code、Codex、Gemini CLI は同じ正本を利用し、実装ワーカーだけを実行中のAIに応じて切り替えます。
 
 ```text
-1. 設計書を書く  →  2. Codex に実装させる  →  3. 実装を確認する  →  4. バージョンを更新する  →  5. コミットする  →  6. 振り返る
+1. 設計書を書く  →  2. ワーカーが実装する  →  3. 実装を確認する  →  4. バージョンを更新する  →  5. コミットする  →  6. 振り返る
 ```
 
 設計書は [`Documentation/Designs/`](./Designs/) に機能ごとの1ファイルとして置き、実装後も設計判断の記録として残します。既存コードの小さな修正や、ホスト側（`Assets/Scripts/` など）のコードにはこのフローを使いません。
@@ -70,7 +70,7 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 
 ## 4. 検証の方法
 
-このワークスペースには **uLoopMCP**（`io.github.hatayama.uloopmcp`）が導入されており、`.claude/skills/` の `uloop-*` スキルから **Unity Editorのコンパイル・Play Mode・ログ取得をエージェント自身が実行できます**。パッケージ単体を別プロジェクトへ導入した場合はこの手段がないため、そちらの前提で書かれた手順とは異なります。
+このワークスペースには **uLoopMCP**（`io.github.hatayama.uloopmcp`）が導入されており、`.agents/skills/` の `uloop-*` スキルから **Unity Editorのコンパイル・Play Mode・ログ取得をエージェント自身が実行できます**。パッケージ単体を別プロジェクトへ導入した場合はこの手段がないため、そちらの前提で書かれた手順とは異なります。
 
 ### 標準の検証手順
 

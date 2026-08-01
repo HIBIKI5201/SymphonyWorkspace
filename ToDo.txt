@@ -18,6 +18,12 @@ Runtimeの各モジュールごとにドキュメントを配置する。
 uLoopCLIのスキルはそれぞれに生成されるため、同じスキルが複数ある。
 またimplementはClaudeにしかないため、これを統合し、各AIのスキルはそれのロケーターにする。
 
+implementのCodexCLI使用という記載は、ワーカーという抽象化したものにし、各AIごとにワーカーを定義する。
+- ClaudeはCodexCLI
+- Codexは自身
+- GeminiはCodexCLI
+にする。
+
 ## Testを追加
 フレームワーク内のあらゆる機能のTestを行えるようにする。
 
@@ -33,3 +39,19 @@ IInitializeAsyncはSystem/SceneLoaderに移動する。
 
 ## Systemフォルダ名をServiceフォルダに変更
 Systemという名前は大雑把すぎるので、Serviceフォルダに変更する。
+
+## ワークフローにTest実装を義務化
+フレームワークのTestコードを実装することを、実装ワークフローに追加する
+
+## SRDebuggerを参考ライブラリに追加
+DebugHUDはこれを参考にした
+
+## Injector系機能で、ConstractorInject(仮名)を追加する
+public static T Constractor<T>()
+{
+	return new T(
+	ServiceLocator.Get(),
+	ServiceLocator.Get()
+	);
+}
+みたいな、VContainerのコンストラクタ注入みたいな感じで生成時に自動注入したい。

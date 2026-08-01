@@ -8,7 +8,7 @@
 
 | やること | 読むもの |
 | --- | --- |
-| パッケージ本体（`Assets/SymphonyFrameWork/` の `Runtime/` `Editor/` `Core/`）に**機能を追加・変更する** | [.claude/skills/implement/SKILL.md](./.claude/skills/implement/SKILL.md)（`/implement`）。設計書 → Codex による実装 → 確認 → バージョン更新 → コミット → 振り返り の一連のフロー |
+| パッケージ本体（`Assets/SymphonyFrameWork/` の `Runtime/` `Editor/` `Core/`）に**機能を追加・変更する** | [.agents/skills/implement/SKILL.md](./.agents/skills/implement/SKILL.md)。設計書 → ワーカーによる実装 → 確認 → バージョン更新 → コミット → 振り返り の一連のフロー |
 | パッケージ本体のソースを修正する（小さな修正、上記フローに乗らないもの） | [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md)。コードを書く前に [Documentation/CodeGuidelines.md](./Documentation/CodeGuidelines.md)、型や名前空間を新設する前に [Documentation/DesignPhilosophy.md](./Documentation/DesignPhilosophy.md) |
 | パッケージを**使う**コードをホスト側（`Assets/Scripts/` など）に書く | [Assets/SymphonyFrameWork/AGENTS.md](./Assets/SymphonyFrameWork/AGENTS.md)。機能一覧とクイックスタートは [Assets/SymphonyFrameWork/README.md](./Assets/SymphonyFrameWork/README.md) |
 | ホストプロジェクトの設定・シーン・アセットを触る | このファイル |
@@ -67,9 +67,16 @@ SymphonyFrameWork.Editor ──> SymphonyFrameWork ──> SymphonyFrameWork.Cor
 - ホスト側 `Assets/Scripts/` に新しい asmdef を作る場合は、`SymphonyFrameWork` を参照に追加してください。自動生成enumを直接使うなら `SymphonyFrameWork.Enum` も追加します。
 - **`SymphonyFrameWork.asmdef` の `SymphonyFrameWork.Enum` への参照は、`PackageInitializer` がEditor起動時に自動で注入します**（`AssemblyGenerator.AddAsssemblyReference`）。submodule に asmdef の差分が出ても手で戻さないでください。
 
-## 5. 検証（uLoopMCP）
+## 5. AI Skill の管理
 
-このワークスペースには uLoopMCP が導入されており、`.claude/skills/` の `uloop-*` スキルから **Unity Editorのコンパイル・Play Mode・ログ取得をエージェント自身が実行できます**。
+- Skill の正本は `.agents/skills/` に置きます。Codex と Gemini CLI はこの共通パスから直接読みます。
+- Claude Code は `.claude/skills/` のロケーターから正本を読みます。ロケーターを手で編集せず、正本の追加・frontmatter変更後に `python scripts/sync_agent_skill_locators.py` を実行してください。`--check` で同期状態だけを検証できます。
+- uLoop skill を再生成するときは `.agents/skills/` を対象にします（CLIを使う場合は `uloop skills install --agents`）。`.codex/skills/` や `.gemini/skills/` へ個別生成しないでください。
+- Gemini CLI が workspace skill を表示しない場合は、workspace を trust してから `/skills reload` を実行してください。
+
+## 6. 検証（uLoopMCP）
+
+このワークスペースには uLoopMCP が導入されており、`.agents/skills/` の `uloop-*` スキルから **Unity Editorのコンパイル・Play Mode・ログ取得をエージェント自身が実行できます**。
 
 1. `uloop-launch` — Unity Editorが起動していない場合
 2. `uloop-clear-console` — 古いログが結果を隠さないよう先にクリアする
@@ -86,7 +93,7 @@ Domain Reload が無効なため、**Play Modeの開始・終了を2回繰り返
 
 権限設定は `.uloop/settings.permissions.json`（`allowThirdPartyTools: false`、`dynamicCodeSecurityLevel: 1`）にあります。
 
-## 6. やってはいけないこと
+## 7. やってはいけないこと
 
 - 自動生成物（`Assets/Scripts/SymphonyFrameWork/*Enum.cs`、`Assets/Resources/SymphonyFrameWork/*.asset`）を手で編集する。再生成で失われます。
 - `Assets/SymphonyFrameWork/` 配下のアセットを移動・リネームする。`SymphonyAssetProtector` に差し戻されます。

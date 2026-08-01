@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Codex CLI execution wrapper with rate-limit (capacity) protection.
+"""Codex CLI worker wrapper with rate-limit (capacity) protection.
 
-Claude Code から Codex CLI へ実装を委任するためのラッパー。
+Claude Code または Gemini CLI から Codex CLI ワーカーへ実装を委任するためのラッパー。
 実行前に Codex の残枠を確認し、残量が閾値未満なら **API を叩かずに** 終了する。
 
 原案は SymphonyKillChord/scripts/codex_runner.py。
@@ -412,7 +412,7 @@ def _looks_rate_limited(last_msg: Path) -> bool:
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="codex_runner.py",
-        description="残量チェック付きで Codex CLI に実装を委任する。",
+        description="残量チェック付きで Codex CLI ワーカーに実装を委任する。",
     )
     parser.add_argument("prompt", nargs="?", help="Codex に渡すプロンプト")
     parser.add_argument(
