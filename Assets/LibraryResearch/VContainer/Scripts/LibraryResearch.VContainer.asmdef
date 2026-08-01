@@ -1,0 +1,8 @@
+{
+  "name": "LibraryResearch.VContainer",
+  "rootNamespace": "LibraryResearch.VContainerSample",
+  "references": [
+    "VContainer"
+  ],
+  "autoReferenced": true
+}

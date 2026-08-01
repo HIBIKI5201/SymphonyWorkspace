@@ -1,0 +1,8 @@
+{
+  "name": "LibraryResearch.R3",
+  "rootNamespace": "LibraryResearch.R3Sample",
+  "references": [
+    "R3.Unity"
+  ],
+  "autoReferenced": true
+}

@@ -1,0 +1,8 @@
+{
+  "name": "LibraryResearch.SerializeReferenceExtensions",
+  "rootNamespace": "LibraryResearch.SerializeReferenceExtensionsSample",
+  "references": [
+    "MackySoft.SerializeReferenceExtensions"
+  ],
+  "autoReferenced": true
+}

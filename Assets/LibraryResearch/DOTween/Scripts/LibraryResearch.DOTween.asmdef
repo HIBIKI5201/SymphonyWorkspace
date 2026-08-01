@@ -1,0 +1,10 @@
+{
+  "name": "LibraryResearch.DOTween",
+  "rootNamespace": "LibraryResearch.DOTweenSample",
+  "references": [],
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "DOTween.dll"
+  ],
+  "autoReferenced": true
+}
