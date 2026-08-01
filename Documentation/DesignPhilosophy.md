@@ -548,7 +548,7 @@ Symphony Frameworkは他プロジェクトが依存するパッケージであ�
 - 既存APIを削除・変更する前に代替手段を用意し、可能な場合は`[Obsolete("代替APIの案内", error: false)]`の移行期間を設ける。
 - `ScriptableObject`や`[Serializable]`データのフィールド名を変更する場合は`[FormerlySerializedAs]`を使用する。
 - 保存形式を変更する場合は、既存データの既定値と移行手順を明示する。
-- 公開APIの追加・変更・非推奨化は、README、Sample、XMLドキュメント、AGENTS.md、CHANGELOG、`package.json`を同じ変更内で更新する。
+- 公開APIの追加・変更・非推奨化は、README、Sample、XMLドキュメント、CHANGELOG、`package.json`を同じ変更内で更新する。AI向けの制約や構成図も変わる場合は、`Documentation~/AgentUsage.md`または`Documentation~/Architecture.md`も更新する。`AGENTS.md`は導線か常時ルール自体が変わる場合だけ更新する。
 - `internal`／`private`だけの変更にバージョニング上の制約は課さない。
 
 ## 利用側への非侵襲性

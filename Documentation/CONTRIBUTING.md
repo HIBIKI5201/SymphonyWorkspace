@@ -12,7 +12,8 @@
 | [CodeGuidelines.md](./CodeGuidelines.md) | コードを書く前に。命名・書式・非同期・Unity固有ルール |
 | [DesignPhilosophy.md](./DesignPhilosophy.md) | 型・クラス・名前空間を**新設**する前、または公開範囲を判断する前。全部を通読せず該当する節（`## クラス設計`、`## 公開APIとバージョニング` など）を参照する |
 | [../AGENTS.md](../AGENTS.md) | ワークスペースの構成、環境設定、自動生成物の区別を知りたいとき |
-| [../Assets/SymphonyFrameWork/AGENTS.md](../Assets/SymphonyFrameWork/AGENTS.md) | 公開APIを変更したとき。更新対象として |
+| [../Assets/SymphonyFrameWork/AGENTS.md](../Assets/SymphonyFrameWork/AGENTS.md) | 利用者向け文書の導線や、全作業で常時守る制約を変更するとき |
+| [../Assets/SymphonyFrameWork/Documentation~/AgentUsage.md](../Assets/SymphonyFrameWork/Documentation~/AgentUsage.md) | AIエージェントが利用コードを書く際の注意事項を変更するとき |
 | [../Assets/SymphonyFrameWork/CHANGELOG.md](../Assets/SymphonyFrameWork/CHANGELOG.md) | 直近の変更の経緯を知りたいとき。記述の粒度の参考にもする |
 | [../.agents/skills/implement/SKILL.md](../.agents/skills/implement/SKILL.md) | 機能を**追加・変更**するとき。設計書からコミットまでの実装フロー |
 
@@ -46,13 +47,13 @@
 - **このリポジトリ単体ではコンパイルできません。** `dotnet build`、`msbuild`、`csc` は使わないでください。asmdefの参照解決はUnityが行うため、コンパイル可否の判断はUnity Editorに委ねます（→ §4）。
 - `Assets/SymphonyFrameWork/Cache/` はランタイム生成物（`SymphonyDebugLogger` のログ）です。`.gitignore` 済みで、編集も削除も自由ですが、コミットしません。
 - `.claude/` と `.agents/` はローカル専用領域です。**他の開発者やエージェントにも守らせたいルールは、必ずこのファイルなど追跡対象のドキュメントに書いてください。**
-- **ドキュメントの置き場所には基準があります。** 本体開発向けのドキュメント（このファイル、CodeGuidelines、DesignPhilosophy）は**ワークスペース側の `Documentation/`** に置きます。パッケージリポジトリのルートには、外部の規約で置き場所が決まっているものだけを置きます（`README.md`・`CHANGELOG.md`・`LICENSE.txt` はUPMの標準レイアウト、`AGENTS.md` はエージェントツールがルートしか探さないため）。これらはすべて**パッケージ利用者向け**の内容に限定します。
+- **ドキュメントの置き場所には基準があります。** 本体開発向けのドキュメント（このファイル、CodeGuidelines、DesignPhilosophy）は**ワークスペース側の `Documentation/`** に置きます。パッケージ利用者向けの詳細文書は、Unity PackageのAsset Import対象外となる`Documentation~/`へ置きます。パッケージリポジトリのルートには、外部の規約で置き場所が決まっているものだけを置きます（`README.md`・`CHANGELOG.md`・`LICENSE.txt`はUPMの標準レイアウト、`AGENTS.md`はエージェントツールがルートから探索するため）。`AGENTS.md`は導線と常時ルールに限定し、API説明やコード例を複製しません。
 
 ## 2. `.meta` ファイルの扱い（最優先事項）
 
 Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUIDによって参照とシリアライズ済みデータが繋がっているため、ここを崩すと利用者側プロジェクトの参照が切れます。
 
-例外は `Assets/` の外にあるファイル（このワークスペースの `Documentation/` など）だけです。`Assets/` 配下に追加したファイルには、すべて `.meta` が必要です。
+例外は、`Assets/`の外にあるファイル（このワークスペースの`Documentation/`など）と、Unity PackageでAsset Import対象外となる`Documentation~/`です。それ以外の`Assets/`配下へ追加したファイルには、すべて`.meta`が必要です。
 
 - **`.meta` を手書きしない。** GUIDを自分で生成しないでください。新規ファイルを追加したら、Unity Editorに一度フォーカスを当てて生成させます。エージェントが新規ファイルを作った場合は、`.meta` が生成されたことを確認してからコミットしてください（→ §4）。
 - **既存の `.meta` の中身（特に `guid`）を編集しない。**
@@ -132,12 +133,12 @@ uLoopで確認できない範囲は依頼者へ依頼します。変更を報告
 
 | 変更の種類 | 同時に更新するもの |
 | --- | --- |
-| 公開API（`public`/`protected`）の追加・変更・削除 | XMLドキュメント、`Assets/SymphonyFrameWork/README.md`、`Assets/SymphonyFrameWork/AGENTS.md`、`Assets/SymphonyFrameWork/CHANGELOG.md`、`Assets/SymphonyFrameWork/package.json` の `version`、該当する Sample |
+| 公開API（`public`/`protected`）の追加・変更・削除 | XMLドキュメント、`Assets/SymphonyFrameWork/README.md`、`Assets/SymphonyFrameWork/CHANGELOG.md`、`Assets/SymphonyFrameWork/package.json` の `version`、該当する Sample。AI向けの注意事項が変わる場合だけ`Documentation~/AgentUsage.md`、アセンブリ・初期化・公開型の関係が変わる場合だけ`Documentation~/Architecture.md` |
 | 公開挙動の変更（シグネチャは同じだが結果が変わる） | CHANGELOG.md、`version`、必要なら README のクイックスタート |
-| 設定アセット（Config）の項目の追加・変更 | README の初期設定、AGENTS.md、CHANGELOG.md |
+| 設定アセット（Config）の項目の追加・変更 | README の初期設定、CHANGELOG.md、AI向けの制約が変わる場合は`Documentation~/AgentUsage.md` |
 | Sample の追加 | `package.json` の `samples`、CHANGELOG.md |
 | 依存パッケージの追加・更新 | `package.json` の `dependencies`、README の必要なパッケージ |
-| 非推奨化 | `[Obsolete("代替APIの案内", error: false)]`、CHANGELOG の `### Deprecated`（移行方法を明記）、AGENTS.md |
+| 非推奨化 | `[Obsolete("代替APIの案内", error: false)]`、CHANGELOG の `### Deprecated`（移行方法を明記）、READMEまたはSampleの旧API利用箇所 |
 | 本体開発の手順・規約の変更 | ワークスペース側の `Documentation/`（このファイル、CodeGuidelines、DesignPhilosophy）と `AGENTS.md` |
 | 内部実装（`internal`/`private`）のみの変更 | 原則不要。ただし**更新不要と判断した理由**をPR説明かコミットメッセージに書く |
 
@@ -184,7 +185,7 @@ uLoopで確認できない範囲は依頼者へ依頼します。変更を報告
 - パッケージのファイルを親リポジトリ側で直接追跡・コミットしようとする。
 - `Cache/`、`Library/`、`.csproj`、`.sln`、親ワークスペースの生成物をコミットする。
 - `main` や `develop` へ直接コミットする。
-- 公開APIを変更したのにREADME / AGENTS.md / CHANGELOGを更新しない。
+- 公開APIを変更したのにREADME / CHANGELOG / Sampleなど該当する利用者向け文書を更新しない。
 - 本体開発向けの手順や規約を、パッケージ側（`README.md`・`AGENTS.md`）へ書き戻す。パッケージ側は利用者向けの内容だけに保つ。
 - Sampleから `internal` APIを使う。Sampleは公開APIだけで書けることの証明です。
 - Runtimeコード（`Runtime/`、`Core/`）から `UnityEditor` を参照する。必要なら `Editor/` へ処理を分離し、やむを得ない場合のみ `#if UNITY_EDITOR` で囲む。
