@@ -6,14 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Level/Scenes/NewScene.unity
-    guid: 0f34a0496bb5b124bb19f46ab98308cc
-  - enabled: 1
-    path: Assets/Level/Scenes/Scene2.unity
-    guid: 1d20c873e5649e64f96342b61eb06805
-  - enabled: 1
-    path: Assets/Level/Scenes/Scene3.unity
-    guid: e9de02bd4f544994e94a720afd6d5849
+    path: Assets/SymphonyFrameWork/Samples/Runtime/ServiceLocatorSample/ServiceLocatorSample.unity
+    guid: 068429c21ff7708459cd12c4b3bfc6ef
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 99f9c9493070a9d4c979a8fec7c5a8d3, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
