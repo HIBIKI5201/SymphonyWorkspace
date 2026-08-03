@@ -655,7 +655,9 @@ BackgroundThreadAsync
 
 - 移行期間を終えた旧シムを削除する。
 - 旧`SaveDataRegistry`が存在せず、`SaveStore`への移行手順がREADMEとCHANGELOGのBreaking項目にあることを確認する。
-- `SaveDataLoaderStrategy`系と7つのenum改名をCHANGELOGのBreaking項目へ列挙する。
+- `SaveDataLoaderStrategy`系と公開enum6型の改名をCHANGELOGのBreaking項目へ列挙する。enumは別のenum型へ暗黙変換できず演算子も定義できないため、シムを作れない。2.xでは行わない。
+- `SceneManagerConfig`を`SceneLoadConfig`へ改名し、**利用側へ設定アセットの手動リネームを案内する。** 自動移行は2.xで試して失敗している。経緯と再挑戦時の注意は[SceneLoadConfigRename.md](./SceneLoadConfigRename.md)にある。
+- Round L3の`SymphonyConfigMigrator`は実装していない。自動移行を採る場合のみ新規に作る。
 - `package.json`を3.0.0へ更新する。
 - CHANGELOGへBreaking項目と移行手順を記載する。
 - submoduleをcommit・pushしてから親リポジトリのgitlinkを更新する。

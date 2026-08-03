@@ -162,5 +162,5 @@ JsonUtility... / Newtonsoft...      PlayerPrefsSaveDataLoader（[Obsolete] シ�
 
 ## 後続 Round
 
-- **Round L3** — `SceneManagerConfig` → `SceneLoadConfig`。**`Resources.Load` が型名でアセットを引くため、アセットファイル自体を改名する移行処理が要る**。移行しないと利用側のシーン設定が既定値で作り直される
+- ~~**Round L3** — `SceneManagerConfig` → `SceneLoadConfig`~~ → **3.0.0 へ延期した。** 自動移行を実装して検証したところ、利用側の設定値が失われることを実測したため中断している。経緯は [SceneLoadConfigRename.md](./SceneLoadConfigRename.md)
 - **3.0.0（Phase 6）** — 公開 enum 6型の `Enum` サフィックス化、`SaveDataRegistryEntryInfo` → `SaveDataEntryInfo`、`SaveDataRegistryWindow` の改名、全 `[Obsolete]` シムの削除
