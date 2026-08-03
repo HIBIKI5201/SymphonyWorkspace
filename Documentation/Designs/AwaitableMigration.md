@@ -252,3 +252,106 @@ await PauseManager.PausableDestroy(gameObject, 1.0f);
 ## バージョン判断
 
 **`3.0.0-preview.2`。** 公開APIのシグネチャが変わる破壊的変更である。
+
+---
+
+# Round M2 — Save Data の公開APIを Awaitable へ
+
+## 目的
+
+`SaveStore` の非同期API6件を `Awaitable` へ移行する。
+
+## 前提の確認
+
+| 前提 | 確認結果 |
+| --- | --- |
+| 対象 | `LoadAsync<T>` / `LoadAsync(Type)` / `SaveAsync<T>` / `SaveAsync(Type)` / `DeleteAsync<T>` / `DeleteAsync(Type)` の6件が `ValueTask` を返す |
+| 重複ロード排除 | `SaveDataService._loadingTasks` が `Task` を保持し、**複数の呼び出し元へ同じ待機を返す**。Round I1 で回帰テストを書いた不変条件 |
+| 同期ブロック（内部） | `SaveDataService.Get` が `LoadAsync(dataType).GetAwaiter().GetResult()` を呼ぶ |
+| 同期ブロック（Editor） | **`SaveDataRegistryWindow` が `SaveStore` の3メソッドで `.GetAwaiter().GetResult()` を呼ぶ** |
+| `SymphonyAwaitable.FromTask` | `Task` を `Awaitable` へ橋渡しする。内部で `RunOnMainThread` を使う |
+
+## 中心にある危険
+
+**`Awaitable` を `.GetAwaiter().GetResult()` で同期待機してはいけない。**
+
+`SymphonyAwaitable.FromTask` が返す `Awaitable` は、完了の伝播にメインスレッドを必要とする。メインスレッドを塞いだまま待つと**デッドロックする。**
+
+現在 `.GetAwaiter().GetResult()` を呼んでいるのは2箇所で、扱いを分ける。
+
+| 箇所 | 扱い |
+| --- | --- |
+| `SaveDataService.Get`（内部） | **内部を `Task` のまま保つ。** `Awaitable` を挟まないためデッドロックしない。同梱ローダーは同期完了するので従来と同じ挙動 |
+| `SaveDataRegistryWindow`（Editor） | **非同期化する。** 公開APIが `Awaitable` を返すため、同期待機を残せない |
+
+## 変更内容
+
+### `SaveDataService`（Application、internal）
+
+戻り値を `ValueTask` から **`Task`** へ変える。重複ロード排除が `Task` を保持しているため、型を揃えると `AsTask()` の変換が不要になる。
+
+**`_loadingTasks` による重複排除の仕組みは変更しない。**
+
+### `SaveStore`（公開Facade）
+
+```csharp
+public static Awaitable<T> LoadAsync<T>(CancellationToken token = default) where T : SaveDataContent, new();
+public static Awaitable LoadAsync(Type dataType, CancellationToken token = default);
+public static Awaitable SaveAsync<T>(CancellationToken token = default) where T : SaveDataContent, new();
+public static Awaitable SaveAsync(Type dataType, CancellationToken token = default);
+public static Awaitable DeleteAsync<T>(CancellationToken token = default) where T : SaveDataContent, new();
+public static Awaitable DeleteAsync(Type dataType, CancellationToken token = default);
+```
+
+`SymphonyAwaitable.FromTask` で `Service` の `Task` を包む。**呼び出しごとに新しい `Awaitable` を作るため、重複ロードで同じ `Task` を共有していても各呼び出し元は自分専用の `Awaitable` を受け取る。** `Awaitable` を共有してはいけないという制約と、重複排除を両立させる。
+
+引数検証は同期部分で行い、呼び出し元へ同期的に投げる（Round M1b と同じ構造）。
+
+### `SaveDataRegistryWindow`（Editor）
+
+`ExecuteAction(Action)` に加えて `ExecuteActionAsync(Func<Awaitable>)` を用意し、`LoadSelected` / `SaveSelected` / `DeleteSelected` を `async Awaitable` へ変える。
+
+ボタンのコールバックは `async void` になるが、**例外は `ExecuteActionAsync` の中で捕捉してステータス表示へ変換する**ため外へ漏れない。UIイベントハンドラでの `async void` は標準的な形である。
+
+`DeleteSelected` の確認ダイアログは同期のまま先に出し、その後に待機する。
+
+### `SaveDataLoaderStrategy` は本 Round では触らない
+
+拡張点（`protected abstract` メンバー）の `Awaitable` 化は **Round M2b** とする。`SaveDataService.Get` の同期ブロック経路と相互作用するため、単独で検証したい。
+
+## 影響範囲
+
+- `SaveStore` の6メソッドの戻り値型が変わる。**`await` して使っている限りソース変更は不要**
+- `Task` として受けている場合は `SymphonyAwaitable.AsTask` で変換する
+- **重複ロードの排除は変わらない**
+- `Get`（同期取得）の挙動は変わらない
+- Sample は `await` しているためソース変更不要
+
+## テスト
+
+`Tests/Runtime/` へ PlayMode テストを追加する。`SaveStore` は Play Mode で初期化される。
+
+- `SaveAsync` → `LoadAsync` で値が往復すること
+- `DeleteAsync` で既定値へ戻ること
+- **同じ型へ `LoadAsync` を2回続けて呼んでも、両方が完了すること**（重複排除が `Awaitable` 化で壊れていないことの回帰テスト）
+- キャンセル済みトークンで `OperationCanceledException` になること。**`Awaitable` を直接 `await` して観測する**
+
+既存の EditMode 222件・PlayMode 14件も全数成功することを確認する。
+
+## 動作確認手順
+
+1. Unity Scene 検証ガードに従い dirty 状態を記録する
+2. `uloop-clear-console` 後に `uloop-compile` でエラー0・SymphonyFrameWork 由来の警告0
+3. `uloop-clear-console` を挟んで EditMode と PlayMode を実行し、`Success` / `Passed` / `Failed` / `Skipped` を記録。**同じ結果が2回続くこと**
+4. **Symphony Administrator の Save Data パネルで Load / Save / Delete を実行し、Editor が固まらないことを確認する。** 非同期化の要点
+5. Save Data Sample を Play し、保存・再ロード・削除が動くこと
+6. Console の Error / Exception が0件
+7. この Round の `.cs` に UTF-8 BOM が付いていること
+
+## バージョン判断
+
+**`3.0.0-preview.3`。** 公開APIの戻り値型が変わる破壊的変更である。
+
+## ブランチ
+
+`develop` から `feature/save-store-awaitable` を作成する。
