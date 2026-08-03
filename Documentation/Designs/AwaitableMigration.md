@@ -16,11 +16,12 @@ C# は戻り値型だけが異なる多重定義を許さない。新しい名�
 
 | Round | バージョン | 内容 |
 | --- | --- | --- |
-| M1 | `3.0.0-preview.1` | **Pause の Awaitable 移行**（本 Round） |
-| M2 | `3.0.0-preview.2` | Save Data の Awaitable 移行 |
-| M3 | `3.0.0-preview.3` | Scene Load の Awaitable 移行 |
-| M4 | `3.0.0-preview.4` | Service Locate の Awaitable 移行 |
-| M5 | `3.0.0-preview.5` | Debug HUD、Component、`IInitializeAsync` |
+| M1 | `3.0.0-preview.1` | Pause の待機API3件の Awaitable 移行（完了） |
+| M1b | `3.0.0-preview.2` | **Pause の `async void` 2件を Awaitable へ**（本 Round） |
+| M2 | `3.0.0-preview.3` | Save Data の Awaitable 移行 |
+| M3 | `3.0.0-preview.4` | Scene Load の Awaitable 移行 |
+| M4 | `3.0.0-preview.5` | Service Locate の Awaitable 移行 |
+| M5 | `3.0.0-preview.6` | Debug HUD、Component、`IInitializeAsync` |
 | N1〜 | `3.0.0-preview.N` | Phase 6（enum 改名、シム削除、`SceneLoadConfig`） |
 | 最終 | `3.0.0` | 接尾辞を落とす |
 
@@ -81,11 +82,11 @@ public static Awaitable PausableWaitUntil(Func<bool> action, CancellationToken t
 
 引数、例外の種類と条件、キャンセルの扱いはいずれも変えない。
 
-### `async void` の2メソッドは変更しない
+### `async void` の2メソッドは Round M1b で移行する
 
-`PausableDestroy` と `PausableInvoke` は `async void` である。`Awaitable` を返す形にすれば呼び出し側が待機できるようになるが、**await されなかった場合に例外が失われる。**
+`PausableDestroy` と `PausableInvoke` は `async void` である。M1 の時点では「await されなかった例外が失われる」ことを理由に据え置いたが、**利用者の判断で移行することになった**（Round M1b）。
 
-現在の `async void` では、例外は Unity の未処理例外ハンドラへ届いてログに出る。戻り値を持たせると、無視された `Awaitable` の例外は観測されない可能性がある。**観測性を下げる変更になるため、本 Round では触らない。** 扱いは Round M5 で改めて判断する。
+実装時に検討したところ、**構造を変えれば観測性はむしろ上がる**ことが分かった。詳細は下記 Round M1b。
 
 ### `IEnumerator` 版は変更しない
 
@@ -174,3 +175,80 @@ CHANGELOG は `## [3.0.0-preview.1]` の見出しに `### Breaking` を置き、
 ## ブランチ
 
 `develop` から `feature/pause-awaitable` を作成する。
+
+---
+
+# Round M1b — Pause の `async void` を Awaitable へ
+
+## 目的
+
+`PausableDestroy` と `PausableInvoke` を `async void` から `Awaitable` を返す形へ変更する。呼び出し側が完了を待機できるようにする。
+
+## 観測性は下がらない — 構造を変えるため
+
+M1 では「await されなかった例外が失われる」ことを懸念して据え置いた。**引数検証を同期的に行う構造にすれば、むしろ観測性は上がる。**
+
+現在の `async void` では、`ArgumentNullException` や `SymphonyNotInitializedException` も**非同期メソッドの中で投げられる**。呼び出し側の `try/catch` では捕まえられず、Unity の未処理例外ハンドラへ流れる。
+
+検証を同期部分に出し、待機と本処理だけを private な `async Awaitable` へ分ける。
+
+```csharp
+public static Awaitable PausableDestroy(GameObject obj, float t, CancellationToken token = default)
+{
+    EnsureInitialized();
+
+    if (obj == null)
+    {
+        throw new ArgumentNullException(nameof(obj));
+    }
+
+    ValidateDuration(t, nameof(t));
+
+    return DestroyAfterDelayAsync(obj, t, token);
+}
+
+private static async Awaitable DestroyAfterDelayAsync(
+    GameObject obj, float durationSeconds, CancellationToken token)
+{
+    await PausableWaitForSecondAsync(durationSeconds, token);
+    Object.Destroy(obj);
+}
+```
+
+これにより:
+
+- **引数と初期化の誤りは呼び出し元へ同期的に伝わる。** `async void` では不可能だった
+- 待機中に起きうる例外は `OperationCanceledException` だけであり、これは待機を中断したときの想定内の結果である
+
+### 残る差分
+
+`Awaitable` を戻り値にすると、**await されなかった場合にプールへ返却されない。** Unity の `Awaitable` は完了の観測時にプールへ戻るため、無視された分は通常の GC 対象になる。
+
+無制限に溜まるものではなく、プールの効果が失われて通常のアロケーションに戻るだけである。fire-and-forget として使う API であり、この代償は受け入れる。**CHANGELOG へ明記する。**
+
+## 呼び出し側への影響
+
+**文として呼んでいる限りソース変更は不要。** 戻り値のない呼び出しは `Awaitable` を返す形でもそのまま書ける。
+
+```csharp
+// 2.x でも 3.0.0 でもそのまま動く
+PauseManager.PausableDestroy(gameObject, 1.0f);
+
+// 3.0.0 では待機もできる
+await PauseManager.PausableDestroy(gameObject, 1.0f);
+```
+
+## テスト
+
+`Tests/Runtime/PauseAwaitableRuntimeTests.cs` へ追加する。
+
+- `PausableInvoke` を await すると、指定秒後に処理が呼ばれていること
+- **await せずに呼んでも処理が実行されること**（fire-and-forget の契約）
+- **引数が不正な場合、同期的に例外が投げられること**（`Assert.Throws` で捕まえられる＝呼び出し元へ届く）
+- `PausableDestroy` が指定秒後に GameObject を破棄すること
+
+`PausableDestroy` の検証には `new GameObject()` を作って破棄を確認する。PlayMode 内で完結し、Scene を保存しないため検証ガードに抵触しない。
+
+## バージョン判断
+
+**`3.0.0-preview.2`。** 公開APIのシグネチャが変わる破壊的変更である。
