@@ -13,7 +13,7 @@
 1. **差分レビュー** — `git -C "Assets/SymphonyFrameWork" status` と `git -C "Assets/SymphonyFrameWork" diff` で全変更を確認する。設計書に無い変更、範囲外のファイル、`public` の増加を特に見る。
 2. **規約チェック** — `Documentation/CodeGuidelines.md` の `## レビュー用チェックリスト` を通す。名前空間とフォルダの一致、`Internal/` の使い分け、XMLドキュメント、CancellationToken の伝播、登録と解除の対。
 
-   目視だけに頼らず、**機械的に検索できる違反は検索する**。特に次の2つは過去に見落としが起きている。
+   目視だけに頼らず、**機械的に検索できる違反は検索する**。特に次の3つは過去に見落としが起きている。
 
    ```
    rg -n "UnityEditor|EditorPrefs" Assets/SymphonyFrameWork/Runtime Assets/SymphonyFrameWork/Core -g '*.cs'
@@ -21,6 +21,18 @@
 
    - Runtime／Core から `UnityEditor` への参照（`#if UNITY_EDITOR` で囲んであっても違反）
    - テスト用 asmdef の `defineConstraints` に `UNITY_INCLUDE_TESTS` があるか（無いと nunit を参照するアセンブリが Player ビルドへ入る）
+
+   **この Round で追加・変更した `.cs` に UTF-8 BOM が付いているか。**
+
+   ```bash
+   cd "Assets/SymphonyFrameWork" && { git diff --name-only --diff-filter=d origin/develop -- '*.cs'; git ls-files -o --exclude-standard -- '*.cs'; } | sort -u | while read -r f; do
+     [ "$(head -c 3 "$f" | od -An -tx1 | tr -d ' \n')" != "efbbbf" ] && echo "BOM無し: $f"
+   done
+   ```
+
+   `CONTRIBUTING.md` は `.cs` を UTF-8 BOM付きと定めているが、**BOM が無くてもコンパイルは通るため、検索しない限り気づけない。** ファイル書き込みツールの多くは BOM を付けないので、ワーカーの成果物でも自分の実装でも起こる。
+
+   対象をこの Round の差分に限っているのは、パッケージ内に BOM 無しの既存ファイルが残っているためである（全体の一括修正は独立した Round で扱う）。毎回同じ既存違反を報告する検索は読まれなくなる。
 3. **コンパイル** — `uloop-clear-console` → `uloop-compile` → `uloop-get-logs`。エラー0件、意図しない警告なし。
 4. **ランタイム確認** — `uloop-control-play-mode` で設計書の「動作確認手順」を実行し、`uloop-get-logs` で期待値と照合する。**Domain Reload が無効なので、Play Mode の開始・終了を2回繰り返し、static 状態のゴースト参照が残らないことを確認する。**
 5. **`.meta` の生成** — 新規ファイルを追加した場合、`.meta` は Unity Editor がフォーカスを得たときに生成される。`uloop-focus-window` を使うか、ユーザーへ依頼する。`git status` で `.cs` と `.meta` が対で揃っていることを確認してからコミットへ進む。
