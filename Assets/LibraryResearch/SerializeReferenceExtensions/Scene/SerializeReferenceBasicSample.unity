@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 895e6bb9a172ca34a930e1daf7fafc30, type: 3}
   m_Name:
   m_EditorClassIdentifier: LibraryResearch.SerializeReferenceExtensions::LibraryResearch.SerializeReferenceExtensionsSample.SerializeReferenceBasicSample
-  data: {fileID: 11400000, guid: 3897eb5eb12ae8a4f8e83bbc41bce26, type: 2}
+  data: {fileID: 11400000, guid: 3897eb5eb12ae8a4f8e83bbc41bce26b, type: 2}
   input: 5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
