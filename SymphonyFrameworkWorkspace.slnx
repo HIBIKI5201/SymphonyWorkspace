@@ -6,7 +6,6 @@
   <Project Path="SingularityGroup.HotReload.Runtime.csproj" />
   <Project Path="SymphonyFrameWork.Core.csproj" />
   <Project Path="SymphonyFrameWork.Tests.Editor.csproj" />
-  <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="SingularityGroup.HotReload.Runtime.Public.csproj" />
   <Project Path="SymphonyFrameWork.Enum.csproj" />
@@ -16,4 +15,5 @@
   <Project Path="SymphonyFrameWork.Tests.Runtime.csproj" />
   <Project Path="LibraryResearch.DOTween.csproj" />
   <Project Path="LibraryResearch.SRDebugger.csproj" />
+  <Project Path="TestAssembly.csproj" />
 </Solution>
