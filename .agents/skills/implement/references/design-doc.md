@@ -39,10 +39,15 @@
 
 ## テストの置き場と種別
 自動テストを書くか。書くなら EditMode と PlayMode のどちらへ、どのパスへ置くか。
-書かないなら理由を書く（モーダルダイアログを伴う、Unity のコールバックに強く依存する等）。
+書かないなら理由を書く（モーダルダイアログを伴う、Unity のコールバックに強く依存する、Editor の GUI 操作を伴う等）。
 テストは**パッケージ内の `Assets/SymphonyFrameWork/Tests/`** へ置く（EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`）。
 `InternalsVisibleTo` によりテストアセンブリから `internal` な内部実装も検証できるため、
 Entity・Service・Registry など公開されない型も単体テストの対象にする。
+
+**テストのメソッド名は既存のテストの命名に合わせる。** 現在は英語の `対象_条件_期待` 形式
+（`Constructor_ExposesValues`、`Normalize_NullLists_BecomeEmptyLists` など）。設計書のテスト一覧にも
+その形式で書く。設計書だけ日本語名で書くと、実装時に必ず書き直すことになる。
+着手時に `Assets/SymphonyFrameWork/Tests/` の既存ファイルを1つ開いて確認する。
 
 **何を検証するかだけでなく、どう書くかを1行で書く。** 検証内容だけを書くと、実現不可能な要件に気づけない。
 過去に「PlayModeテストで Play Mode の開始・終了を2回繰り返す」と書いたが、PlayModeテストは
@@ -57,6 +62,21 @@ Play Mode 内で走るため1テストの中で抜けて再入できず、原理
 **準備段階では、検証したい経路を迂回しない。** 内部レジストリを直接操作して状態を作ると、
 その経路の通知や副作用が発生しないため、後続の期待値が現実と食い違う。
 準備も公開APIまたは Service 経由で行う。
+
+**Editor ウィンドウの GUI 操作は自動で検証できない。** EditorWindow のボタンやトグルを押す手段が無いためで、
+次のいずれも成立しないことを実測で確認済みである。
+
+- `EditorWindow.SendEvent` へ合成した `Event`（MouseDown / MouseUp）を渡しても GUILayout のコントロールは反応しない
+- `uloop` の `simulate-mouse-*` は PlayMode の Game View 専用で、Editor ウィンドウを叩けない
+- `uloop execute-dynamic-code` のサンドボックスは `Type.GetType` と `Assembly.GetType` を禁止しているため、
+  `internal` な型やメソッドをリフレクション経由で直接呼ぶこともできない
+
+したがって、**GUI 操作を含む Round は設計の時点で「人の確認が要る」と分かる**。次を設計書へ書く。
+
+- ロジックは Unity API へ触れない純粋な型（ツリー構築、フィルタ判定など）へ切り出し、そちらをテスト対象にする
+- 「動作確認手順」に**自動で確認する項目と人が操作する項目の境目を明記する**
+- GUI を経由しない公開APIがあるなら、それを通した結果（出力ファイルの中身など）で
+  ロジック側を裏取りする手順も併記する
 
 ## 動作確認手順
 Play Mode で何をどう確認すれば成功と言えるか。期待するログや状態。
