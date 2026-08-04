@@ -505,7 +505,13 @@ public interface IInitializeAsync
 
 共有ロード本体は`SaveDataService`のライフタイムtokenで所有します。各呼び出し側のtokenは、その呼び出しに対応する待機者だけを一覧から除去してキャンセルし、ロード本体へ渡しません。全待機者がキャンセルされてもロード本体は継続し、完了結果を`SaveDataEntryEntity`へ反映します。ロード本体をキャンセルするのは`SaveDataService`のShutdownだけとします。これにより、最初の呼び出しや最後の待機者の都合が他の呼び出しとキャッシュ状態へ影響しません。
 
-### 同期取得の廃止
+### 同期取得の廃止（完了）
+
+**3.0.0で実施済み。** `SaveStore.Get<T>()`は読み込み済みの値だけを返し、未読み込みなら`InvalidOperationException`を送出する。判定用に`SaveStore.IsLoaded<T>()`を追加した。`SaveDataWindow`は未読み込みの型を選択してもI/Oを起こさず、保存時のみ先にロードして正本を確定させる。
+
+計画からの差分は`IsLoaded`の追加1点。`Get`が例外を投げるようになった以上、例外を発生させずに状態を判定する手段が無いと、利用側はtry/catchか`GetEntries()`の走査を強いられるため。
+
+
 
 現在の`SaveDataRegistry.Get<T>()`は未ロード時に`LoadAsync(...).GetAwaiter().GetResult()`を呼びます。PlayerLoopで進むAwaitableを同期ブロックすると完了不能になるため、暗黙の同期ロードを廃止します。
 
