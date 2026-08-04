@@ -1,6 +1,5 @@
-﻿using SymphonyFrameWork.System.SceneLoad;
+using SymphonyFrameWork.System.SceneLoad;
 using System.Linq;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace TestNameSpace
@@ -10,25 +9,23 @@ namespace TestNameSpace
         [SerializeField]
         private SceneListEnum[] _sceneListEnums;
 
-        void Start()
+        async void Start()
         {
             return;
             string[] scenes = _sceneListEnums.Select(s => s.ToString()).ToArray();
-            ValueTask<bool> task = SceneLoader.LoadScenes(scenes, loadingProgress =>
+            bool succeeded = await SceneLoader.LoadScenesAsync(scenes, loadingProgress =>
             {
                 Debug.Log($"Loading Progress: {loadingProgress * 100}%");
             });
-            task.AsTask().ContinueWith(task =>
+
+            if (succeeded)
             {
-                if (task.Result)
-                {
-                    Debug.Log("All scenes loaded successfully.");
-                }
-                else
-                {
-                    Debug.LogError("Failed to load scenes.");
-                }
-            });
+                Debug.Log("All scenes loaded successfully.");
+            }
+            else
+            {
+                Debug.LogError("Failed to load scenes.");
+            }
         }
 
     }

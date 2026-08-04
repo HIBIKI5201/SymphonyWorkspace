@@ -10,8 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 798a2583624225c4fa38a13aba398a0e, type: 3}
-  m_Name: SceneManagerConfig
-  m_EditorClassIdentifier: 
+  m_Name: SceneLoadConfig
+  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.Config.SceneLoadConfig
   _isResetAndLoadOnPlay: 1
   _initializeSceneList: []
   _resetIgnoreSceneList: []

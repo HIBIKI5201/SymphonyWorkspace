@@ -46,24 +46,24 @@ public class DbugObj : MonoBehaviour, IGameObject, IInjectable<MeshRenderer>
 
     private async void SceneLoad()
     {
-        await SceneLoader.LoadScene("Scene2");
+        await SceneLoader.LoadSceneAsync("Scene2");
         Debug.Log("Scene2 loaded");
 
         await Awaitable.WaitForSecondsAsync(3);
 
-        await SceneLoader.LoadScene("Scene3");
+        await SceneLoader.LoadSceneAsync("Scene3");
         Debug.Log("Scene3 loaded");
 
         await Awaitable.WaitForSecondsAsync(3);
 
-        await SceneLoader.UnloadScene("Scene2");
-        await SceneLoader.UnloadScene("Scene3");
+        await SceneLoader.UnloadSceneAsync("Scene2");
+        await SceneLoader.UnloadSceneAsync("Scene3");
         Debug.Log("Scene2 and Scene3 unloaded");
 
         await Awaitable.WaitForSecondsAsync(3);
 
-        await SceneLoader.LoadScene("Scene2", priority: 10);
-        await SceneLoader.LoadScene("Scene3", priority: -5);
+        await SceneLoader.LoadSceneAsync("Scene2", priority: 10);
+        await SceneLoader.LoadSceneAsync("Scene3", priority: -5);
     }
 
     [Serializable]
