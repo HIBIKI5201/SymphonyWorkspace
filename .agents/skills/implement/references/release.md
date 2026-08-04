@@ -31,6 +31,8 @@ CHANGELOG の形式:
 
 submodule と親リポジトリの2段階。**順序を守る。**
 
+**submodule・親リポジトリとも、コミットと push は確認を取らずに実行してよい。** このフローに含まれる操作であり、都度の承認は不要。承認が要るのは `develop` から `main` へのマージだけ（ステップ5の注記）。
+
 1. submodule が、この Round 専用の作業ブランチになっていることを確認する。特定の Issue へ対応する場合は、着手前に作成したブランチを使う
    ```
    git -C "Assets/SymphonyFrameWork" branch --show-current
