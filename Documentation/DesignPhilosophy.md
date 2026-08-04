@@ -343,7 +343,7 @@ Enumは、有限個の選択肢や状態を表す独立した型カテゴリで�
 
 - 型名は必ず`Enum`で終える。入れ子enumにも同じ規則を適用する。
 - 列挙値の追加・削除・数値変更がシリアライズ互換性へ影響する場合は、[バージョニング](#バージョニング)に従う。
-- 3.0.0では`LocateTypeEnum`、`SceneLoadStateEnum`、`SaveDataOperationEnum`、`LogKindEnum`、`InitializeTypeEnum`、`LoadTypeEnum`、`PackageModeEnum`へ統一する。
+- 3.0.0で`LocateTypeEnum`、`SceneLoadStateEnum`、`SaveDataOperationEnum`、`LogKindEnum`、`InitializeTypeEnum`、`LoadTypeEnum`、`PackageModeEnum`へ統一済み。
 - 自動生成済みの`SceneListEnum`、`TagsEnum`、`LayersEnum`、`AudioGroupTypeEnum`は既に規則へ適合しているため変更しない。
 
 ### DTO
@@ -383,7 +383,7 @@ ConfigはInfrastructure層に属し、利用側プロジェクトごとのカス
 
 - DomainやApplicationから直接検索しない。Compositionが読み取り、必要な値だけを注入する。
 - Runtimeの`SymphonyConfigLocator`は既存ConfigをResourcesから検索する`internal`なInfrastructure型、`SymphonyEditorConfigLocator`はEditor用`ScriptableSingleton`を検索する`internal`なEditor型として名称を維持する。どちらもConfigを生成せず、自動初期化を開始しない。
-- 現行`SymphonyConfigManager.AllConfigCheck()`の責務はEditorの`SymphonyConfigInitializer`へ移す。この型は3つのRuntime Config（現行の`SceneManagerConfig`、`AudioManagerConfig`、`SaveSystemConfig`。移行後は各新Config名）とEditor Configの存在保証・生成を担当する`internal`なCompositionモジュールとし、`SymphonyEditorOrchestrator`から明示的に実行する。
+- 現行`SymphonyConfigManager.AllConfigCheck()`の責務はEditorの`SymphonyConfigInitializer`へ移す。この型は3つのRuntime Config（`SceneLoadConfig`、`AudioConfig`、`SaveDataConfig`）とEditor Configの存在保証・生成を担当する`internal`なCompositionモジュールとし、`SymphonyEditorOrchestrator`から明示的に実行する。
 - 動的な再読み込みが必要な場合は、Compositionが更新と再注入を統括する。
 - `ScriptableObject`のシリアライズ値は外部から変更させず、読み取り専用プロパティを公開する。
 - シリアライズ済みフィールドを変更する場合は、[バージョニング](#バージョニング)の規約に従う。

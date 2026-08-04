@@ -45,7 +45,7 @@
 | --- | --- | --- |
 | `Assets/SymphonyFrameWork/` | **submodule**（成果物） | 変更時は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) に従う |
 | `Assets/Scripts/SymphonyFrameWork/` | **自動生成** | `SceneListEnum` / `TagsEnum` / `LayersEnum` / `AudioGroupTypeEnum` と `SymphonyFrameWork.Enum.asmdef`。`EnumGenerator` / `AutoEnumGenerator` が生成する。**手で編集しない** |
-| `Assets/Resources/SymphonyFrameWork/` | **自動生成** | `SceneManagerConfig` / `AudioManagerConfig` / `SaveSystemConfig`。`SymphonyConfigManager.AllConfigCheck()` が `[InitializeOnLoad]` で生成する。型は `internal` なのでコードから参照できず、Inspector と Project Settings 経由でのみ設定する |
+| `Assets/Resources/SymphonyFrameWork/` | **自動生成** | `SceneLoadConfig` / `AudioConfig` / `SaveDataConfig`。`SymphonyConfigManager.AllConfigCheck()` が `[InitializeOnLoad]` で生成する。型は `internal` なのでコードから参照できず、Inspector と Project Settings 経由でのみ設定する |
 | `Assets/Scripts/DebugScripts/` | 手書きの検証用スクラッチ | ServiceLocator等の動作確認用。テストではない |
 | `Assets/Level/Scenes/` | 動作確認用シーン | `NewScene` / `Scene2` / `Scene3` の3つだけがBuild Settingsに登録済み。**この登録順が `SceneListEnum` に反映される** |
 | `Assets/Arts/Shaders/` | Shader Graph + HLSL | `ToonShader` / `CharacterToonShader` / `OutLineShader` / `DashedLineShader`、`ToonLighting.hlsl` / `AdvancedOutline.hlsl` |
