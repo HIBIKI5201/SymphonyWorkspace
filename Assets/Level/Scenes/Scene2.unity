@@ -258,7 +258,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4c2c69bb427f88f408b097383b690c25, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.Utility.SymphonyLocate
+  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.Utility.ServiceLocateComponent
   _target: {fileID: 216230137}
   _locateType: 0
   _autoRegister: 1
@@ -431,7 +431,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4c2c69bb427f88f408b097383b690c25, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.Utility.SymphonyLocate
+  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.Utility.ServiceLocateComponent
   _target: {fileID: 1766308627}
   _locateType: 1
   _autoRegister: 1
@@ -558,7 +558,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4c2c69bb427f88f408b097383b690c25, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.Utility.SymphonyLocate
+  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.Utility.ServiceLocateComponent
   _target: {fileID: 2029210843}
   _locateType: 1
   _autoRegister: 1
