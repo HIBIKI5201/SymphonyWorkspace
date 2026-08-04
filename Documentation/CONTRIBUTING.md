@@ -14,6 +14,8 @@
 | [../AGENTS.md](../AGENTS.md) | ワークスペースの構成、環境設定、自動生成物の区別を知りたいとき |
 | [../Assets/SymphonyFrameWork/AGENTS.md](../Assets/SymphonyFrameWork/AGENTS.md) | 利用者向け文書の導線や、全作業で常時守る制約を変更するとき |
 | [../Assets/SymphonyFrameWork/Documentation~/AgentUsage.md](../Assets/SymphonyFrameWork/Documentation~/AgentUsage.md) | AIエージェントが利用コードを書く際の注意事項を変更するとき |
+| [../Assets/SymphonyFrameWork/Documentation~/EditorTools.md](../Assets/SymphonyFrameWork/Documentation~/EditorTools.md) | Editor機能を追加・変更するとき。**記載の無いモジュールを見つけたら追記する** |
+| [../Assets/SymphonyFrameWork/Documentation~/Deprecations.md](../Assets/SymphonyFrameWork/Documentation~/Deprecations.md) | `[Obsolete]` を付ける・外すとき。今どのAPIが非推奨で残っているかを知りたいとき |
 | [../Assets/SymphonyFrameWork/CHANGELOG.md](../Assets/SymphonyFrameWork/CHANGELOG.md) | 直近の変更の経緯を知りたいとき。記述の粒度の参考にもする |
 | [../.agents/skills/implement/SKILL.md](../.agents/skills/implement/SKILL.md) | 機能を**追加・変更**するとき。設計書からコミットまでの実装フロー |
 
@@ -60,7 +62,7 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 - **移動・リネームは `.meta` と必ずセットで行う。** `git mv` を使い、`.cs` だけを動かして `.meta` を置き去りにしないこと。GUIDを維持すれば利用者側の参照は切れません（実例: CHANGELOG 2.2.1 の `Runtime/Obsolete/` への集約）。
 - **削除も対で行う。** 片方だけ残った `.meta` はUnityが警告を出します。
 - コミット前に `git status` で、追加・削除・移動したファイルと `.meta` の数が対応しているか確認してください。
-- `Assets/SymphonyFrameWork/` 配下のアセットは `SymphonyAssetProtector` が移動を自動で差し戻します。意図して動かす場合は `Tools/SymphonyFrameWork/Settings/Symphony Asset Lock` を解除してから `git mv` してください。
+- `Assets/SymphonyFrameWork/` 配下のアセットは `SymphonyAssetProtector` が移動を自動で差し戻します。意図して動かす場合は `Project Settings > SymphonyFrameWork` の `Asset Protection Mode` を `Warning` または `Disabled` にしてから `git mv` してください。
 
 ## 3. 文字コードと改行
 
@@ -147,10 +149,12 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 | --- | --- |
 | 公開API（`public`/`protected`）の追加・変更・削除 | XMLドキュメント、`Assets/SymphonyFrameWork/README.md`、`Assets/SymphonyFrameWork/CHANGELOG.md`、`Assets/SymphonyFrameWork/package.json` の `version`、該当する Sample。AI向けの注意事項が変わる場合だけ`Documentation~/AgentUsage.md`、アセンブリ・初期化・公開型の関係が変わる場合だけ`Documentation~/Architecture.md` |
 | 公開挙動の変更（シグネチャは同じだが結果が変わる） | CHANGELOG.md、`version`、必要なら README のクイックスタート |
-| 設定アセット（Config）の項目の追加・変更 | README の初期設定、CHANGELOG.md、AI向けの制約が変わる場合は`Documentation~/AgentUsage.md` |
+| 設定アセット（Config）の項目の追加・変更 | README の初期設定、CHANGELOG.md、`Documentation~/EditorTools.md` の該当節、AI向けの制約が変わる場合は`Documentation~/AgentUsage.md` |
+| Editor機能（ウィンドウ、メニュー、Project Settings、生成物）の追加・変更 | `Documentation~/EditorTools.md`、CHANGELOG.md。索引が変わる場合は README の `Editor・デバッグ支援` |
 | Sample の追加 | `package.json` の `samples`、CHANGELOG.md |
 | 依存パッケージの追加・更新 | `package.json` の `dependencies`、README の必要なパッケージ |
-| 非推奨化 | `[Obsolete("代替APIの案内", error: false)]`、CHANGELOG の `### Deprecated`（移行方法を明記）、READMEまたはSampleの旧API利用箇所 |
+| 非推奨化 | `[Obsolete("代替APIの案内", error: false)]`、**`Documentation~/Deprecations.md` への行追加（削除予定が未定なら「未定」と書く）**、CHANGELOG の `### Deprecated`（移行方法を明記）、READMEまたはSampleの旧API利用箇所 |
+| 非推奨APIの削除 | `Documentation~/Deprecations.md` の行を `## 削除済み` へ移す、CHANGELOG の `### Breaking`（移行方法を明記）、`package.json` の `version`（メジャー更新） |
 | 本体開発の手順・規約の変更 | ワークスペース側の `Documentation/`（このファイル、CodeGuidelines、DesignPhilosophy）と `AGENTS.md` |
 | 内部実装（`internal`/`private`）のみの変更 | 原則不要。ただし**更新不要と判断した理由**をPR説明かコミットメッセージに書く |
 

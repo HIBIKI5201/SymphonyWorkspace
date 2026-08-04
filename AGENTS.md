@@ -14,6 +14,22 @@
 | ホストプロジェクトの設定・シーン・アセットを触る | このファイル |
 | 直近の変更の経緯を知る | [Assets/SymphonyFrameWork/CHANGELOG.md](./Assets/SymphonyFrameWork/CHANGELOG.md) |
 
+## 0.1 Editor機能と削除予定のドキュメント
+
+次の2つは、記載漏れが起きやすいわりに参照されるドキュメントです。**該当する変更をしたら、同じ変更の中で必ず更新してください。**
+
+| 正本 | 対象 |
+| --- | --- |
+| [Assets/SymphonyFrameWork/Documentation~/EditorTools.md](./Assets/SymphonyFrameWork/Documentation~/EditorTools.md) | Editor機能（ウィンドウ、メニュー、Project Settings、自動生成、`AssetPostprocessor`） |
+| [Assets/SymphonyFrameWork/Documentation~/Deprecations.md](./Assets/SymphonyFrameWork/Documentation~/Deprecations.md) | 非推奨API（`[Obsolete]`）と、その削除予定 |
+
+- **作業中に、EditorTools.md へ記載の無いEditorモジュールを見つけたら、そのモジュールの節を追加してください。** 今回の変更で触っていないモジュールでも構いません。記載漏れは、その機能が存在しないのと同じです。記載の有無は `Assets/SymphonyFrameWork/Editor/` 配下のディレクトリと照らして判断します。
+- **`[Obsolete]` を付けたら、同じ変更で Deprecations.md へ行を追加してください。** 削除予定が決まっていない場合は「未定」と書きます。書かずに済ませないでください。
+- **`[Obsolete]` なメンバーを削除したら、Deprecations.md の行を `## 削除済み` へ移してください。**
+- **メニューパスや設定の場所を変えたら、EditorTools.md の該当箇所を直してください。** 実際に、Project Settings へ統合済みの `Symphony Asset Lock` メニューへの言及が、廃止後もこのファイルと CONTRIBUTING.md に残っていました。
+
+コードとドキュメントの乖離はバグとして扱います（[Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) §6）。
+
 ## 1. 2つのリポジトリ
 
 | | ワークスペース（親） | パッケージ（submodule） |
@@ -54,7 +70,7 @@
 | `Assets/Plugins/` | **git管理外** | DOTween |
 | `Assets/TextMesh Pro/`, `Assets/TutorialInfo/` | Unityテンプレート由来 | 触らない |
 
-`Assets/SymphonyFrameWork/` 配下のアセットは、`SymphonyAssetProtector`（`AssetPostprocessor`）が移動を検知して自動的に差し戻します。意図して動かす場合は `Tools/SymphonyFrameWork/Settings/Symphony Asset Lock` を解除してください。
+`Assets/SymphonyFrameWork/` 配下のアセットは、`SymphonyAssetProtector`（`AssetPostprocessor`）が移動を検知して自動的に差し戻します。意図して動かす場合は `Project Settings > SymphonyFrameWork` の `Asset Protection Mode` を `Warning` または `Disabled` にしてください（保存先は `UserSettings/SymphonyFrameWork/SymphonyUserSettingConfig.asset`）。
 
 ## 4. アセンブリ構成
 
