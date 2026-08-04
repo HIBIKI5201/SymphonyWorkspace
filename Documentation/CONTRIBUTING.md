@@ -40,7 +40,7 @@
 | リポジトリ | `HIBIKI5201/SymphonyWorkspace` | `HIBIKI5201/SymphonyFramework` |
 | ルート | このリポジトリのルート | `Assets/SymphonyFrameWork/` |
 | 役割 | 開発環境。Unityプロジェクト、検証用シーン、本ドキュメント | 配布物。UPMパッケージ本体 |
-| 既定ブランチ | `dev` | `develop` |
+| 既定ブランチ | `main` | `develop` |
 
 - **パッケージのソース変更は、必ず submodule 側（`Assets/SymphonyFrameWork/`）でコミットします。** 親リポジトリはパッケージのファイルを追跡せず、submodule のコミットハッシュ（gitlink）だけを記録します。
 - コマンドラインからは `git -C "Assets/SymphonyFrameWork" ...` のように対象を明示すると取り違えを防げます。
@@ -109,6 +109,32 @@ uLoopで確認できない範囲は依頼者へ依頼します。変更を報告
 - 新規ファイルの `.meta` が生成されたか（Unity Editorにフォーカスを当てる必要があります）
 
 ## 5. ブランチとコミット
+
+### `scripts/release_round.py` で手順を固定する
+
+この節の手順は `scripts/release_round.py` にコード化してあります。**手で git を叩く代わりにこれを使ってください。**
+
+```bash
+python scripts/release_round.py preflight
+python scripts/release_round.py commit --message "[add]日本語の要約" --issue 119 --pr --pr-body-file body.md
+python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
+```
+
+| フェーズ | 内容 |
+| --- | --- |
+| `preflight` | ブランチ、`version` と CHANGELOG の一致、`.cs` の UTF-8 BOM、`.meta` の対、Runtime/Core からの `UnityEditor` 参照、テスト asmdef の `UNITY_INCLUDE_TESTS` を検証する。**git の状態は変更しない** |
+| `commit` | preflight を通してから submodule へコミットし push する。`--pr` で Pull Request も作成する |
+| `finalize` | **gitlink が `origin/develop` から到達可能かを確認してから**、親リポジトリをコミットして push する |
+
+スクリプトが機械的に防いでいるのは次の3点です。手で叩くと落としやすく、落ちたときの影響が大きい順に並んでいます。
+
+1. **submodule を push する前に親の gitlink を更新しない**
+2. **gitlink が `origin/develop` から到達可能である**（feature ブランチのコミットを指すと、squash マージやブランチ削除で到達不能になり、新規クローンの `git submodule update` が失敗する）
+3. **親リポジトリへ `git add -A` しない**（無関係な未コミット変更を巻き込む）
+
+**PR のマージとブランチ削除はスクリプトの対象外です。** 承認を挟む余地を残すため意図的に外してあります。マージは `gh pr merge <番号> --merge --delete-branch` を手で実行してください。
+
+以下は、スクリプトが何をしているかの説明です。
 
 パッケージを変更した場合、**submodule と親リポジトリの2段階でコミット**します。
 
