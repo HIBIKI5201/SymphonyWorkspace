@@ -73,7 +73,9 @@ Round の目安は「単独で検証でき、単独でリリースできる」�
 
 `package.json` の `version` と `CHANGELOG.md` の見出しを**同時に**更新し、submodule → 親リポジトリの順でコミットする。
 
-→ **[references/release.md](references/release.md)**（CHANGELOG の書き方、2段階コミットとPRの手順）
+**git は手で叩かず `scripts/release_round.py` を使う**（`preflight` / `commit` / `finalize`）。順序と検証がコード化してある。
+
+→ **[references/release.md](references/release.md)**（スクリプトの使い方、CHANGELOG の書き方、2段階コミットとPRの手順）
 
 飛ばすと事故る規則:
 
