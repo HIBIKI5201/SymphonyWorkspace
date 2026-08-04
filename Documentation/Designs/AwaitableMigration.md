@@ -19,11 +19,15 @@ C# は戻り値型だけが異なる多重定義を許さない。新しい名�
 | M1 | `3.0.0-preview.1` | Pause の待機API3件の Awaitable 移行（完了） |
 | M1b | `3.0.0-preview.2` | **Pause の `async void` 2件を Awaitable へ**（本 Round） |
 | M2 | `3.0.0-preview.3` | Save Data の Awaitable 移行 |
-| M3 | `3.0.0-preview.4` | Scene Load の Awaitable 移行 |
-| M4 | `3.0.0-preview.5` | Service Locate の Awaitable 移行 |
-| M5 | `3.0.0-preview.6` | Debug HUD、Component、`IInitializeAsync` |
-| N1〜 | `3.0.0-preview.N` | Phase 6（enum 改名、シム削除、`SceneLoadConfig`） |
-| 最終 | `3.0.0` | 接尾辞を落とす |
+| M3 | `3.0.0` | Scene Load の Awaitable 移行（完了） |
+| M4 | `3.0.0` | Service Locate の Awaitable 移行（完了） |
+| M5 | `3.0.0` | Debug HUD、Component、Editor UI、`SaveDataLoaderStrategy`（完了） |
+| N1〜 | `3.0.0` | Phase 6（enum 改名、シム削除、`SceneLoadConfig`）（完了） |
+| 最終 | `3.0.0` | 接尾辞を落とす（完了） |
+
+**M3以降は preview を刻まず、`3.0.0` として一括でリリースした。** 中間 preview を出す価値は「各 Round を単独でリリース可能に保つ」ことにあるが、M3 着手時点で 3.0.0 の確定までを続けて行う方針になったため、刻む理由が無くなった。
+
+`IInitializeAsync` は Round M5 の検討どおり `Task` を維持した。`InitializeTask` は完了状態を保持して `IsDone` から参照するため、保存も共有もできない `Awaitable` へ移行できない。
 
 ## Awaitable を使うときの制約
 

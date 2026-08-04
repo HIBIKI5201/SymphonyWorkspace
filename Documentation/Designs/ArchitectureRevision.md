@@ -651,7 +651,14 @@ BackgroundThreadAsync
 - 同期ブロック、保存された非同期値、共有された非同期値を全文検索で除去する。
 - 利用側向けの移行例をREADMEとCHANGELOGへ記載する。
 
-### Phase 6 — 3.0.0
+### Phase 6 — 3.0.0（完了）
+
+**2026-08-04に完了。** 実施内容と利用側への移行手順はCHANGELOGの`[3.0.0]`にある。計画からの差分は次の2点。
+
+- 公開enumは6型ではなく、[Enumの改名](#enumの改名)の表どおり7型を改名した。改名したのは型名だけであり、`ServiceRegistrationInfo.LocateType`のようなプロパティ名は変更していない。**型名とメンバー名が同名の場合、機械的な一括置換はメンバー名まで巻き込む。**
+- `SaveDataRegistryWindow`は`SaveStoreWindow`へ改名した。Facade名に揃える他の管理パネルと同じ規則にした。
+
+`SceneLoadConfig`への改名では、クラス改名を検知したUnityが既定値の`SceneLoadConfig.asset`を先に自動生成する。**旧アセットをリネームする前に自動生成分を削除しないと、設定値が既定値へ戻る。** この順序をCHANGELOGの移行手順へ明記した。
 
 - 移行期間を終えた旧シムを削除する。
 - 旧`SaveDataRegistry`が存在せず、`SaveStore`への移行手順がREADMEとCHANGELOGのBreaking項目にあることを確認する。
