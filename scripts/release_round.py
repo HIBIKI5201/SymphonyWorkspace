@@ -157,6 +157,7 @@ def run_preflight() -> bool:
 
     failures.extend(check_branch())
     failures.extend(check_version_matches_changelog())
+    failures.extend(check_fix_is_isolated())
     failures.extend(check_bom())
     failures.extend(check_meta_pairs())
     failures.extend(check_runtime_editor_references())
@@ -200,6 +201,36 @@ def check_version_matches_changelog() -> list[str]:
 
     print(f"[version] OK: {version}")
     return []
+
+
+def check_fix_is_isolated() -> list[str]:
+    """`### Fix` が他の見出しと同居していないかを確認する。
+
+    修正はパッチ更新として単独の版に切り出す方針である。機能追加と同じ版へ混ぜると、
+    「この版はパッチか、マイナーか」が版番号から読めなくなる。
+
+    **全版を対象にする。** 過去分は一度まとめて分離してあり、既存違反は残っていない。
+    残っていない検査は毎回全部を見てよい。
+    """
+    changelog = (SUBMODULE_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+
+    failures = []
+    checked = 0
+    for block in re.split(r"^## \[", changelog, flags=re.M)[1:]:
+        version = block.split("]", 1)[0]
+        sections = re.findall(r"^### (\S+)", block, flags=re.M)
+        checked += 1
+
+        if "Fix" in sections and any(name != "Fix" for name in sections):
+            others = "/".join(name for name in sections if name != "Fix")
+            failures.append(
+                f"CHANGELOGの{version}で'Fix'が'{others}'と同居しています。"
+                "修正は独立したパッチ版へ分けてください。"
+            )
+
+    if not failures:
+        print(f"[changelog] OK: {checked}件")
+    return failures
 
 
 def changed_files(pattern: str) -> list[str]:
