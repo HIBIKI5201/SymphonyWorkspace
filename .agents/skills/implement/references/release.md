@@ -18,15 +18,29 @@ python scripts/release_round.py finalize --paths Documentation/Designs/<機能�
 | --- | --- | --- |
 | `preflight` | ブランチ、`version` と CHANGELOG の一致、`.cs` の UTF-8 BOM、`.meta` の対、Runtime/Core からの `UnityEditor` 参照、テスト asmdef の `UNITY_INCLUDE_TESTS` を検証する。**git の状態は変更しない** | 検証に1件でも失敗 |
 | `commit` | preflight を通してから submodule へコミットし push する。`--pr` で Pull Request も作成する | メッセージが `[add]`/`[update]`/`[fix]` で始まる1行でない、preflight 失敗、変更が無い |
-| `finalize` | **gitlink が `origin/develop` から到達可能かを確認してから**、親リポジトリをコミットして push する | submodule に未コミット変更がある、gitlink が到達不能（＝PR 未マージ） |
+| `finalize` | **gitlink が `origin/develop` から到達可能かを確認してから**、submodule を `develop` へ揃え、マージ済みの `feature/*` ローカルブランチを削除し、親リポジトリをコミットして push する | submodule に未コミット変更がある、gitlink が到達不能（＝PR 未マージ） |
 
-スクリプトが機械的に防いでいるのは次の3点。手で叩くと落としやすい。
+スクリプトが機械的に防いでいるのは次の4点。手で叩くと落としやすい。
 
 1. **submodule を push する前に親の gitlink を更新しない**
 2. **gitlink が `origin/develop` から到達可能である**
 3. **親リポジトリへ `git add -A` しない**（明示したパスだけ staging する）
+4. **マージ後に submodule を `develop` へ戻し、ローカルの `feature/*` を残さない**
 
-**PR のマージとブランチ削除はスクリプトの対象外。** 承認を挟む余地を残すため意図的に外してある。マージは下記のとおり手で実行する。
+**PR のマージだけがスクリプトの対象外。** 承認を挟む余地を残すため意図的に外してある。マージは下記のとおり手で実行する。
+
+### finalize が行う後始末
+
+`gh pr merge --delete-branch` は**リモートのブランチしか消えない**ことがある。`--repo` を付けた `gh` は cwd のリポジトリを見るため、ワークスペースルートから実行すると submodule 側のローカルブランチが残る。`finalize` はこれを含めて片付ける。
+
+1. submodule の HEAD が `origin/develop` から到達可能かを確認する
+2. 現在のブランチが `feature/*` なら、`origin/develop` へマージ済みかを確認して `develop` へ切り替える
+3. `develop` を `origin/develop` へ fast-forward する
+4. マージ済みの `feature/*` ローカルブランチを削除する（`--keep-branches` で抑止できる）
+
+**1 と 3 の順序を入れ替えてはいけない。** 先に `develop` を進めると、PR が未マージでも「develop の HEAD は develop から到達可能」となって 1 の検査が素通りし、作業を含まないコミットを gitlink へ記録してしまう。
+
+削除対象を `feature/*` に限っているのは、フローの命名規則に沿うブランチだけを消し、別目的のローカルブランチへ触らないためである。
 
 `preflight` はステップ3の検証のうち機械的に判定できる部分だけを見る。**`uloop-compile` とテストの実行は別途行う。** スクリプトは Unity を起動しない。
 
@@ -73,16 +87,15 @@ submodule と親リポジトリの2段階。**順序を守る。**
 ```bash
 python scripts/release_round.py commit --message "[add]<日本語の要約>" --issue <番号> --pr --pr-body-file <本文ファイル>
 ```
-5. **`develop` へのマージまで実行してよい。** マージ後は次を行う
+5. **`develop` へのマージまで実行してよい。**
    ```
    gh pr merge <PR番号> --merge --delete-branch
    ```
-   - 作業ブランチを削除する（上のオプションで同時に消える）
    - 対応する Issue を閉じる。Issue が無いラウンドなら不要
-   - **`develop` へ戻る**（`--delete-branch` で自動的に戻るが、`git branch --show-current` で確認する）
+   - **`develop` へ戻す操作とローカルブランチの削除は手で行わない。** 次の `finalize` が行う
 
    **`develop` から `main` へのマージだけは人間が行う。** ここは実行しない。
-6. マージ後、submodule を `develop` へ戻して最新にしてから、親リポジトリで gitlink と設計書をコミットし、**push する**。
+6. マージ後、親リポジトリで gitlink と設計書をコミットし、**push する**。submodule を `develop` へ戻す操作もここに含まれる。
 
    ```bash
    python scripts/release_round.py finalize --paths Documentation/Designs/<機能名>.md

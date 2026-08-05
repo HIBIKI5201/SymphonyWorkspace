@@ -13,9 +13,11 @@
 --------
 preflight : 検証のみ。git の状態は一切変更しない
 commit    : preflight → submodule へコミット → push →（任意で）PR 作成
-finalize  : マージ後。gitlink の到達可能性を確認 → 親リポジトリをコミット → push
+finalize  : マージ後。gitlink の到達可能性を確認 → submodule を develop へ揃える
+            → マージ済み feature ブランチを削除 → 親リポジトリをコミット → push
 
-**マージとブランチ削除はこのスクリプトが行わない。** 承認を挟む余地を残すため意図的に対象外にしている。
+**PR のマージはこのスクリプトが行わない。** 承認を挟む余地を残すため意図的に対象外にしている。
+マージ後の後始末（develop への復帰、fast-forward、ローカルブランチの削除）は finalize が行う。
 
 Exit codes
 ----------
@@ -97,6 +99,11 @@ def main() -> int:
     finalize_parser.add_argument("--parent-branch", help="pushする親のブランチ。省略時は現在のブランチ")
     finalize_parser.add_argument(
         "--no-push", action="store_true", help="コミットまで行い、pushしない"
+    )
+    finalize_parser.add_argument(
+        "--keep-branches",
+        action="store_true",
+        help="マージ済みのfeatureブランチを削除しない",
     )
 
     args = parser.parse_args()
@@ -397,6 +404,13 @@ def run_finalize(args: argparse.Namespace) -> int:
         return 1
     print(f"[gitlink] OK: {head[:7]} は {INTEGRATION_BRANCH} から到達可能")
 
+    # 到達可能性を確認した後で develop へ揃える。順序を入れ替えないこと。
+    # 先に develop を pull すると、PRが未マージでも「developのHEADはdevelopから到達可能」
+    # となって上の検査が素通りし、作業を含まないコミットをgitlinkへ記録してしまう。
+    failure = sync_submodule_to_integration(keep_branches=args.keep_branches)
+    if failure is not None:
+        return failure
+
     # 親リポジトリへは明示したパスだけを staging する。`git add -A` は使わない。
     paths = [SUBMODULE_PATH, *args.paths]
     git("add", "--", *paths)
@@ -419,6 +433,70 @@ def run_finalize(args: argparse.Namespace) -> int:
     git("push", "origin", branch)
     print(f"[push] OK: origin/{branch}")
     return 0
+
+
+def sync_submodule_to_integration(keep_branches: bool) -> int | None:
+    """マージ後の submodule を develop へ揃え、マージ済み feature ブランチを削除する。
+
+    手で行うと落としやすい後始末をここへ集約する。実際に、`gh pr merge --delete-branch`
+    をワークスペースルートで実行してもリモートのブランチしか消えず、submodule 側の
+    ローカルブランチが残る（`--repo` 指定の gh は cwd のリポジトリを見るため）。
+
+    **呼び出しは gitlink の到達可能性を確認した後に限る。** 先に develop を進めると、
+    PR が未マージでも検査が素通りする。
+
+    Returns:
+        成功時は None。失敗時は終了コード。
+    """
+    branch = current_branch(SUBMODULE_ROOT)
+    integration_name = INTEGRATION_BRANCH.split("/", 1)[1]
+
+    if branch and branch not in PROTECTED_BRANCHES:
+        # 未マージのブランチから develop へ移ると、作業が gitlink から外れる。
+        if branch not in merged_branches():
+            print(
+                f"NG: submoduleの'{branch}'が{INTEGRATION_BRANCH}へマージされていません。"
+                "\n  PRのマージを待ってから再実行してください。"
+            )
+            return 1
+        submodule_git("checkout", integration_name)
+
+    submodule_git("merge", "--ff-only", INTEGRATION_BRANCH)
+    print(f"[sync] OK: {integration_name} を {INTEGRATION_BRANCH} へ更新")
+
+    if keep_branches:
+        return None
+
+    # 削除対象を feature/ に限る。フローの命名規則に沿うブランチだけを消し、
+    # 利用者が別目的で持っているローカルブランチへ触らないため。
+    deleted = []
+    for name in merged_branches():
+        if not name.startswith("feature/"):
+            continue
+        submodule_git("branch", "-d", name)
+        deleted.append(name)
+
+    if deleted:
+        print(f"[branch] OK: マージ済みブランチを削除 ({len(deleted)}件)")
+        for name in deleted:
+            print(f"  - {name}")
+    else:
+        print("[branch] OK: 削除するマージ済みブランチはありません")
+
+    return None
+
+
+def merged_branches() -> set[str]:
+    """統合ブランチへマージ済みのローカルブランチ名を返す。
+
+    現在のブランチも含める。マージ済みかの判定に使うためで、
+    削除側では checkout 済みのため現在のブランチが対象に入ることはない。
+    """
+    lines = submodule_git(
+        "branch", "--merged", INTEGRATION_BRANCH, "--format=%(refname:short)"
+    ).splitlines()
+
+    return {name.strip() for name in lines if name.strip()}
 
 
 def default_parent_message() -> str:
