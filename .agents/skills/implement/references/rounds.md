@@ -45,6 +45,14 @@ Issue が無い機能追加・変更でも、従来どおり `develop` から `f
 | サブシステム単位 | Scene Load → Service Locate → Save Data → Audio/Pause |
 | 非破壊 → 破壊的 | 新APIの追加と `[Obsolete]` 化の Round → 旧API削除の Round |
 
+**削除・改名するメンバーがあるなら、その参照元を機械的に列挙し、同じ Round へ入れる。** メンバーが消えた時点で参照元はコンパイルが通らなくなるため、参照元だけを後の Round へ回すことはできない。「表示を変えるのは次の Round」と決めても、表示元のフィールドを今の Round で消すなら、表示の変更も今の Round に入る。
+
+```bash
+rg -n "\.Mode\b|\.CreateZip\b|\.UsedDependencies\b" Assets/SymphonyFrameWork -g '*.cs'
+```
+
+目視で分割を決めない。**この検索は Round 分割を書く時点で実行する。** 実際に、確認ウィンドウの表示変更を Round 2 へ置いた設計書が、Round 1 でフィールドを削除する都合で Round 1 へ戻っている（Issue #124）。検索していれば着手前に分かった。
+
 ### 進め方
 
 1. **設計書に Round 分割を書く。** 各 Round が何を含み、何を含まないかを明示する。依存順があるなら順序も書く
