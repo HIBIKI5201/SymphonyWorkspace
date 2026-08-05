@@ -346,11 +346,15 @@ public enum PackageModeEnum : byte { ... }
 - `AssetStoreToolsPackagerData` へ `_pipelines` を追加
 - Project Settings での配列編集と `Create Default Pipeline` ボタン
 - Packager ウィンドウの `Export Mode` をパイプラインのポップアップへ差し替え、`Create ZIP File` / `Used Dependencies` のトグルを削除
-- 確認ウィンドウの表示をパイプライン名と手順一覧へ差し替え
 - `Export(string[], PackageModeEnum, bool, bool)` と `PackageModeEnum` の `[Obsolete]` 化
 - `Documentation~/EditorTools.md` と `Documentation~/Deprecations.md` の更新
 
 **依存順**: Round 1 が完了しコミットされてから着手します。
+
+**実装時の追加判断**:
+
+- **`internal CreatePlan(string[], PackageModeEnum, bool, bool)` は削除しました。** ウィンドウがパイプラインへ移った時点で唯一の呼び出し元が非推奨の公開 `Export` だけになったため、そちらへ直接インライン展開しています。`internal` なのでバージョニング上の制約はありません。
+- **Export タブへ切り替えたときにパイプラインの一覧を読み直します。** Project Settings の配列は、Packager ウィンドウを開いたまま変更され得るためです。Import タブが既に同じ形（タブ入場時に読み直す）だったため、それに揃えています。実測でも、`OnEnable` と `Refresh` ボタンだけでは配列の変更が反映されないことを確認しました。
 
 ## テストの置き場と種別
 
