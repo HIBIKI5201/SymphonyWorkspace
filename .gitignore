@@ -80,3 +80,4 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 .uloop/outputs/
 Packages/com.singularitygroup.hotreload/
+ExportedPackages/

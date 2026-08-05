@@ -1,7 +1,8 @@
-﻿public enum SceneListEnum : int
+﻿/// <summary> Symphony Frameworkが自動生成した列挙型。 </summary>
+public enum SceneListEnum : int
 {
+    /// <summary> Noneを表す。 </summary>
     None = 0,
-    NewScene = 1,
-    Scene2 = 2,
-    Scene3 = 3,
+    /// <summary> Sampleを表す。 </summary>
+    Sample = 1,
 }

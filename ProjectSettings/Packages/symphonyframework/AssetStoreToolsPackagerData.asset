@@ -14,3 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: SymphonyFrameWork.Editor::SymphonyFrameWork.Editor.AssetStoreToolsPackagerData
   exportedPackagesPath: ExportedPackages
   _assetStoreToolsPath: Assets/AssetStoreTools
+  _pipelines:
+  - {fileID: 11400000, guid: de23246dfa944c644ac3ec13667e4175, type: 2}
+  - {fileID: 11400000, guid: c31d971d1328b3b44990b0d859ef08f2, type: 2}
