@@ -1,4 +1,4 @@
 {
-    "allowThirdPartyTools": false,
-    "dynamicCodeSecurityLevel": 1
+    "allowThirdPartyTools": true,
+    "dynamicCodeSecurityLevel": 2
 }
