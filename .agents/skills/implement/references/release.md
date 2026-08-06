@@ -9,6 +9,7 @@ CHANGELOG の書き方と、submodule から親リポジトリまでの2段階�
 **git を手で叩かず、このスクリプトを使う。** 順序と検証がコード化してある。
 
 ```bash
+python scripts/release_round.py bump --level minor
 python scripts/release_round.py preflight
 python scripts/release_round.py commit --message "[add]日本語の要約" --issue 119 --pr --pr-body-file <本文ファイル>
 python scripts/release_round.py finalize --paths Documentation/Designs/<機能名>.md
@@ -16,7 +17,8 @@ python scripts/release_round.py finalize --paths Documentation/Designs/<機能�
 
 | フェーズ | 内容 | 落ちる条件 |
 | --- | --- | --- |
-| `preflight` | ブランチ、`version` と CHANGELOG の一致、`.cs` の UTF-8 BOM、`.meta` の対、Runtime/Core からの `UnityEditor` 参照、テスト asmdef の `UNITY_INCLUDE_TESTS` を検証する。**git の状態は変更しない** | 検証に1件でも失敗 |
+| `bump` | `package.json`、CHANGELOG の見出し、README の「現在のバージョン」を1回の操作で揃える。**git の状態は変更しない** | 現在より小さい・同じ版、`YYYY-MM-DD` でない日付 |
+| `preflight` | ブランチ、`version` と CHANGELOG と README の一致、CHANGELOG の `Fix` 分離、`.cs` の UTF-8 BOM、`.meta` の対、Runtime/Core からの `UnityEditor` 参照、テスト asmdef の `UNITY_INCLUDE_TESTS` を検証する。**git の状態は変更しない** | 検証に1件でも失敗 |
 | `commit` | preflight を通してから submodule へコミットし push する。`--pr` で Pull Request も作成する | メッセージが `[add]`/`[update]`/`[fix]` で始まる1行でない、preflight 失敗、変更が無い |
 | `finalize` | **gitlink が `origin/develop` から到達可能かを確認してから**、submodule を `develop` へ揃え、マージ済みの `feature/*` ローカルブランチを削除し、親リポジトリをコミットして push する | submodule に未コミット変更がある、gitlink が到達不能（＝PR 未マージ） |
 
@@ -50,7 +52,23 @@ python scripts/release_round.py finalize --paths Documentation/Designs/<機能�
 
 ## 4. バージョンを更新する
 
-`Assets/SymphonyFrameWork/package.json` の `version` と `CHANGELOG.md` の見出しを**同時に**更新する。SemVer の判断は設計書の「バージョン判断」と `Documentation/DesignPhilosophy.md` の `### バージョニング` に従う。
+版は `package.json` の `version`、`CHANGELOG.md` の見出し、`README.md` の「現在のバージョン」の**3箇所**にある。**同時に更新する。**
+
+**版の書き込みは `bump` に任せる。** 3ファイルを手で直さない。README は実際に取り残されており、3.2.0 のまま5リリース進んだ後、直した直後にもう一度取り残している。版を上げる操作と README を直す操作が別だからで、手順書へ書いても同じことが起きる。
+
+```bash
+# 段位を指定する（現在の版から1つ上げる）
+python scripts/release_round.py bump --level minor
+
+# 版を明示する
+python scripts/release_round.py bump --version 3.9.0 --summary "この版の要約。"
+```
+
+`bump` は `package.json` の `version`、CHANGELOG の見出し（日付は今日）、README の「現在のバージョン」を同時に書き換える。**どの段位を上げるかは判断であり、`bump` は決めない。** SemVer の判断は設計書の「バージョン判断」と `Documentation/DesignPhilosophy.md` の `### バージョニング` に従う。
+
+`--summary` を省くと見出しの下へ `<!-- 要約を書く -->` が入る。**置き換えるまで `preflight` は通らない。** 要約と `### 見出し` は手で書く。
+
+**1つの Round で機能追加と修正の両方を行った場合は `bump` を2回実行する。** 常に先頭へ挿入し、現在より大きい版だけを受け付けるため、2回目で正しい並びになる。
 
 CHANGELOG の形式:
 

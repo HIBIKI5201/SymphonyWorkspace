@@ -35,6 +35,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import re
 import subprocess
@@ -56,6 +57,10 @@ META_EXEMPT_PREFIXES = ("Documentation~/",)
 COMMIT_MESSAGE_PATTERN = re.compile(r"^\[(add|update|fix)\][^\s].*$")
 CHANGELOG_HEADING_PATTERN = re.compile(r"^## \[([^\]]+)\]", re.MULTILINE)
 README_VERSION_PATTERN = re.compile(r"^- 現在のバージョン: \*\*([^*]+)\*\*", re.MULTILINE)
+DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+# bump が入れる穴埋めの目印。残ったまま commit へ進めないよう preflight で検出する。
+SUMMARY_PLACEHOLDER = "<!-- 要約を書く -->"
 COMMENT_LINE_PATTERN = re.compile(r"^\s*(//|/\*|\*)")
 
 BOM = b"\xef\xbb\xbf"
@@ -68,6 +73,23 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="phase", required=True)
 
     subparsers.add_parser("preflight", help="検証のみ行い、gitの状態を変更しない")
+
+    bump_parser = subparsers.add_parser(
+        "bump", help="package.json・CHANGELOG・READMEの版を同時に更新する"
+    )
+    bump_group = bump_parser.add_mutually_exclusive_group(required=True)
+    bump_group.add_argument(
+        "--level",
+        choices=("major", "minor", "patch"),
+        help="現在の版から1つ上げる。SemVerの判断は設計書に従う",
+    )
+    bump_group.add_argument("--version", help="明示する版。例: 3.9.0")
+    bump_parser.add_argument(
+        "--summary", help="見出し直下の要約。省略すると穴埋め用の目印を入れる"
+    )
+    bump_parser.add_argument(
+        "--date", help="見出しの日付。省略すると今日（YYYY-MM-DD）"
+    )
 
     commit_parser = subparsers.add_parser("commit", help="submoduleへコミットしpushする")
     commit_parser.add_argument(
@@ -111,6 +133,8 @@ def main() -> int:
 
     if args.phase == "preflight":
         return 0 if run_preflight() else 1
+    if args.phase == "bump":
+        return run_bump(args)
     if args.phase == "commit":
         return run_commit(args)
     if args.phase == "finalize":
@@ -232,6 +256,12 @@ def check_fix_is_isolated() -> list[str]:
 
     failures = []
     checked = 0
+
+    # bump が入れた穴埋めが残ったままリリースされないようにする。
+    if SUMMARY_PLACEHOLDER in changelog:
+        failures.append(
+            f"CHANGELOGに'{SUMMARY_PLACEHOLDER}'が残っています。要約へ置き換えてください。")
+
     for block in re.split(r"^## \[", changelog, flags=re.M)[1:]:
         version = block.split("]", 1)[0]
         sections = re.findall(r"^### (\S+)", block, flags=re.M)
@@ -353,6 +383,102 @@ def check_test_assembly_constraints() -> list[str]:
     if not failures:
         print(f"[asmdef] OK: {checked}件")
     return failures
+
+
+# ----------------------------------------------------------------------- bump
+
+
+def run_bump(args: argparse.Namespace) -> int:
+    """package.json・CHANGELOG・README の版を1回の操作で揃える。
+
+    **どの段位を上げるかは判断であり、ここでは決めない。** 決まった版を3箇所へ
+    同じ形で書き込むところだけを引き受ける。README の表示は実際に取り残されており、
+    版を上げる操作と README を直す操作が別であることが原因である。
+    """
+    package_path = SUBMODULE_ROOT / "package.json"
+    changelog_path = SUBMODULE_ROOT / "CHANGELOG.md"
+    readme_path = SUBMODULE_ROOT / "README.md"
+
+    current = json.loads(package_path.read_text(encoding="utf-8"))["version"]
+
+    try:
+        new_version = args.version or increment_version(current, args.level)
+        validate_bump(current, new_version)
+    except ValueError as error:
+        print(f"NG: {error}")
+        return 2
+
+    date = args.date or datetime.date.today().isoformat()
+    if not DATE_PATTERN.match(date):
+        print(f"NG: 日付は YYYY-MM-DD で指定してください: {date}")
+        return 2
+
+    print("== bump ==")
+
+    # package.json は version 行だけを差し替える。json.dump で書き戻すと
+    # キーの並びと整形が変わり、無関係な差分が出る。
+    package_text = package_path.read_text(encoding="utf-8")
+    package_path.write_text(
+        package_text.replace(f'"version": "{current}"', f'"version": "{new_version}"', 1),
+        encoding="utf-8",
+    )
+    print(f"[package.json] OK: {current} → {new_version}")
+
+    summary = args.summary or SUMMARY_PLACEHOLDER
+    changelog_text = changelog_path.read_text(encoding="utf-8")
+    entry = f"## [{new_version}] - {date}\n{summary}\n\n"
+    changelog_path.write_text(
+        changelog_text.replace("# Changelog\n\n", f"# Changelog\n\n{entry}", 1),
+        encoding="utf-8",
+    )
+    print(f"[CHANGELOG.md] OK: ## [{new_version}] - {date} を追加")
+
+    readme_text = readme_path.read_text(encoding="utf-8")
+    readme_path.write_text(
+        README_VERSION_PATTERN.sub(
+            f"- 現在のバージョン: **{new_version}**", readme_text, count=1
+        ),
+        encoding="utf-8",
+    )
+    print(f"[README.md] OK: {new_version}")
+
+    if args.summary is None:
+        print(
+            f"\n次: CHANGELOG.md の '{SUMMARY_PLACEHOLDER}' を要約へ置き換え、"
+            "### 見出しを書いてください。"
+            "\n     置き換えるまで preflight は通りません。"
+        )
+    return 0
+
+
+def increment_version(current: str, level: str) -> str:
+    """現在の版から指定した段位を1つ上げる。"""
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)$", current)
+    if match is None:
+        raise ValueError(
+            f"現在の版が X.Y.Z の形ではないため --level を使えません: {current}"
+            "\n  --version で明示してください。"
+        )
+
+    major, minor, patch = (int(part) for part in match.groups())
+    if level == "major":
+        return f"{major + 1}.0.0"
+    if level == "minor":
+        return f"{major}.{minor + 1}.0"
+    return f"{major}.{minor}.{patch + 1}"
+
+
+def validate_bump(current: str, new_version: str) -> None:
+    """新しい版が現在より確実に大きいことを確認する。"""
+    if not re.match(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?$", new_version):
+        raise ValueError(f"版は X.Y.Z の形で指定してください: {new_version}")
+
+    def key(version: str) -> tuple:
+        base = version.split("-", 1)[0]
+        return tuple(int(part) for part in base.split("."))
+
+    if key(new_version) < key(current) or new_version == current:
+        raise ValueError(f"現在の版 {current} より大きい版を指定してください: {new_version}")
 
 
 # --------------------------------------------------------------------- commit
