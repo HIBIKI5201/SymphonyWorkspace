@@ -41,6 +41,10 @@
    対象をこの Round の差分に限っているのは、パッケージ内に BOM 無しの既存ファイルが残っているためである（全体の一括修正は独立した Round で扱う）。毎回同じ既存違反を報告する検索は読まれなくなる。
 3. **コンパイル** — `uloop-clear-console` → `uloop-compile` → `uloop-get-logs`。エラー0件、意図しない警告なし。
 
+   **`uloop-compile` が `is compiling` や `Domain Reload in progress` を返し続ける場合、`--force-recompile true` で再試行しない。** 再試行のたびに新しい Domain Reload を起こすため、次のポーリングが必ず「reloading」を見る。**自分で終わらない状態を作っていることに気づけない。** `Temp/` の `compiling.lock`・`domainreload.lock`・`serverstarting.lock` を確認して `uloop fix` を実行し、そのうえで **`uloop-get-logs` のコンソール内容を真実として読む。**
+
+   実際に、`compiling.lock` が残っているだけでコンパイル自体は完了していたケースで、再試行ループを回してユーザーに指摘されるまで気づけなかった。**`uloop-compile` の応答はコンパイル結果そのものではなく、コンパイル結果を読める状態かどうかを示すに過ぎない。**
+
    **コンパイル直後の初回テスト実行は信用しない。** `uloop-clear-console` を挟んでから実行し、**同じ結果が2回続くことを確認してから合格と判断する。**
 
    意図的に例外ログを出すテスト（購読者例外の隔離を検証するものなど）のログが、リコンパイル直後の初回実行に限り、後続の async テストの未処理ログとして計上されることがある。実測では3回連続実行のうち1回目だけが失敗し、2回目・3回目は全数成功した。**1回の失敗を実装の欠陥と決めつけて調査に入らない。** 逆に、2回続けて同じテストが落ちるなら実装を疑う。
@@ -58,11 +62,14 @@
 Sample Scene、Build Settings、Prefabを使うランタイム確認では、検証操作を成果物へ混入させないため次の順序を守る。
 
 1. **検証前の状態を記録する。** 親とsubmoduleの`git status --short`を取得し、対象の`.unity`、`.prefab`、`ProjectSettings/EditorBuildSettings.asset`、自動生成enum、`.slnx`が既にdirtyか確認する。既存のdirty変更はユーザーのものとして扱い、自動復元の対象にしない
-2. **Sceneを保存しない。** 検証用GameObjectの生成・破棄はPlay Mode内だけで行う。`EditorSceneManager.SaveScene`、`SaveCurrentModifiedScenesIfUserWantsTo`、動的実行のsave相当オプションを使わない。Sceneを開いた直後は`isDirty == false`を確認する
-3. **複数行の動的コードは一時`.csx`へ書く。** PowerShell上のinlineコードは補間文字列や空白で引数分割されるため、`Temp/`配下の`.csx`を`--code-file`で実行し、完了後に削除する。短い1文だけinline実行を許可する
-4. **時間依存の確認ではフレーム進行を検証する。** `uloop-focus-window`後も`Time.time`が進まない場合だけ、Play Mode中の`Application.runInBackground`を一時的に`true`へ設定する。待機時間だけで成功と判断せず、期待する状態またはログを読み取る
-5. **Play Mode停止後に差分を照合する。** submoduleの`.unity`／`.prefab`差分と親のBuild Settings・生成物を確認する。意図しないpackage asset差分があればコミットへ進まず、保存せずに原因を調べる
-6. **復元は事前にcleanだった既知ファイルだけへ限定する。** Unityが今回の検証で書き換えたと確認できるファイルだけを明示パスで戻す。作業ツリー全体への`git restore`や、検証前からdirtyだったファイルの復元を行わない
+2. **検証に使うSceneは、フレームワークのAPIを呼ぶホスト側スクリプトを含まないものを選ぶ。** 含むSceneしか使えない場合、観測したログは**スタックトレースで発生元を確認してから**自分の変更へ帰属させる。ホスト側スクリプトが同じAPIを別の意図で呼んでいると、症状が見分けられない。
+
+   このガードの他の項目が「検証操作を成果物へ混入させない」向きなのに対し、**これは逆向きの「ホスト側の既存の挙動が検証結果へ混入する」ことを防ぐ。** 実際に、ホストのデバッグ用MonoBehaviourが自分で`SceneLoader.UnloadSceneAsync`を呼んで出したエラーを、修正対象の経路が出したものと読みかけている（スタックトレースを開いて判明した）。**Sceneを開いた時点の`SceneManager`の状態と、Play Mode開始後の状態を別々に記録する**と、ホスト側スクリプトが状態を書き換えた後のスナップショットを見て誤読することも防げる
+3. **Sceneを保存しない。** 検証用GameObjectの生成・破棄はPlay Mode内だけで行う。`EditorSceneManager.SaveScene`、`SaveCurrentModifiedScenesIfUserWantsTo`、動的実行のsave相当オプションを使わない。Sceneを開いた直後は`isDirty == false`を確認する
+4. **複数行の動的コードは一時`.csx`へ書く。** PowerShell上のinlineコードは補間文字列や空白で引数分割されるため、`Temp/`配下の`.csx`を`--code-file`で実行し、完了後に削除する。短い1文だけinline実行を許可する
+5. **時間依存の確認ではフレーム進行を検証する。** `uloop-focus-window`後も`Time.time`が進まない場合だけ、Play Mode中の`Application.runInBackground`を一時的に`true`へ設定する。待機時間だけで成功と判断せず、期待する状態またはログを読み取る
+6. **Play Mode停止後に差分を照合する。** submoduleの`.unity`／`.prefab`差分と親のBuild Settings・生成物を確認する。意図しないpackage asset差分があればコミットへ進まず、保存せずに原因を調べる
+7. **復元は事前にcleanだった既知ファイルだけへ限定する。** Unityが今回の検証で書き換えたと確認できるファイルだけを明示パスで戻す。作業ツリー全体への`git restore`や、検証前からdirtyだったファイルの復元を行わない
 
 問題があればワーカーへ差し戻す。Claude Code / Gemini CLI は同じ `codex exec` に修正内容を渡し、Codex は現在のタスク内で修正する。軽微ならレビュー担当が直接直してもよい。**設計書と実装が食い違った場合は、どちらが正しいかをユーザーに確認する。**
 
