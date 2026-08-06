@@ -55,6 +55,7 @@ META_EXEMPT_PREFIXES = ("Documentation~/",)
 
 COMMIT_MESSAGE_PATTERN = re.compile(r"^\[(add|update|fix)\][^\s].*$")
 CHANGELOG_HEADING_PATTERN = re.compile(r"^## \[([^\]]+)\]", re.MULTILINE)
+README_VERSION_PATTERN = re.compile(r"^- 現在のバージョン: \*\*([^*]+)\*\*", re.MULTILINE)
 COMMENT_LINE_PATTERN = re.compile(r"^\s*(//|/\*|\*)")
 
 BOM = b"\xef\xbb\xbf"
@@ -185,22 +186,37 @@ def check_branch() -> list[str]:
 
 
 def check_version_matches_changelog() -> list[str]:
-    """package.json の version と CHANGELOG の先頭見出しの一致を確認する。"""
+    """package.json の version が CHANGELOG の先頭見出しと README の表示に一致するかを確認する。
+
+    README の「現在のバージョン」は取り残されやすい。実際に 3.2.0 のまま5リリース進み、
+    直した直後にもう一度取り残している。版を上げる操作と README を直す操作が別なため、
+    人が覚えている限り必ず落ちる。
+    """
     package_path = SUBMODULE_ROOT / "package.json"
     changelog_path = SUBMODULE_ROOT / "CHANGELOG.md"
+    readme_path = SUBMODULE_ROOT / "README.md"
 
     version = json.loads(package_path.read_text(encoding="utf-8"))["version"]
+
+    failures = []
+
     match = CHANGELOG_HEADING_PATTERN.search(changelog_path.read_text(encoding="utf-8"))
-
     if match is None:
-        return ["CHANGELOG.mdにバージョン見出しが見つかりません。"]
+        failures.append("CHANGELOG.mdにバージョン見出しが見つかりません。")
+    elif version != match.group(1):
+        failures.append(
+            f"package.jsonの'{version}'とCHANGELOGの'{match.group(1)}'が一致しません。")
 
-    heading = match.group(1)
-    if version != heading:
-        return [f"package.jsonの'{version}'とCHANGELOGの'{heading}'が一致しません。"]
+    readme_match = README_VERSION_PATTERN.search(readme_path.read_text(encoding="utf-8"))
+    if readme_match is None:
+        failures.append("README.mdに「現在のバージョン」の行が見つかりません。")
+    elif version != readme_match.group(1):
+        failures.append(
+            f"package.jsonの'{version}'とREADMEの'{readme_match.group(1)}'が一致しません。")
 
-    print(f"[version] OK: {version}")
-    return []
+    if not failures:
+        print(f"[version] OK: {version}")
+    return failures
 
 
 def check_fix_is_isolated() -> list[str]:
