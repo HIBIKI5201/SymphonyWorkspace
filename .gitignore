@@ -82,3 +82,7 @@ crashlytics-build.properties
 Packages/com.singularitygroup.hotreload/
 ExportedPackages/
 Assets/GameProject/
+
+# Audit skill
+__pycache__/
+Documentation/Audit/_raw/
