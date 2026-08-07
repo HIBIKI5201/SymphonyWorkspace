@@ -37,6 +37,7 @@
 - **`Core`はRuntimeとEditorの両方から使われる共有アセンブリであり、Editor APIを使うこと自体は許容する。** ただし置き場所と参照方向を守る。Editor APIを使う型は`Core/Editor/`へ置き、`#if UNITY_EDITOR`で囲む。その型をRuntimeから参照してはならない。Runtimeが必要とする値は、Editor側のCompositionからRuntimeへ注入する。
 - Editor設定をRuntimeの挙動へ反映する場合は、Runtime側に`internal`な設定値の入れ物を置き、Editorの初期化処理が読み込んで注入する。Runtimeから設定ストア（`EditorPrefs`、`ScriptableSingleton`など）を直接読まない。
 - asmdef間の参照は必要な方向にだけ追加し、循環参照を作らない。
+- **公開エントリポイントが大きくなった場合は、型を分けずに `partial` でファイルだけを分割する。** 型を分けると利用側の呼び出しが変わり、破壊的変更になります。分割の単位は関心事ごとで、ファイル名は `<型名>.<関心事>.cs` とします（例: `SymphonyAwaitable.WhenAll.cs`）。**`partial` を使ってよいのはこの目的に限ります。** 内部実装（`*/Internal/`）は型ごと分割できるため、`partial` ではなく型の分割で対処します。
 - パッケージ導入とAssets直置きの両方に対応するパスには、`EditorSymphonyConstant.FRAMEWORK_PATH` を使用する。
 - `Assets/SymphonyFrameWork` や `Packages/symphonyframework` を機能コードへ直接埋め込まない。
 
@@ -316,6 +317,17 @@ public string InitialSceneName => _initialSceneName;
 - Editor専用の詳細ログは `#if UNITY_EDITOR` で囲み、Playerビルドへ不要な処理を含めない。
 - パスワード、トークン、個人情報、セーブデータの機密値をログへ出力しない。
 
+**ログの重要度によって使うAPIを変えます。** 素の `Debug.Log` はPlayerビルドへ残り、利用側のコンソールを汚します。利用側から抑止する手段はありません。
+
+| 重要度 | 使うもの | ビルドへ |
+| --- | --- | --- |
+| 利用側の誤用・異常系を伝える | 素の `Debug.LogWarning` / `Debug.LogError` | **残す。** 利用側が知るべき情報 |
+| フレームワーク内部の動作追跡 | `#if UNITY_EDITOR` + Project Settingsの出力可否フラグ | 残さない |
+| 一時的なデバッグ | `SymphonyDebugLogger.LogDirectForEditor`（`[Conditional("UNITY_EDITOR")]`付き） | 残さない |
+
+- **情報レベル（`Debug.Log`）を `#if UNITY_EDITOR` の外へ置かない。** 文字列補間を伴う場合、出力の有無に関わらず文字列が構築されます。
+- 出力可否をProject Settingsから切り替える場合は、Runtime側に `internal` な設定値の入れ物を置き、Editorの初期化処理が注入します（→ `## ディレクトリとAssembly Definition`）。実装例は `ServiceLocateLogOption` と `ServiceLocator` です。
+
 ## Editor拡張
 
 - Editor専用コードは `Editor/` に配置する。
@@ -334,6 +346,7 @@ public string InitialSceneName => _initialSceneName;
 - ファイル生成前に出力先と内容を検証し、既存ファイルを上書きする条件を明確にする。
 - `EditorPrefs` は個人設定、`ProjectSettings` はプロジェクト共有設定として使い分ける。
 - UI Toolkitのイベントは、Windowの無効化時に解除または破棄できる構造にする。
+- **Window自身が所有する `VisualElement` への購読は、匿名ラムダで書いてよい。** `Button.clicked += () => ...` のような購読は、Windowが閉じられれば `VisualElement` ごと破棄されるため、デリゲートがWindowより長生きしません。「解除できない匿名callbackを登録しない」の対象は、Windowより長生きする購読先（`EditorApplication.update`、static event、Runtime側のReactiveProperty）です。**購読先の寿命で判断します。**
 - Package環境とAssets環境の双方で、UXML、USS、設定アセットのパスを確認する。
 
 ## パフォーマンスとコレクション

@@ -9,6 +9,7 @@
 | やること | 読むもの |
 | --- | --- |
 | パッケージ本体（`Assets/SymphonyFrameWork/` の `Runtime/` `Editor/` `Core/`）に**機能を追加・変更する** | [.agents/skills/implement/SKILL.md](./.agents/skills/implement/SKILL.md)。設計書 → ワーカーによる実装 → 確認 → バージョン更新 → コミット → 振り返り の一連のフロー |
+| パッケージ本体の**リファクタリング観点を洗い出す** | [.agents/skills/audit/SKILL.md](./.agents/skills/audit/SKILL.md)。機械走査（`scripts/audit_scan.py`）→ Project Auditor → 読解による確度付け → [Documentation/Audit/](./Documentation/Audit/) へ観点別レポート生成。**指摘と修正方針だけを出し、コードは変更しない。** 修正は観点ごとに implement のフローへ載せ替える |
 | パッケージ本体のソースを修正する（小さな修正、上記フローに乗らないもの） | [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md)。コードを書く前に [Documentation/CodeGuidelines.md](./Documentation/CodeGuidelines.md)、型や名前空間を新設する前に [Documentation/DesignPhilosophy.md](./Documentation/DesignPhilosophy.md) |
 | パッケージを**使う**コードをホスト側（`Assets/Scripts/` など）に書く | [Assets/SymphonyFrameWork/AGENTS.md](./Assets/SymphonyFrameWork/AGENTS.md)。機能一覧とクイックスタートは [Assets/SymphonyFrameWork/README.md](./Assets/SymphonyFrameWork/README.md) |
 | ホストプロジェクトの設定・シーン・アセットを触る | このファイル |

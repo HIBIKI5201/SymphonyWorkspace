@@ -86,6 +86,18 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 
 **このプロジェクトは Enter Play Mode Options が有効で、Domain Reload と Scene Reload の両方が無効です。** そのためstatic状態はPlay Mode終了時にリセットされません。**Play Modeの開始・終了を2回繰り返し、`ServiceLocator` などにゴースト参照が残らないことを確認する**のが定番のチェックです。各Facadeの `ResetRuntimeState()` はこのための仕組みです。
 
+### 自動生成物の再生成
+
+**自動生成enum（`SceneListEnum` / `TagsEnum` / `LayersEnum` / `AudioGroupTypeEnum`）に関わる変更をしたら、再生成してもコンパイルが通ることを確認してください。**
+
+1. `Symphony Administrator > AutoEnumGenerator` から3種のenumを再生成する
+2. `uloop-compile` — エラー0・警告0
+3. `uloop-run-tests` — EditMode / PlayMode の両方
+
+生成物の中身は**利用側プロジェクトの内容によって変わります**。パッケージ本体が特定のenum値（`SceneListEnum.NewScene` など）を前提にしていると、利用側で必ず壊れます。enum型を型引数やパラメータとして扱うのは問題ありませんが、**値を直接参照しないでください**。
+
+再生成せずに済ませると、この違反はワークスペースでは検出できません。ワークスペースの生成物は Build Settings に登録済みの3シーンから作られており、たまたま参照が解決してしまうためです。
+
 ### 自動テストについて
 
 テストは**パッケージ内の `Assets/SymphonyFrameWork/Tests/`** にあります。EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`。
