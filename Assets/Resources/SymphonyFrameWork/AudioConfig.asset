@@ -11,9 +11,6 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dfbc9c553bdfa6c47a74e1fae81b87f0, type: 3}
   m_Name: AudioConfig
-  m_EditorClassIdentifier: 
-  _audioMixer: {fileID: 24100000, guid: e9f3a0a9dc334aa47a826e5c0871aebe, type: 2}
-  _audioGroupSettingList:
-  - _audioGroupName: BGM
-    _exposedParameterName: BGM_Volume
-    _isLoop: 0
+  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.AudioConfig
+  _audioMixer: {fileID: 0}
+  _audioGroupSettingList: []

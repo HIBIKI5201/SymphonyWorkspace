@@ -11,12 +11,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c91e8a4e21da4317ab051a1ec3b9a95b, type: 3}
   m_Name: SaveDataConfig
-  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.SaveSystemConfig
+  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.SaveDataConfig
   _loader:
-    rid: 4420423817887839
+    rid: 1841141191828307968
   references:
     version: 2
     RefIds:
-    - rid: 4420423817887839
-      type: {class: JsonUtilitySaveDataLoader, ns: SymphonyFrameWork.System.SaveSystem, asm: SymphonyFrameWork}
+    - rid: 1841141191828307968
+      type: {class: JsonUtilitySaveDataLoaderStrategy, ns: SymphonyFrameWork.System.SaveSystem, asm: SymphonyFrameWork}
       data: 

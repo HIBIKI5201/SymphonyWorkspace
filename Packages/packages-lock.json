@@ -41,6 +41,13 @@
       "dependencies": {},
       "hash": "1d388a4bba9235dfca394830ca186bb477e90901"
     },
+    "com.quecue.unimarkdown": {
+      "version": "https://github.com/QueCue/UniMarkdown.git?path=src",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "2c103c6411463ca10672dc5b1a7b2914e17dbb31"
+    },
     "com.singularitygroup.hotreload": {
       "version": "file:com.singularitygroup.hotreload",
       "depth": 0,
@@ -220,6 +227,17 @@
       "depth": 0,
       "source": "builtin",
       "dependencies": {}
+    },
+    "com.unity.feature.characters-animation": {
+      "version": "1.0.0",
+      "depth": 0,
+      "source": "builtin",
+      "dependencies": {
+        "com.unity.animation.rigging": "1.4.1",
+        "com.unity.timeline": "1.8.12",
+        "com.unity.cinemachine": "3.1.7",
+        "com.unity.formats.fbx": "5.1.6"
+      }
     },
     "com.unity.feature.ecs": {
       "version": "1.0.0",
