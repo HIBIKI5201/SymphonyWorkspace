@@ -17,8 +17,9 @@ Claude Code または Gemini CLI から Codex CLI ワーカーへ実装を委任
 Exit codes
 ----------
 0 : Codex の実行に成功した
-1 : 一般的なエラー（CLI 不在 / 実行失敗 / タイムアウト など）
+1 : 一般的なエラー（CLI 不在 / 実行失敗 / タイムアウト など）※ファイルが途中まで変わっている可能性あり
 2 : 残量不足によるスキップ（レートリミット保護）※呼び出し側はフォールバックへ
+3 : 指定モデルがアカウントで使用できない ※APIへ到達した直後の失敗でファイルは変わっていない
 
 Usage
 -----
@@ -47,6 +48,14 @@ from typing import Any, Iterator, Optional
 EXIT_OK = 0
 EXIT_ERROR = 1
 EXIT_INSUFFICIENT_CAPACITY = 2
+EXIT_UNSUPPORTED_MODEL = 3
+
+# 指定モデルがアカウントで使えないときにcodexが出す400の目印。
+# APIへ到達する前ではなく到達直後に落ちるため、ファイルは1つも書き換わっていない。
+UNSUPPORTED_MODEL_MARKERS = (
+    "model is not supported",
+    "invalid_request_error",
+)
 
 DEFAULT_THRESHOLD_PERCENT = 10.0
 DEFAULT_TIMEOUT_SEC = 2700  # 大きな Round でも足りる長さ。ハング時はここで打ち切る
@@ -358,16 +367,7 @@ def run_codex(
 
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
     try:
-        proc = subprocess.run(
-            cmd,
-            input=prompt,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout,
-            cwd=str(workdir),
-            env=env,
-        )
+        returncode, stderr_text = _run_and_tee_stderr(cmd, prompt, workdir, env, timeout)
     except FileNotFoundError:
         log(f"[codex_runner] ERROR: codex を実行できません: {codex_bin}")
         return EXIT_ERROR
@@ -376,9 +376,14 @@ def run_codex(
         log("[codex_runner] 途中まで変更が書き込まれている可能性があります。git status で確認してください。")
         return EXIT_ERROR
 
-    if proc.returncode != 0:
-        log(f"[codex_runner] ERROR: codex exec が終了コード {proc.returncode} で失敗しました")
-        if _looks_rate_limited(last_message_path):
+    if returncode != 0:
+        log(f"[codex_runner] ERROR: codex exec が終了コード {returncode} で失敗しました")
+        if _looks_unsupported_model(stderr_text):
+            log("[codex_runner] 指定モデルがこのアカウントでは使用できません。")
+            log("[codex_runner] APIへ到達した直後の失敗のため、ファイルは変更されていません。")
+            log("[codex_runner] --model で使用可能なモデルを指定するか、~/.codex/config.toml の model を変更してください。")
+            return EXIT_UNSUPPORTED_MODEL
+        if _looks_rate_limited(last_message_path) or _contains_rate_limit_marker(stderr_text):
             log("[codex_runner] レートリミット到達を検出したため exit 2 を返します")
             return EXIT_INSUFFICIENT_CAPACITY
         return EXIT_ERROR
@@ -396,14 +401,71 @@ def run_codex(
     return EXIT_OK
 
 
+def _run_and_tee_stderr(
+    cmd: list[str],
+    prompt: str,
+    workdir: Path,
+    env: dict,
+    timeout: int,
+) -> tuple[int, str]:
+    """codexを実行し、stderrをそのまま流しながら内容も保持する。
+
+    **codexは進行表示も最終出力もstderrへ書き、stdoutへは何も書かない。** 単純に捨てると
+    失敗の原因を判別できず、単純に捕まえると実行中の進行が全く見えなくなる。1行ずつ
+    中継して両立させる。stdinはプロンプトを書いた時点で閉じるため、読み書きの同時待ちに
+    よるデッドロックは起きない。
+    """
+    deadline = time.monotonic() + timeout
+    collected: list[str] = []
+
+    with subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        cwd=str(workdir),
+        env=env,
+    ) as proc:
+        proc.stdin.write(prompt)
+        proc.stdin.close()
+
+        for line in proc.stderr:
+            collected.append(line)
+            log(line.rstrip("\n"))
+
+            if time.monotonic() > deadline:
+                proc.kill()
+                raise subprocess.TimeoutExpired(cmd, timeout)
+
+        try:
+            proc.wait(timeout=max(1, int(deadline - time.monotonic())))
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            raise
+
+        return proc.returncode, "".join(collected)
+
+
+def _looks_unsupported_model(stderr_text: str) -> bool:
+    lowered = stderr_text.lower()
+    return all(marker in lowered for marker in UNSUPPORTED_MODEL_MARKERS)
+
+
+def _contains_rate_limit_marker(text: str) -> bool:
+    lowered = text.lower()
+    return any(k in lowered for k in ("rate limit", "usage limit", "quota", "429"))
+
+
 def _looks_rate_limited(last_msg: Path) -> bool:
     if not last_msg.is_file():
         return False
     try:
-        text = last_msg.read_text(encoding="utf-8", errors="replace").lower()
+        text = last_msg.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return False
-    return any(k in text for k in ("rate limit", "usage limit", "quota", "429"))
+    return _contains_rate_limit_marker(text)
 
 
 # --------------------------------------------------------------------------

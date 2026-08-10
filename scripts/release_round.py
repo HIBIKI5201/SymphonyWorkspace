@@ -42,6 +42,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import build_module_docs
+
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 SUBMODULE_PATH = "Assets/SymphonyFrameWork"
@@ -187,6 +189,7 @@ def run_preflight() -> bool:
     failures.extend(check_meta_pairs())
     failures.extend(check_runtime_editor_references())
     failures.extend(check_test_assembly_constraints())
+    failures.extend(check_docs_html_sync())
 
     print("")
     if failures:
@@ -197,6 +200,25 @@ def run_preflight() -> bool:
 
     print("OK: すべての検証を通過しました。")
     return True
+
+
+def check_docs_html_sync() -> list[str]:
+    """`Documentation~/Html/` の生成物が、正本のMarkdownと一致しているかを確認する。
+
+    Markdown を直したあとの再生成は忘れやすい。忘れると、利用者がEditorから開くHTMLだけが
+    古いまま残り、正本との乖離に誰も気づけない。検証ロジックは build_module_docs へ寄せ、
+    ここでは呼ぶだけにする。
+    """
+    try:
+        problems = build_module_docs.check()
+    except build_module_docs.DocumentError as error:
+        return [f"ドキュメントHTMLを生成できません: {error}"]
+
+    if problems:
+        return problems + ["python scripts/build_module_docs.py を実行してください。"]
+
+    print("[docs] OK: 生成物は正本と同期しています")
+    return []
 
 
 def check_branch() -> list[str]:
@@ -441,6 +463,14 @@ def run_bump(args: argparse.Namespace) -> int:
         encoding="utf-8",
     )
     print(f"[README.md] OK: {new_version}")
+
+    # bump は README と CHANGELOG を書き換えるため、生成HTMLが必ず古くなる。
+    # 再生成を人に任せると毎回 preflight で落ちて往復が増えるので、ここで揃えておく。
+    try:
+        build_module_docs.write(build_module_docs.build())
+    except build_module_docs.DocumentError as error:
+        print(f"[docs] NG: ドキュメントHTMLを生成できません: {error}")
+        return 1
 
     if args.summary is None:
         print(

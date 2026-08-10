@@ -185,10 +185,11 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 
 | 変更の種類 | 同時に更新するもの |
 | --- | --- |
-| 公開API（`public`/`protected`）の追加・変更・削除 | XMLドキュメント、`Assets/SymphonyFrameWork/README.md`、`Assets/SymphonyFrameWork/CHANGELOG.md`、`Assets/SymphonyFrameWork/package.json` の `version`、該当する Sample。AI向けの注意事項が変わる場合だけ`Documentation~/AgentUsage.md`、アセンブリ・初期化・公開型の関係が変わる場合だけ`Documentation~/Architecture.md` |
-| 公開挙動の変更（シグネチャは同じだが結果が変わる） | CHANGELOG.md、`version`、必要なら README のクイックスタート |
-| 設定アセット（Config）の項目の追加・変更 | README の初期設定、CHANGELOG.md、`Documentation~/EditorTools.md` の該当節、AI向けの制約が変わる場合は`Documentation~/AgentUsage.md` |
-| Editor機能（ウィンドウ、メニュー、Project Settings、生成物）の追加・変更 | `Documentation~/EditorTools.md`、CHANGELOG.md。索引が変わる場合は README の `Editor・デバッグ支援` |
+| 公開API（`public`/`protected`）の追加・変更・削除 | XMLドキュメント、**`Documentation~/Modules/<モジュール>.md`**、`Assets/SymphonyFrameWork/CHANGELOG.md`、`Assets/SymphonyFrameWork/package.json` の `version`、該当する Sample。索引が変わる場合は `README.md`、アセンブリ・初期化・公開型の関係が変わる場合は`Documentation~/Architecture.md` |
+| 公開挙動の変更（シグネチャは同じだが結果が変わる） | CHANGELOG.md、`version`、必要なら `Documentation~/Modules/<モジュール>.md` のクイックスタートと「実装時の注意」 |
+| 設定アセット（Config）の項目の追加・変更 | `Documentation~/Modules/<モジュール>.md` の「Editor機能」、README の初期設定、CHANGELOG.md |
+| Editor機能（ウィンドウ、メニュー、Project Settings、生成物）の追加・変更 | 対応する `Documentation~/Modules/<モジュール>.md`。横断的な機能（Symphony Administrator、アセット保護、Editorの初期化）は `Documentation~/EditorTools.md`。CHANGELOG.md。索引が変わる場合は `Documentation~/EditorTools.md` の `## 一覧` と README |
+| 利用者向けドキュメント（`README.md`、`Documentation~/**/*.md`）の変更 | **`python scripts/build_module_docs.py` を実行して `Documentation~/Html/` を再生成し、生成物も同じコミットへ含める。** 忘れると `release_round.py preflight` が落ちる |
 | Sample の追加 | `package.json` の `samples`、CHANGELOG.md |
 | 依存パッケージの追加・更新 | `package.json` の `dependencies`、README の必要なパッケージ |
 | 非推奨化 | `[Obsolete("代替APIの案内", error: false)]`、**`Documentation~/Deprecations.md` への行追加（削除予定が未定なら「未定」と書く）**、CHANGELOG の `### Deprecated`（移行方法を明記）、READMEまたはSampleの旧API利用箇所 |
@@ -217,6 +218,19 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 - 「何をしたか」だけでなく「なぜそうしたか」「利用側にどう影響するか」まで書くのがこのリポジトリの粒度です。
 - `Tools/VersionLogGenerator`（ワークスペース側のEditorツール）は、CHANGELOGへのエントリ追記と `package.json` の version 更新を補助します。
 
+### 利用者向けドキュメントとHTML生成物
+
+**正本はMarkdownです。** `Assets/SymphonyFrameWork/Documentation~/Html/` 配下のHTMLは `scripts/build_module_docs.py` の生成物で、Editorから「ドキュメントを開く」操作をしたときにブラウザが読む先です。手で編集しないでください。
+
+```bash
+python scripts/build_module_docs.py
+```
+
+- `--check` を付けると生成せず、正本と生成物が一致しているかだけを検証します。`release_round.py preflight` から呼ばれます。
+- **スクリプトが対応するMarkdownの記法は、このリポジトリの既存ドキュメントが実際に使っているものに限ります**（見出し、段落、リスト、テーブル、フェンス付きコードブロック、インラインコード、`**強調**`、リンク、水平線）。対応外の記法を書くと生成時にエラーで止まります。**黙って素通しさせないための仕様です。**
+- **相対リンクとアンカーの実在も生成時に検査します。** リンク切れがあると生成が止まります。
+- **既知の制限: mermaid のブロックはHTML側でレンダリングされず、コードブロックとして出力されます。** オフラインで開く前提のため外部スクリプトを読み込みません。図として読みたい場合は正本のMarkdownをGitHubなどで開いてください。
+
 ## 7. Pull Request前のチェック
 
 コード品質のチェックは [CodeGuidelines.md `## レビュー用チェックリスト`](./CodeGuidelines.md) を使ってください。それに加えて、本体開発では次を確認します。
@@ -227,6 +241,7 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 - [ ] 公開APIを変更したなら、§6の表にある全ファイルを更新した（不要と判断したものは理由を書いた）
 - [ ] `package.json` の `version` と CHANGELOG の見出しが一致している
 - [ ] `uloop-compile` がエラーなく通り、Consoleに意図しない警告がない
+- [ ] `python scripts/build_module_docs.py --check` が通っている（ドキュメントを変更した場合）
 - [ ] `Cache/` や親ワークスペースの生成物をコミットしていない
 - [ ] submodule の変更を push してから、親の gitlink を更新した
 - [ ] uLoopで確認できない事項を依頼者へ提示した

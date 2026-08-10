@@ -53,6 +53,26 @@ rg -n "\.Mode\b|\.CreateZip\b|\.UsedDependencies\b" Assets/SymphonyFrameWork -g 
 
 目視で分割を決めない。**この検索は Round 分割を書く時点で実行する。** 実際に、確認ウィンドウの表示変更を Round 2 へ置いた設計書が、Round 1 でフィールドを削除する都合で Round 1 へ戻っている（Issue #124）。検索していれば着手前に分かった。
 
+### ワークスペース側で古くなる記述も、同じ検索で洗い出す
+
+**パッケージ側の構造（ファイル配置、文書の分割、公開APIの入口）を変える Round は、ワークスペース側 `Documentation/` の記述も同時に古くする。** ワーカーの変更範囲は `Assets/SymphonyFrameWork/` に限定するため、その Round の中では直せない。**どの Round でワークスペース側を直すかを、分割を書く時点で決める。**
+
+Round 分割を書くときに、次を検索して結果を設計書へ書く。
+
+```bash
+rg -n "README\.md|Documentation~/|EditorTools\.md|AgentUsage\.md" Documentation/ AGENTS.md
+```
+
+特に落ちやすいのは次の3箇所である。
+
+| ファイル | 古くなりやすい記述 |
+| --- | --- |
+| `Documentation/CONTRIBUTING.md` §6 | 「変更に応じて同時に更新するもの」の表が指す文書名とパス |
+| `Documentation/CONTRIBUTING.md` §7 | Pull Request前のチェック項目 |
+| `AGENTS.md` §0・§0.1 | 作業内容ごとの参照先と、正本の対応表 |
+
+実際に、README のクイックスタートをモジュール別文書へ移した Round で、CONTRIBUTING.md §6 が「README のクイックスタート」「`Documentation~/EditorTools.md` の該当節」を指したまま2 Round分残っている（Issue #101）。
+
 ### 進め方
 
 1. **設計書に Round 分割を書く。** 各 Round が何を含み、何を含まないかを明示する。依存順があるなら順序も書く

@@ -11,7 +11,8 @@
 | パッケージ本体（`Assets/SymphonyFrameWork/` の `Runtime/` `Editor/` `Core/`）に**機能を追加・変更する** | [.agents/skills/implement/SKILL.md](./.agents/skills/implement/SKILL.md)。設計書 → ワーカーによる実装 → 確認 → バージョン更新 → コミット → 振り返り の一連のフロー |
 | パッケージ本体の**リファクタリング観点を洗い出す** | [.agents/skills/audit/SKILL.md](./.agents/skills/audit/SKILL.md)。機械走査（`scripts/audit_scan.py`）→ Project Auditor → 読解による確度付け → [Documentation/Audit/](./Documentation/Audit/) へ観点別レポート生成。**指摘と修正方針だけを出し、コードは変更しない。** 修正は観点ごとに implement のフローへ載せ替える |
 | パッケージ本体のソースを修正する（小さな修正、上記フローに乗らないもの） | [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md)。コードを書く前に [Documentation/CodeGuidelines.md](./Documentation/CodeGuidelines.md)、型や名前空間を新設する前に [Documentation/DesignPhilosophy.md](./Documentation/DesignPhilosophy.md) |
-| パッケージを**使う**コードをホスト側（`Assets/Scripts/` など）に書く | [Assets/SymphonyFrameWork/AGENTS.md](./Assets/SymphonyFrameWork/AGENTS.md)。機能一覧とクイックスタートは [Assets/SymphonyFrameWork/README.md](./Assets/SymphonyFrameWork/README.md) |
+| パッケージを**使う**コードをホスト側（`Assets/Scripts/` など）に書く | [Assets/SymphonyFrameWork/AGENTS.md](./Assets/SymphonyFrameWork/AGENTS.md)。使うモジュールの文書は [Documentation~/Modules/](./Assets/SymphonyFrameWork/Documentation~/Modules/) に1モジュール1ファイルであり、機能一覧は [README.md](./Assets/SymphonyFrameWork/README.md) |
+| 利用者向けドキュメント（`README.md`、`Documentation~/**/*.md`）を変更する | 変更後に `python scripts/build_module_docs.py` を実行し、`Documentation~/Html/` の生成物を同じコミットへ含める。詳細は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §6 |
 | ホストプロジェクトの設定・シーン・アセットを触る | このファイル |
 | 直近の変更の経緯を知る | [Assets/SymphonyFrameWork/CHANGELOG.md](./Assets/SymphonyFrameWork/CHANGELOG.md) |
 
@@ -21,10 +22,12 @@
 
 | 正本 | 対象 |
 | --- | --- |
-| [Assets/SymphonyFrameWork/Documentation~/EditorTools.md](./Assets/SymphonyFrameWork/Documentation~/EditorTools.md) | Editor機能（ウィンドウ、メニュー、Project Settings、自動生成、`AssetPostprocessor`） |
+| [Assets/SymphonyFrameWork/Documentation~/Modules/](./Assets/SymphonyFrameWork/Documentation~/Modules/) | モジュールごとの利用方法、実装時の注意、そのモジュールのEditor機能、内部構造 |
+| [Assets/SymphonyFrameWork/Documentation~/EditorTools.md](./Assets/SymphonyFrameWork/Documentation~/EditorTools.md) | Editor機能の索引と、単一モジュールに属さない横断的な仕組み（Symphony Administrator、アセット保護、設定アセットの自動生成、Editorの初期化） |
 | [Assets/SymphonyFrameWork/Documentation~/Deprecations.md](./Assets/SymphonyFrameWork/Documentation~/Deprecations.md) | 非推奨API（`[Obsolete]`）と、その削除予定 |
 
-- **作業中に、EditorTools.md へ記載の無いEditorモジュールを見つけたら、そのモジュールの節を追加してください。** 今回の変更で触っていないモジュールでも構いません。記載漏れは、その機能が存在しないのと同じです。記載の有無は `Assets/SymphonyFrameWork/Editor/` 配下のディレクトリと照らして判断します。
+- **作業中に、どのモジュール文書にも EditorTools.md にも記載の無いEditorモジュールを見つけたら、対応するモジュール文書へ節を追加してください。** 今回の変更で触っていないモジュールでも構いません。記載漏れは、その機能が存在しないのと同じです。記載の有無は `Assets/SymphonyFrameWork/Editor/` 配下のディレクトリと照らして判断します。
+- **EditorTools.md の `## 一覧` は、モジュール文書へ移した機能も行として残します。** Editor機能の全体像をこの表1つで見られる状態を壊さないでください。
 - **`[Obsolete]` を付けたら、同じ変更で Deprecations.md へ行を追加してください。** 削除予定が決まっていない場合は「未定」と書きます。書かずに済ませないでください。
 - **`[Obsolete]` なメンバーを削除したら、Deprecations.md の行を `## 削除済み` へ移してください。**
 - **メニューパスや設定の場所を変えたら、EditorTools.md の該当箇所を直してください。** 実際に、Project Settings へ統合済みの `Symphony Asset Lock` メニューへの言及が、廃止後もこのファイルと CONTRIBUTING.md に残っていました。
