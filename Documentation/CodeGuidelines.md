@@ -2,7 +2,7 @@
 
 このドキュメントは、Symphony Framework内のC#コードとUnityアセットを追加・変更する際の共通ルールです。新規コードには本ガイドラインを適用し、既存コードは機能変更の範囲内で段階的に合わせてください。
 
-作業の進め方（`.meta` の扱い、ブランチとコミット規約、ドキュメントの同時更新、Unityでの検証手順）は [CONTRIBUTING.md](./CONTRIBUTING.md) にあります。本ドキュメントは「コードをどう書くか」に限定しています。
+作業の進め方（`.meta` の扱い、ブランチとコミット規約、ドキュメントの同時更新、Unityでの検証手順）は [CONTRIBUTING.md](./CONTRIBUTING.md) にあります。Markdown文書の書き方は [DocumentationGuidelines.md](./DocumentationGuidelines.md) にあります。本ドキュメントは「コードをどう書くか」に限定しています。
 
 ## 基本方針
 
@@ -87,24 +87,56 @@ SymphonyFrameWork
 ## 書式
 
 - インデントにはスペース4個を使用し、タブを使用しない。
-- 波括弧は改行して配置する（Allman形式）。
-- 本文が1行だけのブロックでも波括弧を省略しない。
+- 波括弧は改行して配置する（Allman形式）。ただし本文が1文だけの制御構文は1行形式にする（→ `### 短縮形でも波括弧を省略しない`）。
 - `using` ディレクティブはファイル先頭にまとめ、未使用のものを残さない。
 - `using` は `System`、Symphony Framework、Unity、その他の順でグループ化し、各グループ内は名前順に並べる。
 - アクセス修飾子は省略しない。
-- 1行には原則として1つの文だけを書く。
+- 1行には原則として1つの文だけを書く。本文が1文だけの制御構文を1行形式で書く場合だけ例外とする。
 - 長い引数リストや条件式は、意味のまとまりごとに改行する。
-- 型が右辺から明確な場合は `var` またはターゲット型 `new()` を使用できる。型を明示した方が意図を読み取りやすい場合は型名を書く。
 - マジックナンバーや重複する文字列は、名前付き定数または設定値へ置き換える。
 - 不要になったコードをコメントアウトして残さず、バージョン管理から参照する。
 
+### 短縮形でも波括弧を省略しない
+
+**制御構文の本文は1文だけでも波括弧で囲みます。** ガード節や早期リターンも例外にしません。波括弧の省略は、後から1文追加したときにスコープを間違えるバグを生みます。
+
+**本文が1文なら1行形式、2文以上ならAllman形式にします。** 1文のためだけに3行使うと、ガード節が並んだときに本題の処理が下へ押し出されます。
+
 ```csharp
-public static bool TryGetScene(string sceneName, out Scene scene)
+// 誤: 波括弧の省略
+if (token.IsCancellationRequested) return;
+
+// 正: 本文が1文なら1行形式
+if (token.IsCancellationRequested) { return; }
+
+// 正: 本文が2文以上ならAllman形式
+if (token.IsCancellationRequested)
 {
-    scene = SceneManager.GetSceneByName(sceneName);
-    return scene.IsValid() && scene.isLoaded;
+    _source.Cancel();
+    return;
 }
 ```
+
+`else if`、`foreach`、`using` 文、`lock` も同じです。式本体メンバー（`=>`）は、1つの式を返すプロパティとメソッドに限って使用できます。
+
+### ローカル変数の型は明示する
+
+**ローカル変数の型は型名で書き、`var` を使いません。** 変数の型が宣言行だけで分かる状態を優先します。代わりに、右辺が `new` の場合はターゲット型 `new()` で型名の重複を省きます。
+
+```csharp
+// 誤: 型が右辺にしかない
+var go = new GameObject();
+var scenes = new List<Scene>();
+
+// 正: 左辺で型を示し、右辺を短縮する
+GameObject go = new();
+List<Scene> scenes = new();
+Scene scene = SceneManager.GetSceneByName(sceneName);
+```
+
+- 型名を書けない匿名型（LINQの射影結果など）だけ `var` を使用できる。
+- `foreach` の反復変数も型を明示する。
+- 引数として直接渡す場合など、変数を経由しない `new` は従来どおり型名を書く（`Register(new SceneLoadInfo(...))`）。
 
 ## 命名規則
 
@@ -158,7 +190,7 @@ public static bool TryGetScene(string sceneName, out Scene scene)
 - 型名と同じ意味を繰り返す曖昧な変数名を避ける。例: `data`、`info`、`manager`はスコープが広い場所では具体化する。
 - UXMLとUSSの要素名、class名にはlower-kebab-caseを使用する。例: `save-data-panel`。
 
-## メンバーの記述順
+## メンバーの記述順とregion
 
 クラス内のメンバーは、原則として次の順番で記述します。同じ分類では、関連するメンバーを近くに配置します。
 
@@ -187,17 +219,65 @@ public static bool TryGetScene(string sceneName, out Scene scene)
 
 相互に強く関係するオーバーロードは分離せず、まとめて配置してください。
 
+### regionで外部向けAPIと内部処理を分ける
+
+**型の中身は `#region` で「利用側から呼べるもの」と「実装の都合」に二分します。** 上の記述順（1〜22）はregionの中でもそのまま維持し、regionは順序を上書きしません。
+
+```csharp
+public sealed class SceneLoadService
+{
+    #region 外部向けAPI
+
+    /// <summary>
+    ///     シーンをロードする。
+    /// </summary>
+    public Awaitable<bool> LoadAsync(string sceneName, CancellationToken token = default)
+    {
+    }
+
+    #endregion
+
+    #region 内部処理
+
+    private readonly SceneLoadRegistry _registry;
+
+    private void RemoveFinishedEntry(SceneLoadEntity entity)
+    {
+    }
+
+    #endregion
+}
+```
+
+**境界は上の記述順の番号と一致します。** どちらへ入れるか迷う必要はありません。
+
+| region | 入れるもの |
+| --- | --- |
+| `#region 外部向けAPI` | 記述順の 1〜10。コンストラクタ、publicなevent・プロパティ・定数・メソッド、interface実装、公開する入れ子型 |
+| `#region 内部処理` | 記述順の 11〜22。private／internal定数、`[SerializeField]`、privateフィールド、Unityライフサイクルメソッド、イベントハンドラ、protected／virtualメソッド、privateメソッド、internalヘルパー、privateな入れ子型、デバッグ機能 |
+
+- **公開メンバーを持たない `internal` な実装型でも2つに分けます。** その型を呼ぶ側から見た入口を「外部向けAPI」へ置いてください。`internal` なメソッドが実装型の入口である場合は、記述順18ではなく6として扱います。
+- 3つ目のregionを作って分類を細分化しません。まとまりが増えて分けたくなった場合は、regionではなく型の分割を検討します（`## ディレクトリとAssembly Definition`）。
+- 片側が空になる型（定数だけのstatic classなど）では、その空のregionを書きません。
+- `#region` を折りたたみの都合で使わないでください。分類の意味を持たないregionは、読み手が中身を推測できなくなるだけです。
+
 ## XMLドキュメントとコメント
 
 - すべてのメソッドにXMLドキュメントを付ける。
 - publicな型、プロパティ、イベントにもXMLドキュメントを付ける。
 - コメントとXMLドキュメントは原則として日本語で記述し、文末を「。」で終える。
 - 引数や戻り値の意味が自明でない場合は `<param>`、`<returns>`、`<typeparam>` を記述する。
-- コメントには処理内容の読み替えではなく、理由、前提、制約、回避している問題を書く。
 - コードと一致しない古いコメントは、機能変更と同時に更新または削除する。
 - TODOを残す場合は、未完了の内容と対応条件を具体的に書く。
-- プロパティ、イベント、フィールドの説明が1行で完結する場合は、`/// <summary> 説明。 </summary>` の形式で記述する。
-- 型、メソッド、または複数行の説明では、`<summary>` の内側をスペース4個分インデントする。
+
+### サマリーの形式
+
+**サマリーは、対象によって1行形式と複数行形式を使い分けます。** 型とメソッドは複数行形式にして、コードを流し読みしたときに区切りとして目に留まるようにします。
+
+| 対象 | 形式 |
+| --- | --- |
+| class、struct、interface、enum、メソッド、コンストラクタ | 複数行形式。`<summary>` の内側で改行し、スペース4個分インデントする |
+| プロパティ、イベント、フィールド、enumのメンバー | 1行形式（`/// <summary> 説明。 </summary>`）。1行で書けない場合だけ複数行形式にする |
 
 ```csharp
 /// <summary>
@@ -211,6 +291,56 @@ public static Awaitable<bool> LoadSceneAsync(
     CancellationToken token = default)
 {
     // 実装
+}
+
+/// <summary> 現在ロード中のシーン数。 </summary>
+public static int LoadingCount { get; }
+```
+
+**サマリーの文字量は極力減らします。** 1文で言い切り、条件、副作用、前提は他のタグへ振り分けます。
+
+- 1文で書き、修飾を重ねない。「〜する。」で終える。
+- 引数と戻り値の説明はサマリーへ書かず、`<param>` と `<returns>` へ書く。
+- 例外、前提条件、呼び出し順の制約は `<exception>` と `<remarks>` へ分ける。
+- 複数文が必要な場合は文ごとに改行する。1行に詰め込まない。
+
+```csharp
+// 誤: 1文に条件と副作用を詰め込んでいる
+/// <summary>
+///     引数のシーン名が有効な場合にシーンをロードし、成功したらActive Sceneを切り替えて、失敗した場合はfalseを返す。
+/// </summary>
+
+// 正: サマリーは1文に絞り、残りをタグへ分ける
+/// <summary>
+///     シーンをロードし、Active Sceneへ設定する。
+/// </summary>
+/// <returns> ロードに成功した場合はtrue。 </returns>
+/// <exception cref="ArgumentException"> sceneNameが空の場合。 </exception>
+```
+
+### 処理コメント
+
+**メソッドの中には、処理のまとまりごとにコメントを残します。** コメントは実行時コストを持たないため、量を惜しむ理由がありません。書かないことで失われるのは、後から読む人（と、差分だけを見るAIエージェント）が意図を復元する手がかりです。
+
+- 処理のまとまりごとに、そのまとまりが何をしているかを1行で置く。
+- 分岐、早期リターン、ループの継続条件には、その条件が成立する状況を書く。
+- 特に、理由、前提、制約、回避している問題は必ず書く。コードから読み取れないのはこれらだけです。
+- 1行を機械的に言い換えるだけのコメント（`// カウントを1増やす`）は書かない。まとまりの単位で書きます。
+
+```csharp
+public static bool TryRegister(Type type, object instance)
+{
+    // 型と実体の対応が壊れた状態を登録させない。
+    if (!type.IsInstanceOfType(instance)) { return false; }
+
+    // 同じ型の二重登録は、後から登録した側が黙って捨てられるため失敗として扱う。
+    if (_instances.ContainsKey(type)) { return false; }
+
+    // 待機中の取得要求は、登録が完了してから解放する。
+    _instances.Add(type, instance);
+    ReleaseWaiters(type);
+
+    return true;
 }
 ```
 
@@ -383,6 +513,11 @@ public string InitialSceneName => _initialSceneName;
 
 - [ ] 変更の責務と配置先が一致している。
 - [ ] 命名、メンバー順、書式が本ガイドラインに従っている。
+- [ ] 制御構文の本文が1文でも波括弧で囲まれ、1文なら1行形式・2文以上ならAllman形式になっている。
+- [ ] ローカル変数の型が明示され、`var` が匿名型以外に使われていない。
+- [ ] 型の中身が `#region 外部向けAPI` と `#region 内部処理` に分かれている。
+- [ ] 型とメソッドのサマリーが複数行形式で、1文に収まっている。
+- [ ] メソッド内に、処理のまとまりごとのコメントがある。
 - [ ] `InitializeOnLoad`系属性と`RuntimeInitializeOnLoadMethod`が対応するOrchestrator以外に存在しない。
 - [ ] 副作用を持つstatic constructor／static field initializerと、package-wideな`DefaultExecutionOrder`が存在しない。
 - [ ] package-wideなEditor callback、delayCall、Timerが解除可能で、Editor Orchestratorのライフサイクル下にある。

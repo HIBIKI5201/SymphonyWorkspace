@@ -9,11 +9,12 @@
 | ドキュメント | 読むタイミング |
 | --- | --- |
 | このファイル | 常に。作業の進め方・コミット・検証の手順 |
-| [CodeGuidelines.md](./CodeGuidelines.md) | コードを書く前に。命名・書式・非同期・Unity固有ルール |
+| [CodeGuidelines.md](./CodeGuidelines.md) | コードを書く前に。命名・書式・コメント・非同期・Unity固有ルール |
+| [DocumentationGuidelines.md](./DocumentationGuidelines.md) | Markdown文書を書く前に。文書の役割分担、節の順序、分量、AIに書かせるときの手順 |
 | [DesignPhilosophy.md](./DesignPhilosophy.md) | 型・クラス・名前空間を**新設**する前、または公開範囲を判断する前。全部を通読せず該当する節（`## クラス設計`、`## 公開APIとバージョニング` など）を参照する |
 | [../AGENTS.md](../AGENTS.md) | ワークスペースの構成、環境設定、自動生成物の区別を知りたいとき |
 | [../Assets/SymphonyFrameWork/AGENTS.md](../Assets/SymphonyFrameWork/AGENTS.md) | 利用者向け文書の導線や、全作業で常時守る制約を変更するとき |
-| [../Assets/SymphonyFrameWork/Documentation~/AgentUsage.md](../Assets/SymphonyFrameWork/Documentation~/AgentUsage.md) | AIエージェントが利用コードを書く際の注意事項を変更するとき |
+| [../Assets/SymphonyFrameWork/Documentation~/AgentUsage.md](../Assets/SymphonyFrameWork/Documentation~/AgentUsage.md) | 公開型のnamespaceや入口が変わり、AI向けAPI索引を更新するとき |
 | [../Assets/SymphonyFrameWork/Documentation~/EditorTools.md](../Assets/SymphonyFrameWork/Documentation~/EditorTools.md) | Editor機能を追加・変更するとき。**記載の無いモジュールを見つけたら追記する** |
 | [../Assets/SymphonyFrameWork/Documentation~/Deprecations.md](../Assets/SymphonyFrameWork/Documentation~/Deprecations.md) | `[Obsolete]` を付ける・外すとき。今どのAPIが非推奨で残っているかを知りたいとき |
 | [../Assets/SymphonyFrameWork/CHANGELOG.md](../Assets/SymphonyFrameWork/CHANGELOG.md) | 直近の変更の経緯を知りたいとき。記述の粒度の参考にもする |
@@ -49,7 +50,7 @@
 - **このリポジトリ単体ではコンパイルできません。** `dotnet build`、`msbuild`、`csc` は使わないでください。asmdefの参照解決はUnityが行うため、コンパイル可否の判断はUnity Editorに委ねます（→ §4）。
 - `Assets/SymphonyFrameWork/Cache/` はランタイム生成物（`SymphonyDebugLogger` のログ）です。`.gitignore` 済みで、編集も削除も自由ですが、コミットしません。
 - `.claude/` と `.agents/` はローカル専用領域です。**他の開発者やエージェントにも守らせたいルールは、必ずこのファイルなど追跡対象のドキュメントに書いてください。**
-- **ドキュメントの置き場所には基準があります。** 本体開発向けのドキュメント（このファイル、CodeGuidelines、DesignPhilosophy）は**ワークスペース側の `Documentation/`** に置きます。パッケージ利用者向けの詳細文書は、Unity PackageのAsset Import対象外となる`Documentation~/`へ置きます。パッケージリポジトリのルートには、外部の規約で置き場所が決まっているものだけを置きます（`README.md`・`CHANGELOG.md`・`LICENSE.txt`はUPMの標準レイアウト、`AGENTS.md`はエージェントツールがルートから探索するため）。`AGENTS.md`は導線と常時ルールに限定し、API説明やコード例を複製しません。
+- **ドキュメントの置き場所には基準があります。** 本体開発向けのドキュメント（このファイル、CodeGuidelines、DocumentationGuidelines、DesignPhilosophy）は**ワークスペース側の `Documentation/`** に置きます。パッケージ利用者向けの詳細文書は、Unity PackageのAsset Import対象外となる`Documentation~/`へ置きます。パッケージリポジトリのルートには、外部の規約で置き場所が決まっているものだけを置きます（`README.md`・`CHANGELOG.md`・`LICENSE.txt`はUPMの標準レイアウト、`AGENTS.md`はエージェントツールがルートから探索するため）。`AGENTS.md`は導線と常時ルールに限定し、API説明やコード例を複製しません。
 
 ## 2. `.meta` ファイルの扱い（最優先事項）
 
@@ -189,17 +190,17 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 | 公開挙動の変更（シグネチャは同じだが結果が変わる） | CHANGELOG.md、`version`、必要なら `Documentation~/Modules/<モジュール>.md` のクイックスタートと「実装時の注意」 |
 | 設定アセット（Config）の項目の追加・変更 | `Documentation~/Modules/<モジュール>.md` の「Editor機能」、README の初期設定、CHANGELOG.md |
 | Editor機能（ウィンドウ、メニュー、Project Settings、生成物）の追加・変更 | 対応する `Documentation~/Modules/<モジュール>.md`。横断的な機能（Symphony Administrator、アセット保護、Editorの初期化）は `Documentation~/EditorTools.md`。CHANGELOG.md。索引が変わる場合は `Documentation~/EditorTools.md` の `## 一覧` と README |
-| 利用者向けドキュメント（`README.md`、`Documentation~/**/*.md`）の変更 | **`python scripts/build_module_docs.py` を実行して `Documentation~/Html/` を再生成し、生成物も同じコミットへ含める。** 忘れると `release_round.py preflight` が落ちる |
+| 利用者向けドキュメント（`README.md`、`Documentation~/**/*.md`）の変更 | 書き方は [DocumentationGuidelines.md](./DocumentationGuidelines.md) に従う。**`python scripts/build_module_docs.py` を実行して `Documentation~/Html/` を再生成し、生成物も同じコミットへ含める。** 忘れると `release_round.py preflight` が落ちる |
 | Sample の追加 | `package.json` の `samples`、CHANGELOG.md |
 | 依存パッケージの追加・更新 | `package.json` の `dependencies`、README の必要なパッケージ |
 | 非推奨化 | `[Obsolete("代替APIの案内", error: false)]`、**`Documentation~/Deprecations.md` への行追加（削除予定が未定なら「未定」と書く）**、CHANGELOG の `### Deprecated`（移行方法を明記）、READMEまたはSampleの旧API利用箇所 |
 | 非推奨APIの削除 | `Documentation~/Deprecations.md` の行を `## 削除済み` へ移す、CHANGELOG の `### Breaking`（移行方法を明記）、`package.json` の `version`（メジャー更新） |
-| 本体開発の手順・規約の変更 | ワークスペース側の `Documentation/`（このファイル、CodeGuidelines、DesignPhilosophy）と `AGENTS.md` |
+| 本体開発の手順・規約の変更 | ワークスペース側の `Documentation/`（このファイル、CodeGuidelines、DocumentationGuidelines、DesignPhilosophy）と `AGENTS.md` |
 | 内部実装（`internal`/`private`）のみの変更 | 原則不要。ただし**更新不要と判断した理由**をPR説明かコミットメッセージに書く |
 
 ### バージョンとCHANGELOG
 
-- `package.json` の `version` と CHANGELOG の見出しは同時に更新します。SemVerの判断基準は [DesignPhilosophy.md `### バージョニング`](./DesignPhilosophy.md) を参照してください（破壊的変更=メジャー / 後方互換な追加=マイナー / 実装のみの修正=パッチ）。
+- `package.json` の `version`、CHANGELOG の見出し、**README の「現在のバージョン」** は同時に更新します。READMEはこの3か所目で、更新漏れが最も起きやすい箇所です。SemVerの判断基準は [DesignPhilosophy.md `### バージョニング`](./DesignPhilosophy.md) を参照してください（破壊的変更=メジャー / 後方互換な追加=マイナー / 実装のみの修正=パッチ）。
 - CHANGELOG の形式:
 
 ```markdown
@@ -229,7 +230,9 @@ python scripts/build_module_docs.py
 - `--check` を付けると生成せず、正本と生成物が一致しているかだけを検証します。`release_round.py preflight` から呼ばれます。
 - **スクリプトが対応するMarkdownの記法は、このリポジトリの既存ドキュメントが実際に使っているものに限ります**（見出し、段落、リスト、テーブル、フェンス付きコードブロック、インラインコード、`**強調**`、リンク、水平線）。対応外の記法を書くと生成時にエラーで止まります。**黙って素通しさせないための仕様です。**
 - **相対リンクとアンカーの実在も生成時に検査します。** リンク切れがあると生成が止まります。
-- **既知の制限: mermaid のブロックはHTML側でレンダリングされず、コードブロックとして出力されます。** オフラインで開く前提のため外部スクリプトを読み込みません。図として読みたい場合は正本のMarkdownをGitHubなどで開いてください。
+- **mermaid のブロックは、生成時にSVGへ変換して `Documentation~/Html/Diagrams/` へ書き出し、HTMLからは `<img>` で参照します。** 実行時のスクリプトを読み込まないため、オフラインでもそのまま図として表示されます。
+- **図を追加・変更したときだけ Node.js が必要です。** 変換には `npx @mermaid-js/mermaid-cli` を使います（初回はChromiumの取得が走ります）。SVGはmermaidソースのダイジェストをファイル名にしてコミットするため、**図を触らない変更では Node.js は要りません。** 既存のSVGがそのまま使われます。
+- SVGが足りない場合と、参照されなくなったSVGが残っている場合は、生成と `--check` の両方で検出されます。
 
 ## 7. Pull Request前のチェック
 
@@ -242,6 +245,7 @@ python scripts/build_module_docs.py
 - [ ] `package.json` の `version` と CHANGELOG の見出しが一致している
 - [ ] `uloop-compile` がエラーなく通り、Consoleに意図しない警告がない
 - [ ] `python scripts/build_module_docs.py --check` が通っている（ドキュメントを変更した場合）
+- [ ] 変更した文書が [DocumentationGuidelines.md `## 7. 更新時の確認`](./DocumentationGuidelines.md#7-更新時の確認) を満たしている
 - [ ] `Cache/` や親ワークスペースの生成物をコミットしていない
 - [ ] submodule の変更を push してから、親の gitlink を更新した
 - [ ] uLoopで確認できない事項を依頼者へ提示した
