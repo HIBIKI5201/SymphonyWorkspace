@@ -13,11 +13,16 @@
 --------
 preflight : 検証のみ。git の状態は一切変更しない
 commit    : preflight → submodule へコミット → push →（任意で）PR 作成
-finalize  : マージ後。gitlink の到達可能性を確認 → submodule を develop へ揃える
-            → マージ済み feature ブランチを削除 → 親リポジトリをコミット → push
+finalize  : feature → develop の PR をマージ → gitlink の到達可能性を確認
+            → submodule を develop へ揃える → マージ済み feature ブランチを削除
+            → 親リポジトリをコミット → push
 
-**PR のマージはこのスクリプトが行わない。** 承認を挟む余地を残すため意図的に対象外にしている。
-マージ後の後始末（develop への復帰、fast-forward、ローカルブランチの削除）は finalize が行う。
+**develop への統合は承認を挟まず finalize が行う。** feature ブランチは develop へ入れて
+初めて他の Round の土台になるため、ここで人を待たせても得られる安全性が無い。
+**人の承認が要るのは develop → main のリリースだけであり、そこはこのスクリプトの対象外である。**
+
+マージ方法の既定は `--merge`（マージコミット）である。`--squash` を使うと feature ブランチの
+コミットが develop の祖先でなくなり、gitlink の到達可能性の検査が通らなくなる。
 
 Exit codes
 ----------
@@ -55,6 +60,15 @@ PROTECTED_BRANCHES = frozenset({"develop", "main", "master"})
 
 # `.meta` を必要としない領域。Unity の Asset Import 対象外。
 META_EXEMPT_PREFIXES = ("Documentation~/",)
+
+# Runtime/Core からの UnityEditor 参照のうち、この検査より前から存在する未解消の違反。
+# **解消するまでの間、そのファイルを別の理由で触った Round を止めないためにある。**
+# 新しい違反を書いてよいという意味ではない。解消したら行ごと削除する。
+KNOWN_EDITOR_REFERENCE_EXCEPTIONS = {
+    "Core/SymphonyConstant.cs":
+        "GetFrameworkAbsolutePath() が #if UNITY_EDITOR 内でUPMのパス解決を行う。"
+        "Core/Editor/ へ移すには public API の移動を伴うため、専用の Round が要る。",
+}
 
 COMMIT_MESSAGE_PATTERN = re.compile(r"^\[(add|update|fix)\][^\s].*$")
 CHANGELOG_HEADING_PATTERN = re.compile(r"^## \[([^\]]+)\]", re.MULTILINE)
@@ -129,6 +143,17 @@ def main() -> int:
         "--keep-branches",
         action="store_true",
         help="マージ済みのfeatureブランチを削除しない",
+    )
+    finalize_parser.add_argument(
+        "--merge-method",
+        choices=("merge", "rebase", "squash"),
+        default="merge",
+        help="PRのマージ方法。squashはgitlinkの到達可能性を壊すため既定にしない",
+    )
+    finalize_parser.add_argument(
+        "--no-merge",
+        action="store_true",
+        help="PRをマージせず、マージ済みである前提で後始末だけを行う",
     )
 
     args = parser.parse_args()
@@ -356,17 +381,26 @@ def check_meta_pairs() -> list[str]:
 def check_runtime_editor_references() -> list[str]:
     """Runtime と Core から UnityEditor を参照していないかを確認する。
 
-    **この Round で触った .cs だけを対象にする。** パッケージには `#if UNITY_EDITOR` で
-    囲んだ既存の例外（`Core/SymphonyConstant.cs`）が残っており、全体を毎回検査すると
+    **この Round で触った .cs だけを対象にする。** 全体を毎回検査すると、
     同じ既存違反を報告し続けることになる。読まれなくなる検査は無いのと同じである。
 
     Core/Editor/ は Editor 専用の共有基盤なので対象外にする。
     コメント行はコードではないため除外する。
+
+    `KNOWN_EDITOR_REFERENCE_EXCEPTIONS` は、この検査が導入される前から存在し、
+    まだ解消していない違反である。**その違反を含むファイルを別の理由で触った Round が、
+    自分の持ち込んでいない指摘で止まるのを防ぐ。** 触っていない限り報告されないため、
+    通常は表に出ない。解消したら、この一覧から削除する。
     """
     failures = []
     checked = 0
     for name in changed_files("*.cs"):
         if not name.startswith(("Runtime/", "Core/")) or name.startswith("Core/Editor/"):
+            continue
+
+        if name in KNOWN_EDITOR_REFERENCE_EXCEPTIONS:
+            print(f"[layer] SKIP: {name}（既知の例外: "
+                  f"{KNOWN_EDITOR_REFERENCE_EXCEPTIONS[name]}）")
             continue
 
         path = SUBMODULE_ROOT / name
@@ -550,7 +584,7 @@ def run_commit(args: argparse.Namespace) -> int:
     if args.pr:
         return create_pull_request(args, branch)
 
-    print("\n次: PRを作成し、マージしてから finalize を実行してください。")
+    print("\n次: PRを作成してから finalize を実行してください。マージは finalize が行います。")
     return 0
 
 
@@ -576,7 +610,7 @@ def create_pull_request(args: argparse.Namespace, branch: str) -> int:
         return 1
 
     print(f"[pr] OK: {completed.stdout.strip()}")
-    print("\n次: PRをマージしてから finalize を実行してください。")
+    print("\n次: finalize を実行してください。マージは finalize が行います。")
     return 0
 
 
@@ -590,6 +624,13 @@ def run_finalize(args: argparse.Namespace) -> int:
         print("NG: submoduleに未コミットの変更があります。先にコミットしてください。")
         return 1
 
+    # develop への統合は承認を挟まない。ここで人を待たせても、後続の Round が
+    # 未統合の feature ブランチを土台にする時間が延びるだけである。
+    if not args.no_merge:
+        failure = merge_into_integration(current_branch(SUBMODULE_ROOT), args.merge_method)
+        if failure is not None:
+            return failure
+
     submodule_git("fetch", "origin", "--prune")
     head = submodule_git("rev-parse", "HEAD")
 
@@ -602,7 +643,7 @@ def run_finalize(args: argparse.Namespace) -> int:
     if completed.returncode != 0:
         print(
             f"NG: submoduleのHEAD({head[:7]})が{INTEGRATION_BRANCH}から到達できません。"
-            "\n  PRのマージを待ってから再実行してください。"
+            "\n  --merge-method squash を使うとこうなる。マージコミットかrebaseで統合してください。"
         )
         return 1
     print(f"[gitlink] OK: {head[:7]} は {INTEGRATION_BRANCH} から到達可能")
@@ -638,6 +679,58 @@ def run_finalize(args: argparse.Namespace) -> int:
     return 0
 
 
+def merge_into_integration(branch: str, merge_method: str) -> int | None:
+    """feature ブランチの Open な PullRequest を統合ブランチへマージする。
+
+    **gh は cwd のリポジトリを見る。** 親リポジトリから実行すると submodule ではなく
+    ワークスペース側の PR を探してしまうため、必ず SUBMODULE_ROOT で実行する。
+
+    Open な PR が無い場合は、既にマージ済みか手で統合した場合である。**ここでは失敗にせず、
+    後続の gitlink 到達可能性の検査へ判断を委ねる。** その検査こそが「作業が develop へ
+    入っているか」の正本であり、PR の有無で二重に判定すると食い違う余地が生まれる。
+
+    Returns:
+        成功時は None。失敗時は終了コード。
+    """
+    # detached HEAD と保護ブランチには、マージ対象の feature ブランチが無い。
+    if not branch or branch in PROTECTED_BRANCHES:
+        print(f"[merge] SKIP: マージ対象のfeatureブランチではありません（{branch or 'detached HEAD'}）")
+        return None
+
+    integration_name = INTEGRATION_BRANCH.split("/", 1)[1]
+
+    listed = subprocess.run(
+        ["gh", "pr", "list", "--head", branch, "--base", integration_name,
+         "--state", "open", "--json", "number", "--jq", ".[0].number // empty"],
+        cwd=SUBMODULE_ROOT, capture_output=True, text=True,
+        encoding="utf-8", errors="replace",
+    )
+    if listed.returncode != 0:
+        print(f"NG: PRを検索できませんでした。\n{listed.stderr.strip()}")
+        return 1
+
+    number = listed.stdout.strip()
+    if not number:
+        print(f"[merge] SKIP: '{branch}'に{integration_name}向けのOpenなPRはありません")
+        return None
+
+    merged = subprocess.run(
+        ["gh", "pr", "merge", number, f"--{merge_method}"],
+        cwd=SUBMODULE_ROOT, capture_output=True, text=True,
+        encoding="utf-8", errors="replace",
+    )
+    if merged.returncode != 0:
+        print(
+            f"NG: PR #{number} のマージに失敗しました。\n{merged.stderr.strip()}"
+            "\n  必須チェックの未完了やコンフリクトが原因のことが多い。"
+            "\n  解消済みなら --no-merge で後始末だけを実行できる。"
+        )
+        return 1
+
+    print(f"[merge] OK: PR #{number} を{integration_name}へマージ（{merge_method}）")
+    return None
+
+
 def sync_submodule_to_integration(keep_branches: bool) -> int | None:
     """マージ後の submodule を develop へ揃え、マージ済み feature ブランチを削除する。
 
@@ -659,7 +752,7 @@ def sync_submodule_to_integration(keep_branches: bool) -> int | None:
         if branch not in merged_branches():
             print(
                 f"NG: submoduleの'{branch}'が{INTEGRATION_BRANCH}へマージされていません。"
-                "\n  PRのマージを待ってから再実行してください。"
+                "\n  --no-merge を外すか、PRの状態を確認してください。"
             )
             return 1
         submodule_git("checkout", integration_name)
