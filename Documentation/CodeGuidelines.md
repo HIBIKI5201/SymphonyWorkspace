@@ -270,6 +270,29 @@ public sealed class SceneLoadService
 - コードと一致しない古いコメントは、機能変更と同時に更新または削除する。
 - TODOを残す場合は、未完了の内容と対応条件を具体的に書く。
 
+### 今直さないものはTODOコメントとIssueの両方で記録する
+
+**作業中に見つけた「直すべきだが今の変更範囲では直さないもの」は、その場所へ `// TODO:` を書き、対応するIssueを発行します。** どちらか片方では足りません。
+
+| 記録先 | 役割 | 片方だけだと |
+| --- | --- | --- |
+| `// TODO:` コメント | **そのコードを次に読む人が、その場で気づける** | Issueだけでは、コードを読んでいる人に届かない |
+| GitHub Issue | **作業として管理され、優先順位が付き、閉じられる** | TODOだけでは、誰も着手しないまま残り続ける |
+
+書き方は次のとおりです。
+
+```csharp
+// TODO(#160): componentがnullのときにcomponent.nameを参照しており、真のnullでは例外になる。
+//             警告を出す目的の関数が落ちるため、破棄済みと真のnullを分けて扱う。
+```
+
+- **1行目に「何が問題か」、2行目以降に「なぜ直すべきか」を書く。** 「直す」だけのTODOは、次に読む人が判断できません。
+- **Issue番号を `TODO(#番号):` の形で必ず含める。** 番号が無いTODOは、対応済みかどうかを後から判定できません。
+- **Issueを発行できない場合はTODOも書かない。** 追跡されないTODOが増えると、TODO全体が読み飛ばされるようになります。
+- 修正時は、TODOコメントとIssueを同じ変更で閉じます。
+
+**発見した変更を、見つけたついでに直さないでください。** 変更範囲が混ざると、差分レビューの前提（この変更は何を変えるのか）が崩れます。実際に、コメント規約の適用（Issue #153）の差分レビュー中に3件の既存問題が見つかりましたが、いずれも同じPRへ含めず、TODOとIssueへ分離しています。
+
 ### サマリーの形式
 
 **サマリーは、対象によって1行形式と複数行形式を使い分けます。** 型とメソッドは複数行形式にして、コードを流し読みしたときに区切りとして目に留まるようにします。
@@ -371,7 +394,7 @@ public static bool TryRegister(Type type, object instance)
 - データコンテナとして使用する `ScriptableObject` は、Inspectorだけから値を設定し、外部には読み取り専用プロパティを公開する。
 - 既存のシリアライズ済みフィールド名を変更する場合は、データ移行のため `[FormerlySerializedAs]` を使用する。
 - polymorphicな設定値には、必要に応じて `[SerializeReference]` と `[SubclassSelector]` を使用する。
-- `ScriptableObject`の設定値は、CompositionまたはInfrastructureのinternalな`SymphonyConfigLocator`を通して取得し、利用側やApplicationからLocatorを直接呼ばない。Configアセットの生成はEditor Orchestratorから呼ばれる`SymphonyConfigInitializer`だけが行う。
+- `ScriptableObject`の設定値は、CompositionまたはInfrastructureのinternalな`SymphonyConfigLocator`を通して取得し、利用側やApplicationからLocatorを直接呼ばない。Configアセットの生成は`SymphonyEditorOrchestrator`から呼ばれる`PackageInitializer`が`SymphonyConfigManager.AllConfigCheck()`を通して行う。
 
 ```csharp
 [SerializeField, Tooltip("再生開始時にロードするシーン名。")]
@@ -386,7 +409,7 @@ public string InitialSceneName => _initialSceneName;
 - 自動初期化属性を持つメソッドとOrchestratorのstatic constructorは、同じOrchestratorの明示的な初期化メソッドを呼ぶ入口に限定する。
 - `MenuItem`、`SettingsProvider`、`CustomEditor`、`UxmlElement`などの発見用属性は使用できるが、そのcallbackからpackage-wideな初期化を開始しない。
 - `AssetPostprocessor`はUnityが発見して任意のタイミングで呼ぶhost callbackとして使用でき、自動初期化属性の禁止対象には含めない。ただし初期化、Asset生成、`AssetDatabase.Refresh`、購読を所有せず、変更種別を`SymphonyEditorOrchestrator`へ通知してcoalesceするだけにする。
-- `SymphonyConfigInitializer`などのEditor初期化モジュールは自動初期化属性を持たず、`SymphonyEditorOrchestrator`から明示的に開始される。`SymphonyConfigLocator`と`SymphonyEditorConfigLocator`はinternalな検索専用Infrastructureとし、生成や初期化を開始しない。
+- `PackageInitializer`などのEditor初期化モジュールは自動初期化属性を持たず、`SymphonyEditorOrchestrator`から明示的に開始される。`SymphonyConfigLocator`と`SymphonyEditorConfigLocator`は検索専用Infrastructureとし、生成や初期化を開始しない。
 - Runtimeの`SymphonyDebugHUD`などに`MenuItem`や`UnityEditor`参照を置かない。メニュー入口はEditor専用型へ分離し、Runtimeの公開操作を呼ぶだけにする。
 - サブシステムは副作用を持つstatic constructor、static field initializer、独自の遅延初期化を使わず、Orchestratorから呼ばれる`Initialize`と`Shutdown`または`Dispose`を提供する。
 - Runtimeの各サブシステムから`SymphonyOrchestrator`を呼ばない。Orchestratorは汎用Factoryや`DontDestroyOnLoad` helperとして公開せず、必要なComponent、値、Infrastructure契約をBuild時に注入する。
@@ -474,7 +497,7 @@ public string InitialSceneName => _initialSceneName;
 - アセット変更には、必要に応じて `Undo.RecordObject`、`EditorUtility.SetDirty`、`AssetDatabase.SaveAssets` を使用する。
 - `AssetDatabase.Refresh` をループ内や頻繁に呼び出さない。
 - ファイル生成前に出力先と内容を検証し、既存ファイルを上書きする条件を明確にする。
-- `EditorPrefs` は個人設定、`ProjectSettings` はプロジェクト共有設定として使い分ける。
+- 設定の保存先は、個人設定を`UserSettings/SymphonyFrameWork/`、プロジェクト共有設定を`ProjectSettings/Packages/`配下として使い分ける。パスは`EditorSymphonyConstant.USER_SETTING_FILE_PATH`と`PROJCET_SETTING_FILE_PATH`にあり、`ScriptableSingleton<T>`の`[FilePath]`で指定する。実装例は`SymphonyUserSettingConfig`（個人）と`AutoEnumGeneratorConfig`（共有）。**`EditorPrefs`は使用しない。**
 - UI Toolkitのイベントは、Windowの無効化時に解除または破棄できる構造にする。
 - **Window自身が所有する `VisualElement` への購読は、匿名ラムダで書いてよい。** `Button.clicked += () => ...` のような購読は、Windowが閉じられれば `VisualElement` ごと破棄されるため、デリゲートがWindowより長生きしません。「解除できない匿名callbackを登録しない」の対象は、Windowより長生きする購読先（`EditorApplication.update`、static event、Runtime側のReactiveProperty）です。**購読先の寿命で判断します。**
 - Package環境とAssets環境の双方で、UXML、USS、設定アセットのパスを確認する。

@@ -73,5 +73,33 @@ Sample Scene、Build Settings、Prefabを使うランタイム確認では、検
 
 問題があればワーカーへ差し戻す。Claude Code / Gemini CLI は同じ `codex exec` に修正内容を渡し、Codex は現在のタスク内で修正する。軽微ならレビュー担当が直接直してもよい。**設計書と実装が食い違った場合は、どちらが正しいかをユーザーに確認する。**
 
+### 範囲外の問題は TODO コメントと Issue の両方へ記録する
+
+**差分を読んでいると、この Round の範囲外だが直すべき問題が必ず見つかる。** 見つけたついでに直さない。変更範囲が混ざると「この Round は何を変えるのか」というレビューの前提が崩れる。
+
+**記録は2箇所へ行う。片方だけでは足りない。**
+
+| 記録先 | 役割 | 片方だけだと |
+| --- | --- | --- |
+| `// TODO(#番号):` コメント | そのコードを次に読む人が、その場で気づける | Issueだけでは、コードを読んでいる人に届かない |
+| GitHub Issue | 作業として管理され、優先順位が付き、閉じられる | TODOだけでは、誰も着手しないまま残り続ける |
+
+書き方は `Documentation/CodeGuidelines.md` の `### 今直さないものはTODOコメントとIssueの両方で記録する` に従う。
+
+手順は次のとおり。
+
+1. **Issueを先に発行する。** 番号が決まらないとTODOへ書けない。`gh issue create --repo HIBIKI5201/SymphonyFramework`
+2. **その番号でTODOコメントを書く。** `// TODO(#160): 何が問題か` と、なぜ直すべきかの1〜2行
+3. **TODOの追加はコメントだけの変更なので、進行中の Round のコミットへ含めてよい。** ロジックは変えないこと
+4. **Issue本文には、どのRoundの差分レビューで見つけたかと、なぜその場で直さなかったかを書く。** 後から読む人が経緯を復元できる
+
+**Issueを発行できない状況ならTODOも書かない。** 追跡されないTODOが増えると、TODO全体が読み飛ばされるようになり、書いた意味が失われる。
+
+実例として、コメント規約の適用（Issue #153、12 Round）の差分レビューで次の3件が見つかり、いずれも同じPRへ含めずTODOとIssueへ分離している。
+
+- `SymphonyDebugLogger.CheckComponentNull` が `component == null` の分岐内で `component.name` を参照している
+- `EnumGenerator` が予約語を「除外しました」と警告しながら実際には除外していない
+- `SaveDataSettingProvider` が `SettingsProvider` のcallbackから package-wide な初期化を開始している
+
 ---
 
