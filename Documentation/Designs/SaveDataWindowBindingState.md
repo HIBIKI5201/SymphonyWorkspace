@@ -393,3 +393,74 @@ Round は1つで完結する。差分は新規4ファイルを含めて17ファ�
 | `Assets/SymphonyFrameWork/CHANGELOG.md` | `## [3.10.0] - 2026-08-14` を先頭へ追加。`### Add`（状態の色ランプ、自動ロード、非接続時の編集、Play Mode への持ち越し）と `### Fix`（ランタイムのロードへ追従しない不具合、対応型が一覧に出ない不具合） |
 
 `README.md` の「現在のバージョン」と `AGENTS.md` のAPI早見表は、利用側から見た公開APIの入口が変わらないため触らない。実装時に `rg -n "README\.md|Documentation~/|EditorTools\.md|AgentUsage\.md" Documentation/ AGENTS.md` を実行し、今回の変更で古くなるワークスペース側の記述が無いことを再確認する。
+
+---
+
+## 実施レポート
+
+実施日: 2026-08-14 / バージョン: 3.9.7（Fix）・3.10.0（Add） / PR: [#169](https://github.com/HIBIKI5201/SymphonyFramework/pull/169)（マージ済み） / Issue: #166（クローズ済み）
+
+### 実装した内容
+
+| 設計項目 | 実現したファイル |
+| --- | --- |
+| detached I/O（レジストリと状態変更eventに触れない） | `Runtime/System/SaveSystem/Internal/Application/SaveDataService.cs` |
+| View専用エントリポイント | `Runtime/System/SaveSystem/Internal/View/SaveDataViewStore.cs`（新規） |
+| Composition と公開 | `Runtime/System/SaveSystem/SaveStore.cs` の `CurrentViewStore` |
+| 3状態の判定と表示値 | `Editor/.../CS/SaveDataBindingSourceEnum.cs`・`SaveDataBindingState.cs`（新規） |
+| 再バインド、専用インスタンス、自動ロード、Dirty、持ち越し | `Editor/.../CS/SaveDataWindow.cs` |
+| ランプ・状態ラベル・チェックボックス | `Editor/.../UXML/SaveDataWindow.uxml`・`SymphonyWIndow.uss` |
+| 持ち越しフラグ | `Editor/Configs/ConfigData/SymphonyUserSettingConfig.cs` |
+| テスト | `Tests/Editor/` に3ファイル（新規） |
+
+`SaveDataViewModel` は設計どおり無変更。`SaveDataWindow` から `SaveStore` への参照は `OnCurrentViewModelChanged` / `CurrentViewModel` / `CurrentViewStore` の3つだけになった。
+
+### 設計から変えた点
+
+- **命令の置き場を、着手後に `SaveDataViewModel` から `SaveDataViewStore` へ変えた。** 最初の設計書は ViewModel へ命令を集約すると書いたが、`DesignPhilosophy.md` の `### ViewModel`（「Commandを実行しない」）と `## やってはいけないこと`（「ViewModelからCommandを実行する」）に抵触していた。**設計を書く時点でこの2箇所を読んでいなかったのが原因**で、ワーカーが1度実装を終えた後の差し替えになった。同文書へ `### View専用エントリポイント` を新設して正式な選択肢とした上で採用している。
+- **4パネルへ入れた `// TODO:` を全件取り消した。** 「旧規約のまま残る4パネル」という設計書の記述が誤りだった。今回の改訂は規約の**置き換えではなく緩和**であり、Facade を直接呼ぶ既存パネルは今も規約に適合している。実際の呼び出しを数えると、`SceneLoadWindow` と `ServiceLocateWindow` は命令を1つも出しておらず、`AutoEnumGeneratorWindow` は ViewModel も Query も持たない Editor 専用の生成器だった。
+- **Editor 向けの公開APIは作らなかった。** 作ってよいという判断はもらっていたが、`InternalsVisibleTo` で Editor から届き、現時点で利用側の要求が無いため見送った。
+
+### 検証結果
+
+`verify_round.py` と `release_round.py preflight` を自分で実行した値。
+
+| 項目 | 結果 |
+| --- | --- |
+| コンパイル | エラー0・警告0（**確定前は「警告12件」を返した。取り直した値を採用**） |
+| EditMode | 334/334 成功 |
+| PlayMode | 21/21 成功 ×2往復 |
+| Console（テスト実行前） | エラー0件 |
+| 新規 `.cs` 6件の `.meta` | 6/6 生成済み |
+| `preflight` | 9項目すべて通過 |
+
+実機の表示は `execute-dynamic-code` で要素の状態を直接読み、次まで確認した。
+
+```
+state=Window instance | lamp=save-binding-lamp save-binding--instance
+rows=8 | toggle=False
+```
+
+赤状態の修飾クラスが実際に付くこと、一覧に全8型が出ること（従来はキャッシュ済み／保存済みのみ）、持ち越しチェックボックスが既定 off であること。
+
+### 未実施の確認
+
+「動作確認手順」の11項目のうち、**#3〜#11 が未実施**。黄・緑への遷移、`Loading…`、`未保存の変更あり`、Play Mode 持ち越し、Editor 再起動後の設定保持が該当する。ボタンとトグルを押す手段が無いため自動化できない。`Samples/Runtime/SaveDataSystemSample/SaveDataSystemSample.unity` を再生すると #5〜#7 を踏める。
+
+**「Play Mode 突入時のフラッシュが同期完了しなかった場合の取り消しと入り直し」は、同梱ローダーが同期完了するため原理的に踏めない。** コードレビューと `SaveDetachedAsync_CompletesSynchronously` で担保し、実機確認の対象から外した。
+
+### 振り返り
+
+適用したもの:
+
+- `implement/references/design-doc.md` へ「DesignPhilosophy のレイヤー節と `## やってはいけないこと` 全項目を読む」を追加
+- `implement/references/release.md` を `finalize` の実装（PRをマージする）に合わせて修正し、マージ可否を問い合わせて止めないことを明記
+- `implement/SKILL.md` へステップ7（実施レポート）と `verify_round.py` の呼び出しを追加
+- `audit/references/perspectives.md` へ観点 B9「コード内 TODO の棚卸し」を追加
+- `scripts/release_round.py preflight` へ Enter Play Mode Options の検査を追加
+- `scripts/verify_round.py` を新設。Unity 側の検証を1コマンドへ集約
+- `uloop-execute-dynamic-code` skill へ「複数行 `--code` の失敗は `Success: true` で黙って返る」を追記
+
+見送ったもの:
+
+- **型検証の3重化**（`SaveStore` / `SaveDataService` / `SaveDataLoaderStrategy`）。Service 側の追加は例外契約のために必要だが、統合すると `SaveStore` の公開例外メッセージが変わる。別 Round で単独に扱う。
