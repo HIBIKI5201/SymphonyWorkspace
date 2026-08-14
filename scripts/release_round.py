@@ -214,6 +214,7 @@ def run_preflight() -> bool:
     failures.extend(check_meta_pairs())
     failures.extend(check_runtime_editor_references())
     failures.extend(check_test_assembly_constraints())
+    failures.extend(check_enter_play_mode_options())
     failures.extend(check_docs_html_sync())
 
     print("")
@@ -439,6 +440,39 @@ def check_test_assembly_constraints() -> list[str]:
     if not failures:
         print(f"[asmdef] OK: {checked}件")
     return failures
+
+
+def check_enter_play_mode_options() -> list[str]:
+    """Enter Play Mode Options が Domain/Scene Reload 無効のままかを確認する。
+
+    **PlayMode テストを実行すると Unity がこの値を書き戻す。** 実際に `3`（両方無効）から
+    `1`（Domain Reload だけ無効）へ戻される事例が繰り返し出ている。static 状態が
+    Play Mode 終了時にリセットされない前提で各 Facade の `ResetRuntimeState` が
+    書かれているため、黙って戻ると検証の前提そのものが変わる。**戻ったことは
+    Console にもテスト結果にも出ず、`git status` を見ない限り気づけない。**
+    """
+    settings_path = WORKSPACE_ROOT / "ProjectSettings" / "EditorSettings.asset"
+    if not settings_path.exists():
+        return [f"EditorSettings.assetが見つかりません: {settings_path}"]
+
+    text = settings_path.read_text(encoding="utf-8")
+    enabled = re.search(r"^\s*m_EnterPlayModeOptionsEnabled:\s*(\d+)", text, re.MULTILINE)
+    options = re.search(r"^\s*m_EnterPlayModeOptions:\s*(\d+)", text, re.MULTILINE)
+
+    if enabled is None or options is None:
+        return ["EditorSettings.assetにEnter Play Mode Optionsの項目がありません"]
+
+    # 1=DisableDomainReload、2=DisableSceneReload。ワークスペースの前提は両方無効。
+    if enabled.group(1) != "1" or options.group(1) != "3":
+        return [
+            "Enter Play Mode OptionsがDomain/Scene Reload両方無効ではありません"
+            f"（Enabled={enabled.group(1)} Options={options.group(1)}、期待は 1 と 3）。"
+            " PlayModeテストの実行で書き戻された可能性があります。"
+            " Unity側で Domain Reload と Scene Reload を両方無効へ戻してください。"
+        ]
+
+    print("[playmode] OK: Domain/Scene Reloadは両方無効")
+    return []
 
 
 # ----------------------------------------------------------------------- bump
