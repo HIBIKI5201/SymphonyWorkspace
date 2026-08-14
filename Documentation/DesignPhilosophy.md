@@ -128,7 +128,8 @@ Domainの値と規則を組み合わせ、サブシステムが提供する処�
 - ViewModelはAdaptorのQueryが生成したDtoを表示状態へ変換し、`IReadOnlyReactiveProperty<T>`としてViewとEditor UIへ公開する。
 - Editor UIはViewModelのReactivePropertyを購読し、値の変更をポーリングせずに反映する。
 - Unityライフサイクルは表示の開始・停止、購読・解除、描画更新の同期に使う。
-- 状態変更を独自に実装せず、Applicationまたは公開エントリポイントへ委譲する。
+- 状態変更を独自に実装せず、Applicationまたはエントリポイントへ委譲する。
+- **View専用エントリポイント**を置いてよい。View層の操作と問い合わせを1つの型へ集約したい場合に使う。詳細は下記。
 - 表示のために状態を整形できるが、Domainの不変条件を持たない。
 - `ServiceHostComponent`は、サービスの登録表ではなくGameObjectの所有と破棄を担うため、この層に置く。
 
@@ -153,7 +154,7 @@ Domainの値と規則を組み合わせ、サブシステムが提供する処�
 - `[RuntimeInitializeOnLoadMethod]`は`SymphonyOrchestrator`、`[InitializeOnLoad]`と`[InitializeOnLoadMethod]`は`SymphonyEditorOrchestrator`だけが所有する。サブシステムやInitializerへUnityの自動初期化属性を付けない。
 - `SymphonyLifetimeComponent`はUnityライフサイクルとpackage-wideな`destroyCancellationToken`をRuntime Compositionへ提供するだけにする。
 - `SymphonyOrchestrator`だけがpackage-wideな`destroyCancellationToken`へ1回登録し、キャンセル時に全サブシステムの`Shutdown`を逆順で実行する。各Service、Registry、公開エントリポイントは同じtokenへ終了処理を個別登録しない。
-- Runtime用ViewModelを生成・所有し、Editor Windowへ内部参照を提供する。Play Mode終了時にViewModelを破棄する。
+- Runtime用ViewModelとView専用エントリポイントを生成・所有し、Editor Windowへ内部参照を提供する。Play Mode終了時にViewModelを破棄する。
 - Edit ModeでRuntime Compositionが存在しない場合、Editor Windowは未接続状態を表示し、Play Mode切り替え時にViewModelを再取得する。
 - 他レイヤーへ具象型の組み立てやサービス登録を分散させない。
 - 初期化に失敗した場合は、部分的に構築された状態を残さない。
@@ -294,13 +295,25 @@ ViewModelはView層に属し、RuntimeまたはEditorの表示に必要な状態
 - Entity、Registry、Infoを参照せず、AdaptorのQueryが返すDtoから表示状態を構築する。
 - Commandを実行したServiceの状態変更eventだけを購読し、通知時にQueryを呼び直してReactivePropertyを更新する。
 - 状態の更新権限はViewModel自身だけが持ち、ViewとEditor UIには`IReadOnlyReactiveProperty<T>`を公開する。
-- Commandを実行しない。Runtime ViewやEditor Windowの操作は公開エントリポイントを直接呼ぶ。
+- Commandを実行しない。Runtime ViewやEditor Windowの操作は、公開エントリポイントかView専用エントリポイントを呼ぶ。
 - Runtime側に置くViewModelから`UnityEditor`を参照しない。EditorはRuntimeのViewModelを購読する。
 - CompositionがViewModelを生成・所有し、Editor Windowは現在のViewModelへの購読だけを所有する。
 - Composition Rootは現在のViewModelを取得する`internal`な読み取り専用accessorを提供する。Editor WindowはこのaccessorからPlay Modeごとに取得し、ViewModelを生成・置換しない。
 - 購読とApplicationへの接続を所有し、`Dispose`で必ず解除する。
 - Domain Reloadが無効でも、再初期化時に古い購読と値を残さない。
 - 例: `SceneLoadViewModel`、`ServiceLocateViewModel`、`SaveDataViewModel`。
+
+### View専用エントリポイント
+
+View専用エントリポイントはView層に属し、Runtime ViewやEditor UIが行う操作と問い合わせの窓口になります。ViewModelがCommandを実行しない制約を保ったまま、View側の呼び出し先を1つへ集約するための型です。
+
+- AdaptorのQueryとApplicationのServiceを保持し、読み取りはQuery、状態変更はServiceへ委譲する。読み取り変換や不変条件をここで重複実装しない。
+- **公開エントリポイントと機能が重複するだけなら設けない。** Viewにしか必要のない操作があり、それを公開APIへ広げたくない場合に限って設ける。
+- `internal`にする。Editorからの参照は`InternalsVisibleTo`で許可する。
+- CompositionがViewModelと同じ寿命で生成・所有し、Composition Rootは現在のインスタンスを返す`internal`な読み取り専用accessorを提供する。View側は生成・置換しない。
+- ViewModelの代わりにはならない。**表示状態の購読はViewModelの`IReadOnlyReactiveProperty<T>`から行う。** View専用エントリポイントは表示状態を保持せず、`ReactiveProperty`も公開しない。
+- Editor拡張の利用側へ開く必要が生じた場合は、Editorアセンブリ側に公開APIを作り、そこからView専用エントリポイントへ委譲する。Runtimeの公開APIを広げない。
+- 例: `SaveDataViewStore`（Editorのセーブデータ管理パネルが、レジストリを経由しない編集用I/Oを行うために使う）。
 
 ### ReactiveProperty
 
@@ -592,7 +605,8 @@ Symphony Frameworkは他プロジェクトが依存するパッケージであ�
 - 利用側プロジェクトの具体的なゲーム設計やデータ構造をDomain／Applicationへ埋め込む。
 - 役割を表さない`Manager`や`Data`を新しい型名へ使う。
 - EntityをDomain以外へ置く、DTOをQueryからViewModelへの受け渡し以外に流用する。
-- ViewModelからCommandを実行する、またはInfoをViewModelの更新データとして使う。
+- ViewModelからCommandを実行する、またはInfoをViewModelの更新データとして使う。操作をView層へ集約したい場合はView専用エントリポイントを設ける。
+- 公開エントリポイントと同じ操作を並べただけのView専用エントリポイントを設ける、またはView専用エントリポイントへ表示状態や`ReactiveProperty`を持たせる。
 - 公開エントリポイントやViewModelがRegistry／Entityを直接読み、Queryと同じInfo／Dto変換を重複実装する。
 - public abstractな拡張点をLoaderと呼ぶ、またはInfrastructureの具象LoaderをStrategyと呼ぶ。
 - enumをValue Objectとして扱う、または`Enum`で終わらないenum型を追加する。
@@ -617,6 +631,7 @@ Symphony Frameworkは他プロジェクトが依存するパッケージであ�
 - [ ] ViewModelがAdaptorのQueryから専用Dtoを受け取り、Dtoを公開APIへ漏らしていないか。
 - [ ] Commandを実行するServiceだけが状態変更eventを所有し、観測可能な論理更新の確定後に過不足なく発行しているか。
 - [ ] CompositionがViewModelを所有し、Editor Windowは購読だけを所有しているか。
+- [ ] View専用エントリポイントを設けた場合、QueryとServiceへ委譲するだけに留め、表示状態を持たず、公開エントリポイントと操作が重複していないか。
 - [ ] コレクションを持つReactivePropertyへ内容比較用comparerを指定したか。
 - [ ] 継承によって拡張可能なApplication型はStrategyとして、固定処理のServiceと区別されているか。
 - [ ] public abstractなSave Data拡張点がStrategy、sealed具象I/O実装がLoaderとして命名されているか。
