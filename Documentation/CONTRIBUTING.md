@@ -161,7 +161,8 @@ python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
 
 特定の GitHub Issue に対応する場合は、**設計や実装へ着手する前に**、submodule の `develop` からその Issue 専用のブランチを作ります。複数の無関係な Issue を同じブランチで扱わないでください。
 
-- 命名規則: `feature/<Issue番号>-<短い機能名>`（例: `feature/101-module-docs`）
+- 命名規則: `feature/<Issue番号>-<短い機能名>`（例: `feature/101-module-docs`）。不具合修正のIssueには `fix/<Issue番号>-<短い名前>` を使えます（例: `fix/160-check-component-null`）
+- **接頭辞は `feature/` か `fix/` のどちらかにしてください。** `release_round.py finalize` はこの2つで始まるブランチだけをマージ後に削除します。規則外の名前を付けると、コミットもマージも通ったうえでブランチだけが残ります。`preflight` が着手時点で弾きます
 - 修正と検証が完了したらブランチを push し、`develop` をベースとする Pull Request を作成する
 - PR 本文へ `Issue: #<Issue番号>` を記載し、PR がマージされたら対応する Issue を閉じる
 

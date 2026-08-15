@@ -55,8 +55,13 @@ SUBMODULE_PATH = "Assets/SymphonyFrameWork"
 SUBMODULE_ROOT = WORKSPACE_ROOT / SUBMODULE_PATH
 INTEGRATION_BRANCH = "origin/develop"
 
-# この名前のブランチへ直接コミットしない。実装フローは feature ブランチを前提にする。
+# この名前のブランチへ直接コミットしない。実装フローは作業ブランチを前提にする。
 PROTECTED_BRANCHES = frozenset({"develop", "main", "master"})
+
+# 実装フローが作る作業ブランチの接頭辞。**preflight の検査と finalize の削除で同じ集合を使う。**
+# 別々に持つと、検査を通ったのに削除されないブランチが黙って残る。実際に `fix/160-...` が
+# preflight を通過したうえで、削除側の `feature/` 判定に引っかからず残った。
+FLOW_BRANCH_PREFIXES = ("feature/", "fix/")
 
 # `.meta` を必要としない領域。Unity の Asset Import 対象外。
 META_EXEMPT_PREFIXES = ("Documentation~/",)
@@ -248,11 +253,22 @@ def check_docs_html_sync() -> list[str]:
 
 
 def check_branch() -> list[str]:
+    """submodule が、後始末まで届く作業ブランチに居ることを確認する。
+
+    **命名規則を検査するのは、finalize の削除対象が接頭辞で決まるためである。**
+    規則外の名前でも commit までは通ってしまい、マージ済みブランチだけが黙って残る。
+    """
+    prefixes = "、".join(f"'{prefix}'" for prefix in FLOW_BRANCH_PREFIXES)
     branch = current_branch(SUBMODULE_ROOT)
     if not branch:
-        return ["submoduleがdetached HEADです。feature ブランチを作成してください。"]
+        return [f"submoduleがdetached HEADです。{prefixes} で始まる作業ブランチを作成してください。"]
     if branch in PROTECTED_BRANCHES:
-        return [f"submoduleが'{branch}'です。feature ブランチを作成してください。"]
+        return [f"submoduleが'{branch}'です。{prefixes} で始まる作業ブランチを作成してください。"]
+    if not branch.startswith(FLOW_BRANCH_PREFIXES):
+        return [
+            f"submoduleの'{branch}'が命名規則から外れています。{prefixes} で始めてください。"
+            "\n  規則外の名前は finalize のマージ済みブランチ削除の対象になりません。"
+        ]
     print(f"[branch] OK: {branch}")
     return []
 
@@ -748,8 +764,11 @@ def merge_into_integration(branch: str, merge_method: str) -> int | None:
         print(f"[merge] SKIP: '{branch}'に{integration_name}向けのOpenなPRはありません")
         return None
 
+    # `--delete-branch` はリモート側だけを消す。ローカルの後始末は
+    # sync_submodule_to_integration が行う。**両方やらないとどちらかが残る。**
+    # 実際に、リモートの feature/153・163・166 がマージ後も残っていた。
     merged = subprocess.run(
-        ["gh", "pr", "merge", number, f"--{merge_method}"],
+        ["gh", "pr", "merge", number, f"--{merge_method}", "--delete-branch"],
         cwd=SUBMODULE_ROOT, capture_output=True, text=True,
         encoding="utf-8", errors="replace",
     )
@@ -797,11 +816,11 @@ def sync_submodule_to_integration(keep_branches: bool) -> int | None:
     if keep_branches:
         return None
 
-    # 削除対象を feature/ に限る。フローの命名規則に沿うブランチだけを消し、
-    # 利用者が別目的で持っているローカルブランチへ触らないため。
+    # 削除対象をフローの命名規則に沿うブランチへ限る。利用者が別目的で持っている
+    # ローカルブランチへ触らないため。**接頭辞の集合は preflight の検査と共有する。**
     deleted = []
     for name in merged_branches():
-        if not name.startswith("feature/"):
+        if not name.startswith(FLOW_BRANCH_PREFIXES):
             continue
         submodule_git("branch", "-d", name)
         deleted.append(name)
