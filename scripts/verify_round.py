@@ -13,7 +13,10 @@
    実際に「警告12件」が取り直すと0件になっている。compile は必ず2回問い合わせ、
    2回目の値だけを採用する。
 3. **PlayMode を2往復させる。** Domain Reload 無効のため、static 状態のゴースト参照は
-   1回では出ない。あわせて Enter Play Mode Options が書き戻されていないかも見る。
+   1回では出ない。
+4. **Enter Play Mode Options を元へ戻す。** PlayMode テストの実行は、この設定を
+   3（Domain Reload と Scene Reload の両方を無効）から 1 へ書き戻す。**毎回必ず戻るのに、
+   戻す操作は毎回手で叩いていた。** 検出したら Unity へ設定し直し、確定後の値で成否を見る。
 
 使い方:
 
@@ -151,25 +154,63 @@ def console_problems() -> dict:
     return {"errors": errors, "warnings": warnings}
 
 
-def check_enter_play_mode_options() -> str | None:
-    """Enter Play Mode Options が書き戻されていないかを見る。
+# 1=DisableDomainReload、2=DisableSceneReload。両方無効の 3 がこのプロジェクトの前提。
+EXPECTED_ENTER_PLAY_MODE_OPTIONS = "3"
 
-    **PlayMode テストの実行で 3 から 1 へ戻る。** Console にもテスト結果にも出ないため、
-    ここで見ないと気づけない。
-    """
+# Unity側で Enter Play Mode Options を前提値へ戻す。ファイルを直接書いても実行中のEditorが
+# メモリ上の値で上書きするため、**Editorへ設定させてから SaveAssets で確定させる。**
+RESTORE_ENTER_PLAY_MODE_OPTIONS_CODE = (
+    "UnityEditor.EditorSettings.enterPlayModeOptionsEnabled = true;"
+    " UnityEditor.EditorSettings.enterPlayModeOptions ="
+    " UnityEditor.EnterPlayModeOptions.DisableDomainReload"
+    " | UnityEditor.EnterPlayModeOptions.DisableSceneReload;"
+    " UnityEditor.AssetDatabase.SaveAssets();"
+    " return ((int)UnityEditor.EditorSettings.enterPlayModeOptions).ToString();"
+)
+
+
+def read_enter_play_mode_options() -> str:
+    """`ProjectSettings/EditorSettings.asset` に記録されている値を読む。"""
     settings_path = WORKSPACE_ROOT / "ProjectSettings" / "EditorSettings.asset"
     text = settings_path.read_text(encoding="utf-8")
     options = re.search(r"^\s*m_EnterPlayModeOptions:\s*(\d+)", text, re.MULTILINE)
 
-    # 1=DisableDomainReload、2=DisableSceneReload。両方無効の 3 が前提。
-    if options is None or options.group(1) != "3":
-        found = options.group(1) if options else "不明"
-        return (
-            f"Enter Play Mode Options が {found} です（期待は 3）。"
-            " PlayModeテストの実行で書き戻されています。Unity側で戻してください。"
-        )
+    return options.group(1) if options else "不明"
 
-    return None
+
+def check_enter_play_mode_options(skipped_playmode: bool) -> tuple[str, bool]:
+    """Enter Play Mode Options が書き戻されていれば、その場で戻す。
+
+    **PlayMode テストの実行で 3 から 1 へ戻る。** Console にもテスト結果にも出ないため、
+    ここで見ないと気づけない。**毎回必ず戻るのに、戻す操作は毎回手で叩いていた。**
+    検出したら Unity へ設定し直し、確定後の値で成否を判断する。
+
+    人へ報告する意味があるのは「戻せなかった」場合だけなので、復元できたら成功として扱う。
+    ただし何が起きたかは要約へ残す。
+    """
+    found = read_enter_play_mode_options()
+    if found == EXPECTED_ENTER_PLAY_MODE_OPTIONS:
+        return "OK", True
+
+    # PlayMode を回していないのに崩れているなら、原因はこの検証の外にある。戻すだけにして報告する。
+    cause = "PlayModeテストの実行で書き戻されています" if not skipped_playmode else "この検証の外で変更されています"
+
+    result = run_uloop("execute-dynamic-code", "--code", RESTORE_ENTER_PLAY_MODE_OPTIONS_CODE, timeout=300)
+    if not result.get("Success"):
+        return (
+            f"NG: Enter Play Mode Options が {found} です（期待は"
+            f" {EXPECTED_ENTER_PLAY_MODE_OPTIONS}）。{cause}。"
+            f" 自動復元に失敗しました: {result.get('ErrorMessage') or result.get('Error')}"
+        ), False
+
+    restored = read_enter_play_mode_options()
+    if restored != EXPECTED_ENTER_PLAY_MODE_OPTIONS:
+        return (
+            f"NG: Enter Play Mode Options を復元しましたが、ファイル上は {restored} のままです。"
+            " Unity側で確認してください。"
+        ), False
+
+    return f"復元: {found} → {restored}（{cause}）", True
 
 
 def build_summary(args: argparse.Namespace) -> dict:
@@ -211,9 +252,9 @@ def build_summary(args: argparse.Namespace) -> dict:
         if result["failed"] != 0 or result["passed"] != result["total"]:
             summary["ok"] = False
 
-    play_mode_issue = check_enter_play_mode_options()
-    summary["enterPlayModeOptions"] = play_mode_issue or "OK"
-    if play_mode_issue:
+    play_mode_options, play_mode_ok = check_enter_play_mode_options(args.skip_playmode)
+    summary["enterPlayModeOptions"] = play_mode_options
+    if not play_mode_ok:
         summary["ok"] = False
 
     return summary
