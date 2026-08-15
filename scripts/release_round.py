@@ -82,6 +82,9 @@ KNOWN_EDITOR_REFERENCE_EXCEPTIONS = {
 COMMIT_MESSAGE_PATTERN = re.compile(r"^\[(add|update|fix)\][^\s].*$")
 CHANGELOG_HEADING_PATTERN = re.compile(r"^## \[([^\]]+)\]", re.MULTILINE)
 README_VERSION_PATTERN = re.compile(r"^- 現在のバージョン: \*\*([^*]+)\*\*", re.MULTILINE)
+# Playerビルドに package.json は含まれないため、実行時に読む版はソースの定数が正本になる。
+VERSION_CONSTANT_PATH = "Core/SymphonyConstant.cs"
+VERSION_CONSTANT_PATTERN = re.compile(r'public const string VERSION = "([^"]+)";')
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 # bump が入れる穴埋めの目印。残ったまま commit へ進めないよう preflight で検出する。
@@ -385,6 +388,16 @@ def check_version_matches_changelog() -> list[str]:
         failures.append(
             f"package.jsonの'{version}'とREADMEの'{readme_match.group(1)}'が一致しません。")
 
+    # 実行時のログへ載る版はこの定数から来る。ずれると、報告されたログの版が嘘になる。
+    constant_path = SUBMODULE_ROOT / VERSION_CONSTANT_PATH
+    constant_match = VERSION_CONSTANT_PATTERN.search(constant_path.read_text(encoding="utf-8-sig"))
+    if constant_match is None:
+        failures.append(f"{VERSION_CONSTANT_PATH}にVERSION定数が見つかりません。")
+    elif version != constant_match.group(1):
+        failures.append(
+            f"package.jsonの'{version}'と{VERSION_CONSTANT_PATH}の"
+            f"'{constant_match.group(1)}'が一致しません。")
+
     if not failures:
         print(f"[version] OK: {version}")
     return failures
@@ -630,6 +643,18 @@ def run_bump(args: argparse.Namespace) -> int:
         encoding="utf-8",
     )
     print(f"[README.md] OK: {new_version}")
+
+    # 実行時のエラーログへ載る版。**.cs はUTF-8 BOM付きのため、読み書きの符号化を揃える。**
+    constant_path = SUBMODULE_ROOT / VERSION_CONSTANT_PATH
+    constant_text = constant_path.read_text(encoding="utf-8-sig")
+    constant_path.write_text(
+        VERSION_CONSTANT_PATTERN.sub(
+            f'public const string VERSION = "{new_version}";', constant_text, count=1
+        ),
+        encoding="utf-8-sig",
+        newline="",
+    )
+    print(f"[{VERSION_CONSTANT_PATH}] OK: {new_version}")
 
     # bump は README と CHANGELOG を書き換えるため、生成HTMLが必ず古くなる。
     # 再生成を人に任せると毎回 preflight で落ちて往復が増えるので、ここで揃えておく。
