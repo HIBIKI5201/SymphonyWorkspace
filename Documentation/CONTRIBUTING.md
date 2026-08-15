@@ -107,7 +107,11 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 - `Runtime/AssemblyInfo.cs` と `Core/AssemblyInfo.cs` がテストアセンブリへ `InternalsVisibleTo` を与えているため、**`internal` な内部実装も単体テストできます**
 - 実行は `uloop-run-tests --test-mode EditMode` と `--test-mode PlayMode`
 
-コードを変更したら、既存テストが全数成功することを確認してください。挙動を変えた場合はテストの追加も検討します。テストで再現できない範囲（モーダルダイアログ、Unityのホストライフサイクルなど）は次の「サンプルによる確認」と手動確認で担保します。
+コードを変更したら、既存テストが全数成功することを確認してください。
+
+**パッケージ本体（`Runtime/` `Core/` `Editor/`）のソースを変更する場合、テストの追加または変更は必須です。** `release_round.py preflight` がソースの変更に対する `Tests/` の変更を検査し、無ければコミットを止めます。検証手段が無い場合だけ `--no-tests-reason "理由"` で通せます。理由は `No-Tests-Reason:` トレーラとしてコミットへ残ります。使ってよいのは、Editor の GUI 操作を伴う変更、Unity のホストライフサイクルに依存する変更、ソースを変更していない変更に限ります。**「テストが書きにくい」は理由になりません。**
+
+テストで再現できない範囲（モーダルダイアログ、Unityのホストライフサイクルなど）は次の「サンプルによる確認」と手動確認で担保します。
 
 ### サンプルによる確認
 
@@ -137,7 +141,7 @@ python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
 
 | フェーズ | 内容 |
 | --- | --- |
-| `preflight` | ブランチ、`version` と CHANGELOG の一致、`.cs` の UTF-8 BOM、`.meta` の対、Runtime/Core からの `UnityEditor` 参照、テスト asmdef の `UNITY_INCLUDE_TESTS` を検証する。**git の状態は変更しない** |
+| `preflight` | ブランチ名、**ソース変更に対するテストの有無**、`version` と CHANGELOG の一致、`.cs` の UTF-8 BOM、`.meta` の対、Runtime/Core からの `UnityEditor` 参照、テスト asmdef の `UNITY_INCLUDE_TESTS` を検証する。**git の状態は変更しない** |
 | `commit` | preflight を通してから submodule へコミットし push する。`--pr` で Pull Request も作成する |
 | `finalize` | **gitlink が `origin/develop` から到達可能かを確認してから**、親リポジトリをコミットして push する |
 
@@ -241,6 +245,7 @@ python scripts/build_module_docs.py
 
 コード品質のチェックは [CodeGuidelines.md `## レビュー用チェックリスト`](./CodeGuidelines.md) を使ってください。それに加えて、本体開発では次を確認します。
 
+- [ ] 本体のソースを変更したなら、テストを追加または変更した（できない場合は `--no-tests-reason` の理由を用意した）
 - [ ] 追加・削除・移動したファイルに対して `.meta` が対で揃っている
 - [ ] 移動・リネームでGUIDを維持している
 - [ ] `.cs` がUTF-8 BOM付きで保存されている

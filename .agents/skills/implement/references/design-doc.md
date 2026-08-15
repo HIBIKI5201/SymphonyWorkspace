@@ -43,8 +43,9 @@
 既存の公開API・シリアライズ形式への影響。互換性を壊す場合は移行方法。
 
 ## テストの置き場と種別
-自動テストを書くか。書くなら EditMode と PlayMode のどちらへ、どのパスへ置くか。
-書かないなら理由を書く（モーダルダイアログを伴う、Unity のコールバックに強く依存する、Editor の GUI 操作を伴う等）。
+**テストの実装は必須である。** EditMode と PlayMode のどちらへ、どのパスへ置くかを書く。
+書かない場合は、`--no-tests-reason` へ渡す理由をここへ書く（モーダルダイアログを伴う、Unity のホストライフサイクルに強く依存する、Editor の GUI 操作を伴う等）。
+**「書きにくい」は理由にならない。** 書きにくい形になっていること自体が設計の指摘であり、ロジックを Unity API へ触れない型へ切り出してテスト対象にする。
 テストは**パッケージ内の `Assets/SymphonyFrameWork/Tests/`** へ置く（EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`）。
 `InternalsVisibleTo` によりテストアセンブリから `internal` な内部実装も検証できるため、
 Entity・Service・Registry など公開されない型も単体テストの対象にする。

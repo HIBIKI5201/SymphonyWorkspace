@@ -66,6 +66,10 @@ FLOW_BRANCH_PREFIXES = ("feature/", "fix/")
 # `.meta` を必要としない領域。Unity の Asset Import 対象外。
 META_EXEMPT_PREFIXES = ("Documentation~/",)
 
+# テストを伴うことを求める本体のソース領域と、テストの置き場。
+SOURCE_PREFIXES = ("Runtime/", "Core/", "Editor/")
+TEST_PREFIX = "Tests/"
+
 # Runtime/Core からの UnityEditor 参照のうち、この検査より前から存在する未解消の違反。
 # **解消するまでの間、そのファイルを別の理由で触った Round を止めないためにある。**
 # 新しい違反を書いてよいという意味ではない。解消したら行ごと削除する。
@@ -93,7 +97,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     subparsers = parser.add_subparsers(dest="phase", required=True)
 
-    subparsers.add_parser("preflight", help="検証のみ行い、gitの状態を変更しない")
+    preflight_parser = subparsers.add_parser(
+        "preflight", help="検証のみ行い、gitの状態を変更しない"
+    )
+    add_no_tests_reason_argument(preflight_parser)
 
     bump_parser = subparsers.add_parser(
         "bump", help="package.json・CHANGELOG・READMEの版を同時に更新する"
@@ -127,6 +134,7 @@ def main() -> int:
         action="store_true",
         help="検証を飛ばす。検証済みの内容を再コミットする場合だけ使う",
     )
+    add_no_tests_reason_argument(commit_parser)
 
     finalize_parser = subparsers.add_parser(
         "finalize", help="マージ後に親リポジトリのgitlinkを更新する"
@@ -164,7 +172,7 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.phase == "preflight":
-        return 0 if run_preflight() else 1
+        return 0 if run_preflight(args.no_tests_reason) else 1
     if args.phase == "bump":
         return run_bump(args)
     if args.phase == "commit":
@@ -207,12 +215,25 @@ def current_branch(cwd: Path) -> str:
 # ------------------------------------------------------------------ preflight
 
 
-def run_preflight() -> bool:
+def add_no_tests_reason_argument(parser: argparse.ArgumentParser) -> None:
+    """テストを伴わないことを明示する引数を足す。
+
+    **理由を書かずに素通りさせないための引数である。** 値は必須で、コミットのトレーラへ残る。
+    """
+    parser.add_argument(
+        "--no-tests-reason",
+        help="テストを追加・変更せずに本体を変更する理由。**書くと検査を通せるが、"
+             "コミットのトレーラへ残る。** 検証手段が無い場合にだけ使う",
+    )
+
+
+def run_preflight(no_tests_reason: str | None = None) -> bool:
     """コミット前の検証をまとめて実行する。"""
     print("== preflight ==")
     failures: list[str] = []
 
     failures.extend(check_branch())
+    failures.extend(check_tests_accompany_source(no_tests_reason))
     failures.extend(check_version_matches_changelog())
     failures.extend(check_fix_is_isolated())
     failures.extend(check_bom())
@@ -250,6 +271,68 @@ def check_docs_html_sync() -> list[str]:
 
     print("[docs] OK: 生成物は正本と同期しています")
     return []
+
+
+def check_tests_accompany_source(no_tests_reason: str | None) -> list[str]:
+    """本体のソースを変更した Round が、テストも変更していることを確認する。
+
+    実装フローはテストの実装を必須手順にしている（Issue #107）。**手順書へ書くだけでは、
+    抜けてもその場では何も起きない。** 触ったソースとテストの対応をここで機械的に見る。
+
+    検証手段が無い変更（Editor の GUI 操作を伴うもの、ドキュメントだけの Round など）は
+    `--no-tests-reason` で通せる。**理由は必須で、コミットのトレーラへ残る。**
+    """
+    changed = changed_files_against_integration()
+    source = sorted(
+        name for name in changed
+        if name.endswith(".cs")
+        and name.startswith(SOURCE_PREFIXES)
+        and not name.startswith(TEST_PREFIX)
+    )
+    tests = [name for name in changed if name.startswith(TEST_PREFIX)]
+
+    if not source:
+        print("[tests] OK: 本体のソース変更はありません")
+        return []
+
+    if tests:
+        print(f"[tests] OK: ソース{len(source)}件に対しテスト{len(tests)}件を変更")
+        return []
+
+    if no_tests_reason:
+        print(f"[tests] SKIP: テスト無しの理由が指定されています: {no_tests_reason}")
+        return []
+
+    preview = "\n    ".join(source[:10])
+    return [
+        f"本体のソースを{len(source)}件変更していますが、Tests/ の変更がありません。"
+        "\n  実装フローはテストの実装を必須にしています。"
+        "\n  検証手段が無い場合は --no-tests-reason \"理由\" を付けてください（コミットへ残ります）。"
+        f"\n    {preview}"
+    ]
+
+
+def changed_files_against_integration() -> set[str]:
+    """統合ブランチと比べて、この Round が触った submodule のファイルを返す。
+
+    コミット済みの差分と未コミットの差分の両方を見る。**片方だけを見ると、
+    先にコミットしてから preflight を回した Round で検査が空振りする。**
+    """
+    changed: set[str] = set()
+
+    merge_base = submodule_git("merge-base", "HEAD", INTEGRATION_BRANCH, check=False)
+    if merge_base:
+        changed.update(
+            name for name in submodule_git("diff", "--name-only", merge_base).splitlines() if name
+        )
+
+    for line in submodule_git("status", "--porcelain").splitlines():
+        # porcelain は "XY <path>" 形式。リネームの "old -> new" は新しい方だけを見る。
+        path = line[3:].split(" -> ")[-1].strip().strip('"')
+        if path:
+            changed.add(path)
+
+    return changed
 
 
 def check_branch() -> list[str]:
@@ -606,7 +689,7 @@ def run_commit(args: argparse.Namespace) -> int:
         )
         return 2
 
-    if not args.skip_preflight and not run_preflight():
+    if not args.skip_preflight and not run_preflight(args.no_tests_reason):
         print("\nNG: 検証が通らなかったためコミットしません。")
         return 1
 
@@ -620,6 +703,9 @@ def run_commit(args: argparse.Namespace) -> int:
     body_lines = []
     if args.issue:
         body_lines.append(f"Issue: #{args.issue}")
+    # テスト無しで通した理由は履歴へ残す。**フラグだけだと、通した事実がどこにも残らない。**
+    if args.no_tests_reason:
+        body_lines.append(f"No-Tests-Reason: {args.no_tests_reason}")
     body_lines.append("Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>")
     message = args.message + "\n\n" + "\n".join(body_lines) + "\n"
 
