@@ -105,24 +105,55 @@ def clear_console() -> None:
     run_uloop("clear-console", timeout=300)
 
 
+# 進行中のコンパイルへ重ねて要求したときに返る文言。**コードのエラーではない。**
+# 件数1のエラーとしてJSONに載るため、そのまま採用すると健全なコードを失敗と報告する。
+COMPILE_BUSY_MESSAGE = "Compilation is already in progress"
+
+
 def compile_project() -> dict:
     """コンパイルし、確定後の集計だけを採用する。
 
     force-recompile の直後は確定前の値が返るため、**必ずもう一度問い合わせる。**
     2回目は再コンパイルを起こさない（`--force-recompile false`）。
+
+    大量のアセットを動かした直後などは、要求時点で既にコンパイルが走っていることがある。
+    そのときの応答はコードのエラーではないため、収まるまで待って取り直す。
     """
-    run_uloop("compile", "--force-recompile", "true")
-    settled = run_uloop("compile", "--force-recompile", "false")
-    return {
-        "errors": settled.get("ErrorCount", -1),
-        "warnings": settled.get("WarningCount", -1),
-        "errorList": settled.get("Errors") or [],
-        "warningList": settled.get("Warnings") or [],
-    }
+    for _ in range(RELOAD_MAX_RETRIES):
+        run_uloop("compile", "--force-recompile", "true")
+        settled = run_uloop("compile", "--force-recompile", "false")
+
+        if not is_compile_busy(settled):
+            return {
+                "errors": settled.get("ErrorCount", -1),
+                "warnings": settled.get("WarningCount", -1),
+                "errorList": settled.get("Errors") or [],
+                "warningList": settled.get("Warnings") or [],
+            }
+
+        time.sleep(RELOAD_WAIT_SECONDS)
+
+    raise VerifyError(
+        f"コンパイルが{RELOAD_MAX_RETRIES * RELOAD_WAIT_SECONDS}秒たっても開始できません。"
+    )
+
+
+def is_compile_busy(result: dict) -> bool:
+    """コンパイル結果が「既に進行中」の応答かを判定する。"""
+    return any(
+        COMPILE_BUSY_MESSAGE in str(entry.get("Message", entry))
+        for entry in result.get("Errors") or []
+    )
 
 
 def run_tests(mode: str) -> dict:
-    """指定モードのテストを実行する。"""
+    """指定モードのテストを実行する。
+
+    **実行そのものを拒否された場合、uloop は件数0の成功形と同じ形で返す。**
+    `Success` と `Message` を落とすと「テストが1件も実行されていません」としか分からず、
+    理由の書かれた行が捨てられる。実際に「未保存のシーンがあるため実行できない」が
+    この形で返り、原因の特定に往復を要した。
+    """
     result = run_uloop("run-tests", "--test-mode", mode)
     return {
         "mode": mode,
@@ -131,6 +162,8 @@ def run_tests(mode: str) -> dict:
         "failed": result.get("FailedCount", -1),
         "skipped": result.get("SkippedCount", -1),
         "failedTests": result.get("FailedTests") or [],
+        "accepted": result.get("Success", True),
+        "message": result.get("Message") or "",
     }
 
 
@@ -241,6 +274,12 @@ def build_summary(args: argparse.Namespace) -> dict:
 
     summary["tests"] = test_results
     for result in test_results:
+        # 実行を拒否された場合は、その理由をそのまま出す。0件の報告より原因が分かる。
+        if not result["accepted"]:
+            result["note"] = f"テストを実行できませんでした: {result['message']}"
+            summary["ok"] = False
+            continue
+
         # **0件を成功として扱わない。** `failed == 0 and passed == total` は 0/0 でも成立するため、
         # テストが1件も走らなかった実行（アセンブリが読めていない、フィルタが効きすぎている等）を
         # 見逃す。実際に PlayMode が 0/0 のまま「成功」と報告された。

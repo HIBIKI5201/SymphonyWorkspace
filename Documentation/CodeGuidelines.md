@@ -31,7 +31,7 @@
 | `*/Internal/` | 各フォルダのDomain、Application、Adaptor、View、Infrastructure、Compositionの内部実装 | `internal`なEntity、Service、Registry、Query、Dto、ViewModel、Unity API実装を置く。名前空間には`Internal`を含めない（→ `## 名前空間`） |
 | `Runtime/Obsolete/` | 代替APIへ移行済みの `[Obsolete]` シム | 移行期間のみ存在させ、メジャー更新で削除する |
 | `Editor/` | Inspector、設定画面、Generatorなど | `SymphonyFrameWork.Editor` asmdefに含める |
-| `Samples/` | 利用例 | 製品コードから依存しない |
+| `Samples~/` | 利用例 | 製品コードから依存しない。**末尾のチルダによりUnityのインポート対象外**で、`SymphonyFrameWork` アセンブリへ入らない。Package Managerがインポート時に利用側の`Assets/`へコピーする |
 
 - RuntimeコードからEditor APIを参照しない。Editor専用の`MenuItem`、設定、Inspector処理は`Editor/`側の型へ分離する。`#if UNITY_EDITOR`で囲んでもRuntimeファイルへ`UnityEditor`参照を置く例外は作らない。
 - **`Core`はRuntimeとEditorの両方から使われる共有アセンブリであり、Editor APIを使うこと自体は許容する。** ただし置き場所と参照方向を守る。Editor APIを使う型は`Core/Editor/`へ置き、`#if UNITY_EDITOR`で囲む。その型をRuntimeから参照してはならない。Runtimeが必要とする値は、Editor側のCompositionからRuntimeへ注入する。

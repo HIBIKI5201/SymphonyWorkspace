@@ -112,7 +112,7 @@ Domain Reload が無効なため、**Play Modeの開始・終了を2回繰り返
 
 **テストは `Assets/SymphonyFrameWork/Tests/` にあります**（EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`）。`uloop-run-tests --test-mode EditMode` と `--test-mode PlayMode` で実行します。`InternalsVisibleTo` によりテストアセンブリから `internal` な内部実装も検証できます。
 
-テストで再現できない範囲（モーダルダイアログ、Unityのホストライフサイクル、Play Mode の往復など）は、`Assets/SymphonyFrameWork/Samples/Runtime/*Sample/` のサンプルシーンと手動確認で担保します。
+テストで再現できない範囲（モーダルダイアログ、Unityのホストライフサイクル、Play Mode の往復など）は、`Assets/SymphonyFrameWork/Samples~/Runtime/*Sample/` のサンプルシーンと手動確認で担保します。**`Samples~` はUnityのインポート対象外です。**このワークスペースではサンプルシーンをそのまま開けません（→ [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §4）。
 
 権限設定は `.uloop/settings.permissions.json`（`allowThirdPartyTools: false`、`dynamicCodeSecurityLevel: 1`）にあります。
 

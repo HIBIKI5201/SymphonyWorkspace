@@ -111,7 +111,9 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 
 ### サンプルによる確認
 
-各機能には `Assets/SymphonyFrameWork/Samples/Runtime/*Sample/` に動作確認用のシーンとスクリプトがあります。挙動を変えた機能に対応するサンプルがある場合は、そのサンプルをPlayして確認するのが最短です。サンプルは公開APIの利用例であり、`internal` APIへ依存させないでください。
+各機能には `Assets/SymphonyFrameWork/Samples~/Runtime/*Sample/` に動作確認用のシーンとスクリプトがあります。サンプルは公開APIの利用例であり、`internal` APIへ依存させないでください。
+
+**`Samples~` は末尾のチルダによりUnityのインポート対象外です。**利用側では出荷物に含まれず、Package Managerからインポートしたときだけ `Assets/Samples/` へコピーされます。**その代わり、このワークスペースではサンプルシーンをProjectビューから開けません。**サンプルをPlayして確認する場合は、対象の `Samples~/Runtime/<名前>/` を `Assets/` 配下の作業用フォルダへコピーしてから開き、確認後に削除してください。コピーしたものをコミットしないでください。
 
 ### 依頼者に確認してもらうこと
 

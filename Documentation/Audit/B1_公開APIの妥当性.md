@@ -59,8 +59,16 @@ UPM経由で導入した利用側プロジェクトでのみ顕在化する。
 
 Unityのパッケージレイアウト規約では、**サンプルは `Samples~`（末尾チルダ）に置く**。
 チルダ付きフォルダはUnityのアセットパイプラインから不可視となり、コンパイル対象から外れる。
-`package.json` の `samples[].path` はチルダ無しの `Samples/...` のまま記述する（Package Manager が
-内部で読み替える）。
+`package.json` の `samples[].path` もチルダ付きの `Samples~/...` へ変更する。
+
+> **訂正（2026-08-15、Issue #167 の対応時）**
+> この節は当初「`samples[].path` はチルダ無しの `Samples/...` のまま記述する（Package Manager が
+> 内部で読み替える）」としていたが、**誤りだった。** `Library/PackageCache/` の実パッケージを確認した
+> ところ、Addressables・Input System・Cinemachine・Behavior・Animation Rigging・AI Navigation・
+> App UI・SerializeReference Extensions のすべてが `"path": "Samples~/..."` と書いている。
+> あわせて「配下の全 `.meta` を削除することになる」も誤りで、**実パッケージは `Samples~` 配下の
+> `.meta` を保持している**（Input System 180件、Cinemachine 142件）。インポート時にGUIDごと
+> 利用側へコピーするためである。実際の対応では `git mv` で `.meta` を保持したまま移動した。
 
 ```text
 Assets/SymphonyFrameWork/Samples/   →   Assets/SymphonyFrameWork/Samples~/
