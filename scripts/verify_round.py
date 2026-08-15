@@ -200,6 +200,14 @@ def build_summary(args: argparse.Namespace) -> dict:
 
     summary["tests"] = test_results
     for result in test_results:
+        # **0件を成功として扱わない。** `failed == 0 and passed == total` は 0/0 でも成立するため、
+        # テストが1件も走らなかった実行（アセンブリが読めていない、フィルタが効きすぎている等）を
+        # 見逃す。実際に PlayMode が 0/0 のまま「成功」と報告された。
+        if result["total"] <= 0:
+            result["note"] = "テストが1件も実行されていません"
+            summary["ok"] = False
+            continue
+
         if result["failed"] != 0 or result["passed"] != result["total"]:
             summary["ok"] = False
 
@@ -231,9 +239,11 @@ def print_summary(summary: dict) -> None:
         print(f"  ERROR: {message.splitlines()[0][:160]}")
 
     for result in summary["tests"]:
+        note = result.get("note")
         print(
-            f"[{result['mode']}] {result['passed']}/{result['total']} 成功"
+            f"[{result['mode']}] {result['passed']}/{result['total']}"
             f"（失敗{result['failed']} / スキップ{result['skipped']}）"
+            + (f" NG: {note}" if note else " 成功")
         )
         for failed in result["failedTests"][:10]:
             print(f"  FAILED: {failed}")
