@@ -51,7 +51,9 @@ ULOOP = [resolve_npx(), "--yes", "uloop-cli@2.2.0"]
 RELOAD_WAIT_SECONDS = 10
 RELOAD_MAX_RETRIES = 18
 
-RELOADING_MARKER = "Unity is reloading"
+# uloop が結果を返せない一時状態。**どちらもJSONを返さず終了する。**
+# 「reloading」だけを見ていると、コンパイル中に来た応答をパース失敗として報告してしまう。
+BUSY_MARKERS = ("Unity is reloading", "Unity is compiling")
 
 
 class VerifyError(RuntimeError):
@@ -76,8 +78,8 @@ def run_uloop(*arguments: str, timeout: int = 900) -> dict:
         )
         output = f"{completed.stdout}\n{completed.stderr}"
 
-        # reload 中は結果が返らない。待って同じ要求をやり直す。
-        if RELOADING_MARKER in output:
+        # reload中・コンパイル中は結果が返らない。待って同じ要求をやり直す。
+        if any(marker in output for marker in BUSY_MARKERS):
             time.sleep(RELOAD_WAIT_SECONDS)
             continue
 
