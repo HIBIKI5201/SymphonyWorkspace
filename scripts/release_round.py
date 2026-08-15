@@ -674,6 +674,12 @@ def run_finalize(args: argparse.Namespace) -> int:
         print("NG: submoduleに未コミットの変更があります。先にコミットしてください。")
         return 1
 
+    # **マージの前に、この Round の作業コミットを控える。** `gh pr merge --delete-branch` は
+    # ローカルの feature ブランチを消す際に HEAD を別のブランチへ移す。移った後の HEAD で
+    # 到達可能性を見ると、develop の古い先端を自分自身と比べることになり、検査が素通りする。
+    # 実際に、この検査が「マージ前の develop は develop から到達可能」を報告していた。
+    work_head = submodule_git("rev-parse", "HEAD")
+
     # develop への統合は承認を挟まない。ここで人を待たせても、後続の Round が
     # 未統合の feature ブランチを土台にする時間が延びるだけである。
     if not args.no_merge:
@@ -682,21 +688,20 @@ def run_finalize(args: argparse.Namespace) -> int:
             return failure
 
     submodule_git("fetch", "origin", "--prune")
-    head = submodule_git("rev-parse", "HEAD")
 
     # gitlink が develop から到達できることを確認する。ここを飛ばすと、
     # squash マージやブランチ削除で新規クローンの submodule 解決が壊れる。
     completed = subprocess.run(
-        ["git", "merge-base", "--is-ancestor", head, INTEGRATION_BRANCH],
+        ["git", "merge-base", "--is-ancestor", work_head, INTEGRATION_BRANCH],
         cwd=SUBMODULE_ROOT, capture_output=True, text=True,
     )
     if completed.returncode != 0:
         print(
-            f"NG: submoduleのHEAD({head[:7]})が{INTEGRATION_BRANCH}から到達できません。"
+            f"NG: このRoundの作業コミット({work_head[:7]})が{INTEGRATION_BRANCH}から到達できません。"
             "\n  --merge-method squash を使うとこうなる。マージコミットかrebaseで統合してください。"
         )
         return 1
-    print(f"[gitlink] OK: {head[:7]} は {INTEGRATION_BRANCH} から到達可能")
+    print(f"[gitlink] OK: 作業コミット {work_head[:7]} は {INTEGRATION_BRANCH} から到達可能")
 
     # 到達可能性を確認した後で develop へ揃える。順序を入れ替えないこと。
     # 先に develop を pull すると、PRが未マージでも「developのHEADはdevelopから到達可能」
