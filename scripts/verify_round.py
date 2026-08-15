@@ -162,7 +162,9 @@ def run_tests(mode: str) -> dict:
         "failed": result.get("FailedCount", -1),
         "skipped": result.get("SkippedCount", -1),
         "failedTests": result.get("FailedTests") or [],
-        "accepted": result.get("Success", True),
+        # **`Success` はテストが1件でも落ちれば false になる。** 実行を拒否されたことの判定には
+        # 使えないため、「拒否」は件数0と併せて判定する。落ちた分は下の件数チェックが拾う。
+        "accepted": result.get("Success", True) or result.get("TestCount", 0) > 0,
         "message": result.get("Message") or "",
     }
 

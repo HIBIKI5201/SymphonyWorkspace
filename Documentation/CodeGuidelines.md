@@ -27,7 +27,7 @@
 | `Core/` | RuntimeとEditorで共有する最小限の基盤と内部ヘルパー | 上位機能へ依存させない。`ReactiveProperty<T>`などの`internal`な型は`Core/AssemblyInfo.cs`の`InternalsVisibleTo`でRuntime／Editorへ公開する |
 | `Core/Editor/` | Editor APIを使う共有基盤（パス解決、Editor向け定数など） | `#if UNITY_EDITOR`で囲む。**Runtimeから参照しない**（Playerビルドで解決できなくなる）。参照してよいのはEditorアセンブリだけ |
 | `Runtime/` | Playerビルドに含まれる機能 | `UnityEditor` を参照しない |
-| `Runtime/System/<Subsystem>/` | サブシステムの公開エントリポイント、公開Component、公開Strategy、Info、Value Object、Enum | 利用側が参照する型だけを直下へ置く |
+| `Runtime/Service/<Subsystem>/` | サブシステムの公開エントリポイント、公開Component、公開Strategy、Info、Value Object、Enum | 利用側が参照する型だけを直下へ置く |
 | `*/Internal/` | 各フォルダのDomain、Application、Adaptor、View、Infrastructure、Compositionの内部実装 | `internal`なEntity、Service、Registry、Query、Dto、ViewModel、Unity API実装を置く。名前空間には`Internal`を含めない（→ `## 名前空間`） |
 | `Runtime/Obsolete/` | 代替APIへ移行済みの `[Obsolete]` シム | 移行期間のみ存在させ、メジャー更新で削除する |
 | `Editor/` | Inspector、設定画面、Generatorなど | `SymphonyFrameWork.Editor` asmdefに含める |
@@ -71,12 +71,13 @@ SymphonyFrameWork
 - Sampleは`SymphonyFrameWork.Samples.<SampleName>`とする。
 - ファイルの配置と名前空間を一致させる。
 - 名前空間はディレクトリ構成を反映する。並び順を示す数字など、コード上の責務を表さないディレクトリ名は除外する。
-- `internal`な型は、所属するフォルダ直下の`Internal/`へ置く。`Internal`と概念レイヤー名は名前空間には含めない。例: `Runtime/System/SceneLoad/Internal/Application/SceneLoadService.cs`の名前空間は`SymphonyFrameWork.System.SceneLoad`。
+- **`Runtime/Service/` だけは、フォルダ名と名前空間（`SymphonyFrameWork.System.*`）が一致しません。** Issue #106 でフォルダ名を `System` から `Service` へ変えた際、名前空間を揃えなかったためです。`SymphonyFrameWork.System.SaveData` などは利用側のすべての `using` に現れるため、変更するとメジャー更新の破壊的変更になります。**意図的に残している乖離であり、新しいサブシステムも `SymphonyFrameWork.System.<名前>` へ置いてください。**揃えるなら、それ自体を独立したメジャー更新のRoundとして扱います。
+- `internal`な型は、所属するフォルダ直下の`Internal/`へ置く。`Internal`と概念レイヤー名は名前空間には含めない。例: `Runtime/Service/SceneLoader/Internal/Application/SceneLoadService.cs`の名前空間は`SymphonyFrameWork.System.SceneLoad`。
   - 横断的で最小限の内部ヘルパーは`Core/Internal/`へ置く。
-  - Domain Entityは`Runtime/System/<Subsystem>/Internal/Domain/`へ置く。
-  - ApplicationのServiceとRegistryは`Runtime/System/<Subsystem>/Internal/Application/`、AdaptorのQueryとDtoは`Internal/Adaptor/`へ置く。
+  - Domain Entityは`Runtime/Service/<Subsystem>/Internal/Domain/`へ置く。
+  - ApplicationのServiceとRegistryは`Runtime/Service/<Subsystem>/Internal/Application/`、AdaptorのQueryとDtoは`Internal/Adaptor/`へ置く。
   - 利用側が継承するpublic abstractなStrategyはサブシステム直下、内部Strategyは`Internal/Application/`へ置く。Infrastructureの具象Loaderは`Internal/Infrastructure/`へ置く。
-  - ViewModelと内部表示Componentは`Runtime/System/<Subsystem>/Internal/View/`へ置く。`View`は責務を表すフォルダだが、名前空間には追加しない。
+  - ViewModelと内部表示Componentは`Runtime/Service/<Subsystem>/Internal/View/`へ置く。`View`は責務を表すフォルダだが、名前空間には追加しない。
   - RuntimeのComposition Rootとライフタイム用Componentは`Runtime/Orchestrator/Internal/`、EditorのComposition Rootは`Editor/Orchestrator/Internal/`へ置く。
   - `internal`なConfig用`ScriptableObject`は`Runtime/Configs/Internal/`へ置く。
   - `Internal/`の外には、利用側が使う公開エントリポイント、公開Component、拡張契約、Info、不変な値だけを残す。
