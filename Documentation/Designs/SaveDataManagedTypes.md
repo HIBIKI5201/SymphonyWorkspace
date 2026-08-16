@@ -283,3 +283,79 @@ EditorWindow と IMGUI のボタン・トグルの押下は手段が無いため
 | `Assets/SymphonyFrameWork/Documentation~/Html/` | `python scripts/build_module_docs.py` の再生成物 |
 
 `AGENTS.md` と `Documentation~/Architecture.md` は変更しない。導線も公開型の関係も変わらないため。
+
+---
+
+## 実施レポート
+
+実施日: 2026-08-16 / バージョン: 5.1.0 / PR: [#182](https://github.com/HIBIKI5201/SymphonyFramework/pull/182)
+
+### 実装した内容
+
+設計の「ファイル構成」どおり、追加4ファイル・変更2ファイル。すべて `internal` で、公開型は1つも増えていない。
+
+| 設計の項目 | 実現したファイル |
+| --- | --- |
+| 管理フラグの保存と変更通知 | `Editor/Configs/ConfigData/SaveDataVisibilityConfig.cs`（`ScriptableSingleton`、`[Serializable]` な入れ子 `private` エントリ、`SetManaged` の単数版と複数版、`OnChanged`） |
+| 型の探索・テストアセンブリ判定・対応型判定 | `Editor/SaveData/SaveDataTypeCatalog.cs`（判定は `SaveDataWindow` から移設） |
+| 既定値と上書き値の解決 | `Editor/SaveData/SaveDataVisibilityMap.cs` |
+| 名前空間ツリー（分岐の無い階層をまとめる） | `Editor/SaveData/SaveDataTypeTreeNode.cs` |
+| Project Settings の描画 | `Editor/SettingProvider/SaveDataSettingProvider.cs` の `DrawManagedTypes` / `DrawTypeNode` |
+| Save Data パネルの絞り込みと追従 | `Editor/Administrator/UITK/CS/SaveDataWindow.cs`（`EnsureTypeListCurrent` の変更、`OnChanged` の購読と解除） |
+
+テストは設計に挙げたクラス名・メソッド名のまま23件を追加した（`SaveDataVisibilityMapTests` 5件、`SaveDataTypeTreeNodeTests` 8件、`SaveDataTypeCatalogTests` 10件）。
+
+### 設計から変えた点
+
+1. **`SaveDataConfig` が未生成でも、管理対象の節を描くようにした。** 設計では触れていなかったが、従来は `config == null` で `IMGUI` 全体を早期 return していた。管理対象の設定は Runtime Config と無関係な Editor 専用設定であり、Runtime Config の有無で隠す理由が無い。
+
+2. **名前空間ノードのトグルを Foldout より先に描くようにした。** 設計では描画順を決めていなかった。ワーカーの実装は Foldout → トグルの順で、`EditorGUILayout.Foldout` が横方向へ広がるため**トグルが行の右端へ追い出され、型の葉のチェックと列が揃わなかった**。スクリーンショットで確認して入れ替えた。同じ行の Foldout へ字下げが二重に掛からないよう、`EditorGUI.indentLevel` を一時的に 0 にしている。
+
+3. **未選択時の文言を、対応型の有無と管理対象の有無で3通りに分けた。** 設計では `EnsureTypeListCurrent` の分岐だけを書いていたが、実際には Registry に管理対象外の型のエントリが載っていると `ApplyAutoSelection` が後から「Save Data Types からセーブデータを選択してください。」で上書きし、**選べる行が1つも無いのに選択を促す表示になった**（実機で確認）。`ResolveUnselectedMessage()` へ集約し、`ApplyAutoSelection`・`UpdateBindingStatusMessage`・`ExecuteActionAsync` の3か所から使う。対応型自体が無い場合と区別するため `_hasSupportedTypes` を持たせた。
+
+4. **テストアセンブリ判定の結果を、Project Settings 側でキャッシュした。** 設計では触れていなかったが、IMGUI は再描画のたびに走るため、`Assembly.GetReferencedAssemblies()` を全型分・毎フレーム呼ぶことになっていた。型を探索し直したときにだけ作り直す。
+
+5. **`SaveDataTypeCatalog.IsSupportedSaveDataType` から `UnityEngine.Object` の除外条件が落ちた。** 移設元にはあった。`SaveDataContent` は `UnityEngine.Object` を継承しないため、C# の単一継承により両方を満たす型は存在せず、**判定結果は変わらない**（到達しない条件だった）。設計の「移設の前後で判定が変わらないこと」は満たしている。
+
+6. **範囲外の1行を含めた。** `SaveDataWindow.ProbeSavedDateAsync` の `Debug.LogException` を `SymphonyDebugLogger.LogException` へ変えた。ワーカーの成果物に含まれていたもので、[#102](https://github.com/HIBIKI5201/SymphonyFramework/issues/102) で決めた「フレームワーク内のログは `SymphonyDebugLogger` 経由」に対する取り残しである。同じファイルの他の箇所はすべて移行済みで、挙動は変わらない。**1コミット1意図の原則からは外れるため、ここに記録する。**
+
+### 検証結果
+
+`verify_round.py`（最終の実装で2回実行し、2回とも同じ結果）:
+
+- コンパイル: エラー0件 / 警告0件
+- Console: エラー0件（「テスト実行前の時点で警告3件」と出るが、取り直すと0件。確定前の値）
+- EditMode: 438/438 成功（失敗0 / スキップ0）。Round 前は415件で **+23件**
+- PlayMode: 21/21 成功（失敗0 / スキップ0）を2往復
+
+`release_round.py preflight`: 全項目通過（`bom` 10件、`meta` 7件、`asmdef` 2件、`docs` 同期、`tests` ソース4件に対しテスト6件）。
+
+**Editor の実表示も実測した。** 設計では「人が操作して確認する」に置いていた項目のうち、次は自動で確認できた。
+
+- Project Settings のツリー描画をスクリーンショットで確認。`SymphonyFrameWork` → `Tests` が `SymphonyFrameWork.Tests` の1行にまとまり、配下に7件の型が並ぶ（**分岐が無い名前空間をまとめる規則が効いている**）。チェックはすべて外れた状態（テストアセンブリの既定値）
+- Save Data パネルの実値を UI Toolkit のラベルから読み、管理対象0件のとき `Visible Entries: 0` / `rows=0` / 「管理対象のセーブデータ型がありません。…」を確認
+- **パネルを開いたまま**設定を1件 `true` にすると、開き直さずに `Visible Entries: 1` / `rows=1` へ変わり、`false` へ戻すと0件と元の文言へ戻ることを確認（設計の「動作確認手順」5・6に相当）
+- 生成された `SaveDataVisibilityConfig.asset` の内容が、切り替えた1件だけを持つことを確認。**確認後に削除して作業ツリーへ残していない**
+
+### 未実施の確認
+
+「動作確認手順」の人が操作する項目のうち、次が未実施である。
+
+- **項目3の後半・項目7**: 名前空間トグルの押下（混在表示からの一括切り替え）と、Unity 再起動後に設定が残ること。EditorWindow / IMGUI のトグル押下を自動で叩く手段が無いため。**トグルの値の決め方（混在なら `true` へ倒す）と一括保存はコード上の分岐で、対応するツリーの列挙は `EnumerateTypeFullNames` のテストで固定してある。**押下そのものは未確認
+- 上記の実測は、いずれも設定APIを直接呼んで行った。**GUI のクリック経路は通していない**
+
+### 振り返り
+
+| 気づき | 扱い |
+| --- | --- |
+| Editor の GUI は「叩けない」だけで「見られない」わけではない。スクリーンショットと UI Toolkit の実値読み取りで、レイアウト崩れと表示文言を自動で確認できた。実際にこの2つで欠陥を2件見つけている | **`implement` スキルのステップ3へ追加を提案**（下記） |
+| `finalize --paths` が実施レポートを書く前に設計書をコミットするため、親リポジトリへ必ず2コミット目が要る | 提案（下記） |
+| 設計書に「描画順」を書いていなかったため、レイアウトの崩れがワーカーの実装で入った | 今回は設計書の「Project Settings の描画」へ後追いで書ける粒度。仕組みへの還元は見送る |
+
+提案（**ユーザーの承認を得てから反映する。この Round では変更していない**）:
+
+1. **`references/review.md` のステップ3へ、Editor UI の視認確認を足す。** 現在は「EditorWindow の GUI 操作は自動検証できない」とだけ書かれており、**操作できないことと確認できないことが同一視されている。** 次の2つを手順として書く。
+   - `SettingsService.OpenProjectSettings(<パス>)` や `EditorWindow.GetWindow<T>()` で対象を開き、`uloop screenshot --window-name <名前> --match-mode exact` で撮って**レイアウトを目で見る**
+   - UI Toolkit の Window は `rootVisualElement.Query<VisualElement>().Build()` を `execute-dynamic-code` で回し、**ラベルの実テキストと `ListView.itemsSource.Count` を読む**。`Q<T>` は拡張メソッドが解決できず、`UQueryExtensions.Q` は多重定義で曖昧になるため、`Query().Build()` の列挙が確実（実測）
+   - 実例として、今回これで「名前空間のチェックが行の右端に出る」「管理対象0件なのに選択を促す文言が出る」の2件を見つけたことを添える
+2. **`release_round.py finalize` へ、実施レポートが未記入なら止めるか警告する検査を入れる。** 現状は設計書を先にコミットするため、レポートは必ず別コミットになる。`--paths` に渡した設計書へ `## 実施レポート` が無ければ警告する程度でも、書き忘れは防げる。
