@@ -90,7 +90,7 @@ EditorのInput Action TreeView自体へのクリックは自動操作できな�
 
 利用方法と設定場所は変わらないため、`Documentation~/Modules/Debug.md` と `EditorTools.md` の本文は変更しない。
 
-## 実装結果
+## 実施レポート
 
 - 実装コミット: `28bc62f`（`[fix]Debug HUDのInput Action編集を修正`）
 - Pull Request: [SymphonyFramework #185](https://github.com/HIBIKI5201/SymphonyFramework/pull/185)
