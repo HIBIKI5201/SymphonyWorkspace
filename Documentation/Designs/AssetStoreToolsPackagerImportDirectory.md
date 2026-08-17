@@ -80,3 +80,29 @@ EditMode の `Assets/SymphonyFrameWork/Tests/Editor/AssetStoreToolsImportPlanner
 | `Assets/SymphonyFrameWork/Documentation~/Modules/AssetStoreToolsPackager.md` | Import タブの正本を更新する |
 | `Assets/SymphonyFrameWork/Documentation~/Html/Modules/AssetStoreToolsPackager.html` | 正本から再生成する |
 
+## 実施レポート
+
+実施日: 2026-08-18  
+リリースバージョン: `6.1.1`  
+Pull Request: [#188](https://github.com/HIBIKI5201/SymphonyFramework/pull/188)
+
+### 実装結果
+
+- Import タブの出力履歴ポップアップを、選択パス表示と `Select Folder` ボタンへ置き換えた。
+- フォルダ選択ダイアログは、現在の選択先、または Project Settings の `Exported Packages Path` を初期位置にする。キャンセル時は選択と候補を変更しない。
+- 選択した任意ディレクトリを既存の候補構築・インポート処理へ直接渡すようにし、不要になった出力履歴列挙処理を削除した。
+- 任意の一時ディレクトリにあるマニフェストから候補を構築する EditMode テストを追加し、利用者向け文書と生成HTMLを更新した。
+- `release_round.py bump` の正規処理により、設計時に列挙したファイルに加えて `README.md` と `Core/SymphonyConstant.cs` のバージョン表記も `6.1.1` へ同期した。
+
+### 検証結果
+
+- `python scripts/release_round.py preflight`: 成功。バージョン、CHANGELOG、UTF-8 BOM、`.meta`、asmdef、Play Mode 設定、生成文書の同期を確認した。
+- `python scripts/build_module_docs.py`: 成功。
+- `python scripts/verify_round.py`: コンパイル Error 0 / Warning 0、EditMode 459/459、PlayMode 21/21 を2往復とも成功。Enter Play Mode Options は検証後に元の値へ復元された。
+- Unity 上で Import タブの未選択状態を確認した。さらに `Exported Packages Path` 外の一時ディレクトリを注入し、選択パス、候補名、状態、リビジョン、選択件数が表示されることを確認した。
+- OS のフォルダ選択ダイアログを実際にクリックして選択・キャンセルする操作と、実パッケージのインポート実行は自動化対象外のため未実施。ダイアログ後の表示状態と任意パスの候補構築経路は上記の画面確認と EditMode テストで確認した。
+
+### 振り返り
+
+- ワークスペースの `AGENTS.md` と `Documentation/CONTRIBUTING.md` に、PR の `develop` へのマージとブランチ削除を手動とする古い記述が残っていた。現行実装どおり、`finalize` がマージ、ブランチ削除、gitlink更新まで自動実行し、人が行うのは `develop` から `main` へのリリースだけであることへ統一した。
+- `commit --pr --pr-body-file` は submodule をカレントディレクトリとして `gh` を実行するため、ワークスペース相対の本文ファイルを見つけられなかった。相対パスをワークスペースルート基準の絶対パスへ変換してから渡すよう修正し、モック実行で解決結果と実行ディレクトリを確認した。
