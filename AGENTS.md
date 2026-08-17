@@ -44,7 +44,7 @@
 | 役割 | 開発環境。Unityプロジェクト、検証用シーン、開発ドキュメント | 配布物。UPMパッケージ本体 |
 | 既定ブランチ | `main` | `develop` |
 
-- **コミットからgitlink更新までは `scripts/release_round.py` を使ってください。** 手順と検証がコード化してあります（`preflight` / `commit` / `finalize`）。詳細は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §5。PRのマージとブランチ削除だけは対象外で、手で実行します。
+- **コミットからgitlink更新までは `scripts/release_round.py` を使ってください。** 手順と検証がコード化してあります（`preflight` / `commit` / `finalize`）。詳細は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §5。`finalize` がPRの `develop` へのマージ、作業ブランチの削除、gitlink更新まで自動で行います。人が行うのは `develop` から `main` へのリリースだけです。
 - **git コマンドを実行する前に、どちらのリポジトリが対象かを必ず確認してください。** submodule 側は `git -C "Assets/SymphonyFrameWork" ...` と明示するのが安全です。
 - パッケージの特定の GitHub Issue に対応する場合は、`develop` から Issue 専用の `feature/*` ブランチを作ります。命名とPull Requestの手順は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §5 に従ってください。
 - パッケージのソース変更は **submodule 側でコミットし、push してから**、親リポジトリで gitlink の更新をコミットします。手順の詳細は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §1 と §5 にあります。

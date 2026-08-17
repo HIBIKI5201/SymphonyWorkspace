@@ -145,7 +145,7 @@ python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
 | --- | --- |
 | `preflight` | ブランチ名、**ソース変更に対するテストの有無**、`version` と CHANGELOG の一致、`.cs` の UTF-8 BOM、`.meta` の対、Runtime/Core からの `UnityEditor` 参照、テスト asmdef の `UNITY_INCLUDE_TESTS` を検証する。**git の状態は変更しない** |
 | `commit` | preflight を通してから submodule へコミットし push する。`--pr` で Pull Request も作成する |
-| `finalize` | **gitlink が `origin/develop` から到達可能かを確認してから**、親リポジトリをコミットして push する |
+| `finalize` | PRを `develop` へマージし、**gitlink が `origin/develop` から到達可能かを確認してから**、作業ブランチを削除し、親リポジトリをコミットして push する |
 
 スクリプトが機械的に防いでいるのは次の3点です。手で叩くと落としやすく、落ちたときの影響が大きい順に並んでいます。
 
@@ -153,7 +153,7 @@ python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
 2. **gitlink が `origin/develop` から到達可能である**（feature ブランチのコミットを指すと、squash マージやブランチ削除で到達不能になり、新規クローンの `git submodule update` が失敗する）
 3. **親リポジトリへ `git add -A` しない**（無関係な未コミット変更を巻き込む）
 
-**PR のマージとブランチ削除はスクリプトの対象外です。** 承認を挟む余地を残すため意図的に外してあります。マージは `gh pr merge <番号> --merge --delete-branch` を手で実行してください。
+**PR の `develop` へのマージと作業ブランチの削除は `finalize` が自動で行います。** `gh pr merge` を手で実行しないでください。人の承認を必要とする `develop` から `main` へのリリースだけは、このスクリプトの対象外です。
 
 以下は、スクリプトが何をしているかの説明です。
 
@@ -161,7 +161,8 @@ python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
 
 1. submodule（`Assets/SymphonyFrameWork/`）で `develop` から `feature/<機能名>` を切り、変更をコミットする。`main` へ直接コミットしません。
 2. submodule の変更を push する。**push しないまま親の gitlink だけを更新すると、他の開発者が解決できない参照になります。**
-3. 親リポジトリで、更新された gitlink をコミットする。
+3. `finalize` でPRを `develop` へマージし、submoduleを `develop` へ揃えて作業ブランチを削除する。
+4. 親リポジトリで、更新された gitlink をコミットしてpushする。
 
 `feature/*` → `develop` → `main` の順にPull Requestでマージします。
 

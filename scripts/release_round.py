@@ -144,7 +144,7 @@ def main() -> int:
     add_no_tests_reason_argument(commit_parser)
 
     finalize_parser = subparsers.add_parser(
-        "finalize", help="マージ後に親リポジトリのgitlinkを更新する"
+        "finalize", help="PRをdevelopへマージして親リポジトリのgitlinkを更新する"
     )
     finalize_parser.add_argument(
         "--paths",
@@ -761,7 +761,10 @@ def create_pull_request(args: argparse.Namespace, branch: str) -> int:
         "--title", args.message,
     ]
     if args.pr_body_file:
-        command += ["--body-file", args.pr_body_file]
+        body_file = Path(args.pr_body_file)
+        if not body_file.is_absolute():
+            body_file = WORKSPACE_ROOT / body_file
+        command += ["--body-file", str(body_file)]
     else:
         body = f"Issue: #{args.issue}\n" if args.issue else ""
         command += ["--body", body]
