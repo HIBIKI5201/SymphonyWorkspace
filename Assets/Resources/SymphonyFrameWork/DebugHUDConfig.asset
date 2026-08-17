@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acfa13e234dfbde4fb6e8a7e16a1bfcd, type: 3}
+  m_Name: DebugHUDConfig
+  m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.Config.DebugHUDConfig
+  _toggleAction:
+    m_Name: Toggle Debug HUD
+    m_Type: 1
+    m_ExpectedControlType: 
+    m_Id: 68414fc3-ee81-45cd-9d6b-a123162e633e
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: ButtonWithTwoModifiers
+      m_Id: 9adf6c0e-2be2-4945-819f-460cd4597e70
+      m_Path: ButtonWithTwoModifiers
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Toggle Debug HUD
+      m_Flags: 4
+    - m_Name: Modifier1
+      m_Id: 94ec46a8-5cef-4970-83a0-948f1fcb12e6
+      m_Path: <Keyboard>/shift
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Toggle Debug HUD
+      m_Flags: 8
+    - m_Name: Modifier2
+      m_Id: 39a3a961-d009-46cd-8af9-6844ad905033
+      m_Path: <Keyboard>/d
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Toggle Debug HUD
+      m_Flags: 8
+    - m_Name: Button
+      m_Id: 4b3542ae-5f7c-4909-8034-588e0f9f1454
+      m_Path: <Keyboard>/p
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Toggle Debug HUD
+      m_Flags: 8
+    m_Flags: 0
