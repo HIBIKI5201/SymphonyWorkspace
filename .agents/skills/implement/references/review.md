@@ -57,7 +57,44 @@
 
    **失敗0件でも `Success` が false なら合格にしない。** 実測で `Success=False` / `Failed=0` という結果が出ている。件数だけ見ていると気づかずに通してしまう。`Skipped` も同様で、意図せず実行されなかったテストは「成功」ではない。
 4. **ランタイム確認** — `uloop-control-play-mode` で設計書の「動作確認手順」を実行し、`uloop-get-logs` で期待値と照合する。**Domain Reload が無効なので、Play Mode の開始・終了を2回繰り返し、static 状態のゴースト参照が残らないことを確認する。**
-5. **`.meta` の生成** — 新規ファイルを追加した場合、`.meta` は Unity Editor がフォーカスを得たときに生成される。`uloop-focus-window` を使うか、ユーザーへ依頼する。`git status` で `.cs` と `.meta` が対で揃っていることを確認してからコミットへ進む。
+5. **Editor UI の視認確認** — Editor の画面を変えた Round では、**開いて見る。** 下記「Editor UI は操作できなくても確認できる」に従う。
+6. **`.meta` の生成** — 新規ファイルを追加した場合、`.meta` は Unity Editor がフォーカスを得たときに生成される。`uloop-focus-window` を使うか、ユーザーへ依頼する。`git status` で `.cs` と `.meta` が対で揃っていることを確認してからコミットへ進む。
+
+### Editor UI は操作できなくても確認できる
+
+**EditorWindow のボタンやトグルを「押せない」ことと、表示を「確認できない」ことは別である。** この2つを同一視すると、レイアウト崩れと表示文言の誤りがすべて人の目視送りになる。押下は自動化できないが、**開いて撮る**ことと**表示要素の実値を読む**ことはできる。
+
+Editor の画面（Project Settings、EditorWindow、Inspector）を変更した Round では、次の2つを行う。
+
+**1. 開いてスクリーンショットを撮り、レイアウトを目で見る。**
+
+```bash
+npx --yes uloop-cli@2.2.0 screenshot --window-name "Project Settings" --match-mode exact --project-path <ワークスペースルート>
+```
+
+Project Settings は `SettingsService.OpenProjectSettings("Project/<設定パス>")`、EditorWindow は `EditorWindow.GetWindow<T>()` を `uloop execute-dynamic-code` で呼んで開く。撮った PNG はそのまま読める。
+
+**2. UI Toolkit の Window は、表示要素の実値を読む。** ラベルの文字列と `ListView.itemsSource.Count` を読めば、「何が表示されているか」を件数と文言で確定できる。スクリーンショットが撮れない位置（ドッキングしていてスクロールが要る等）でも読める。
+
+```csharp
+using UnityEngine.UIElements;
+var w = EditorWindow.GetWindow<対象のWindow>();
+foreach (var e in w.rootVisualElement.Query<VisualElement>().Build())
+{
+    if (e.name == "<UXMLのname>" && e is Label label) { /* label.text を読む */ }
+}
+```
+
+**`Q<T>` は使えない。** `execute-dynamic-code` のコンパイル単位では拡張メソッドが解決できず、`UQueryExtensions.Q` を直接呼ぶと多重定義で曖昧になる（どちらも実測でコンパイルエラー）。**`Query().Build()` の列挙が確実である。**
+
+**設定値を持つ機能は、設定を切り替えて追従を確かめる。** `internal` な設定型でも、`AppDomain.CurrentDomain.GetAssemblies()` から型を引いてリフレクションで呼べる（`Type.GetType` はサンドボックスが禁止しているが、この経路は通る）。切り替えた後は**必ず元へ戻し、生成された設定ファイルを削除して作業ツリーへ残さない。**
+
+実例として、Issue #170 の Round ではこの2つで次の2件を見つけている。**どちらもコンパイルとテストは全数通っていた。**
+
+- 名前空間のチェックボックスが行の右端に描かれ、型のチェックと列が揃っていなかった（`EditorGUILayout.Foldout` が横へ広がるため）。スクリーンショットで発覚
+- 管理対象が0件のとき、選べる行が無いのに「一覧から選択してください」と表示していた。ラベルの実値を読んで発覚
+
+**設計書の「動作確認手順」で人へ回す項目は、この2つを試してから決める。** 試さずに「GUI だから人の確認」と書くと、実際には自動で確認できたものまで未確認のまま Round が閉じる。
 
 ### Unity Scene検証ガード
 

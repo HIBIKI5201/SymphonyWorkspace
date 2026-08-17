@@ -89,6 +89,10 @@ DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 # bump が入れる穴埋めの目印。残ったまま commit へ進めないよう preflight で検出する。
 SUMMARY_PLACEHOLDER = "<!-- 要約を書く -->"
+
+# 設計書の置き場と、実装フローのステップ7が追記する見出し。
+DESIGN_DOC_PREFIX = "Documentation/Designs/"
+DESIGN_REPORT_HEADING = "## 実施レポート"
 COMMENT_LINE_PATTERN = re.compile(r"^\s*(//|/\*|\*)")
 
 BOM = b"\xef\xbb\xbf"
@@ -835,14 +839,62 @@ def run_finalize(args: argparse.Namespace) -> int:
     git("commit", "-m", message)
     print(f"[commit] OK: {git('rev-parse', '--short', 'HEAD')} {message.splitlines()[0]}")
 
+    # 実施レポートの有無はコミットの後で見る。finalize 時点で未記入なのは正常であり、
+    # 止める理由にはならない。**閉じる前に気づかせることだけが目的である。**
+    missing_reports = design_docs_without_report(args.paths)
+
     if args.no_push:
         print("\n--no-push が指定されたためpushしていません。")
+        print_design_report_note(missing_reports)
         return 0
 
     branch = args.parent_branch or current_branch(WORKSPACE_ROOT)
     git("push", "origin", branch)
     print(f"[push] OK: origin/{branch}")
+    print_design_report_note(missing_reports)
     return 0
+
+
+def design_docs_without_report(paths: list[str]) -> list[str]:
+    """実施レポートがまだ書かれていない設計書を返す。
+
+    **finalize の時点で未記入なのは正常である。** 実装フローはステップ7で設計書へ
+    実施レポートを追記するため、必ず finalize より後になる。ここで拾うのは
+    「書いたつもりで Round を閉じる」ことで、検出しても finalize は止めない。
+    """
+    missing: list[str] = []
+
+    for path in paths:
+        relative = Path(path).as_posix()
+        # 設計書以外のパスを --paths へ渡す Round もあるため、置き場で絞る。
+        if not relative.startswith(DESIGN_DOC_PREFIX):
+            continue
+
+        absolute = WORKSPACE_ROOT / relative
+        # 削除を伴う Round では存在しないパスを渡しうる。読めないものは判定しない。
+        if not absolute.is_file():
+            continue
+
+        if DESIGN_REPORT_HEADING not in absolute.read_text(encoding="utf-8-sig"):
+            missing.append(relative)
+
+    return missing
+
+
+def print_design_report_note(missing_reports: list[str]) -> None:
+    """実施レポートの記入状況を、次の手順とともに表示する。"""
+    if not missing_reports:
+        print("[report] OK: 設計書に実施レポートがあります")
+        return
+
+    print(
+        "\n[report] 未記入: 次の設計書に "
+        f"`{DESIGN_REPORT_HEADING}` がありません。"
+        "\n  " + "\n  ".join(missing_reports)
+        + "\n  実装フローのステップ7です。**設計書の末尾へ追記して、"
+        "親リポジトリへもう1コミットしてください。**"
+        "\n  何を確認できて何を確認できなかったかは、会話ログではなく設計書に残ります。"
+    )
 
 
 def merge_into_integration(branch: str, merge_method: str) -> int | None:

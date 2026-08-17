@@ -20,7 +20,7 @@ python scripts/release_round.py finalize --paths Documentation/Designs/<機能�
 | `bump` | `package.json`、CHANGELOG の見出し、README の「現在のバージョン」を1回の操作で揃える。**git の状態は変更しない** | 現在より小さい・同じ版、`YYYY-MM-DD` でない日付 |
 | `preflight` | ブランチ、`version` と CHANGELOG と README の一致、CHANGELOG の `Fix` 分離、`.cs` の UTF-8 BOM、`.meta` の対、Runtime/Core からの `UnityEditor` 参照、テスト asmdef の `UNITY_INCLUDE_TESTS` を検証する。**git の状態は変更しない** | 検証に1件でも失敗 |
 | `commit` | preflight を通してから submodule へコミットし push する。`--pr` で Pull Request も作成する | メッセージが `[add]`/`[update]`/`[fix]` で始まる1行でない、preflight 失敗、変更が無い |
-| `finalize` | **PR を `develop` へマージしてから**、gitlink が `origin/develop` から到達可能かを確認し、submodule を `develop` へ揃え、マージ済みの `feature/*` ローカルブランチを削除し、親リポジトリをコミットして push する | submodule に未コミット変更がある、PR のマージに失敗した、gitlink が到達不能 |
+| `finalize` | **PR を `develop` へマージしてから**、gitlink が `origin/develop` から到達可能かを確認し、submodule を `develop` へ揃え、マージ済みの `feature/*` ローカルブランチを削除し、親リポジトリをコミットして push する。最後に設計書の実施レポートの有無を報告する | submodule に未コミット変更がある、PR のマージに失敗した、gitlink が到達不能 |
 
 スクリプトが機械的に防いでいるのは次の4点。手で叩くと落としやすい。
 
@@ -122,6 +122,10 @@ python scripts/release_round.py commit --message "[add]<日本語の要約>" --i
    - **手動確認が残っていてもマージしてよい。** 可否をユーザーへ問い合わせて止めない。未実施の確認は報告に明示する
    - 対応する Issue を閉じる。Issue が無いラウンドなら不要
    - **`develop` から `main` へのマージだけは人間が行う。** ここは実行しない
+
+   最後に `[report]` 行が出る。`--paths` へ渡した `Documentation/Designs/` の設計書に `## 実施レポート` が無ければ、ファイル名と次の手順を表示する。**この時点で未記入なのは正常である**（実施レポートはステップ7で、finalize より後に書く）。止めずに報告だけするのは、**書いたつもりで Round を閉じるのを防ぐ**ためである。
+
+   実施レポートを追記したら、親リポジトリへもう1コミットする。設計書は `finalize` が既にコミット済みのため、レポートは必ず2コミット目になる。
 
 **gitlink は `develop` に到達可能なコミットを指すこと。** PR がマージされる前に feature ブランチのコミットを指すと、squash マージや作業ブランチ削除で**そのコミットが到達不能になり、新規クローンの `git submodule update` が失敗する**。
 
