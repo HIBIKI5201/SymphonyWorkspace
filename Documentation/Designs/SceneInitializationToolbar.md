@@ -153,3 +153,56 @@ Editor のメインツールバーは PlayMode Game View 用の `uloop simulate-
 | `Assets/SymphonyFrameWork/Documentation~/Html/` | 上記 Markdown から再生成 |
 
 `AGENTS.md`、`Documentation~/AgentUsage.md`、`Documentation~/Architecture.md`、Sample は更新しない。公開 API、AI の利用側コード契約、アセンブリ構成、Runtime 初期化構成、サンプル操作は変わらないためである。
+
+## 実施レポート
+
+実施日: 2026-08-18 / バージョン: 6.2.0 / PR: [#190](https://github.com/HIBIKI5201/SymphonyFramework/pull/190)
+
+### 実装した内容
+
+| 設計項目 | 実装 |
+| --- | --- |
+| 公式Main Toolbar登録 | `Editor/Toolbar/Internal/SymphonyMainToolbar.cs` に `MainToolbarElementAttribute` 付きfactoryと `Scene Init` トグルを追加 |
+| Config変更 | 既存 `_isResetAndLoadOnPlay` を `SerializedObject` で変更し、Undo、dirty、`AssetDatabase.SaveAssets` へ反映 |
+| 表示追従 | ツールバー操作後と `SceneLoadConfigDrawer` の変更適用後に `MainToolbar.Refresh` を実行 |
+| 旧Unity互換 | Toolbar実装とテストを `UNITY_6000_3_OR_NEWER` で囲み、6000.0〜6000.2では既存コードだけをコンパイル |
+| テスト | `Tests/Editor/SymphonyMainToolbarTests.cs` に登録属性、シリアライズ値変更、null Configの3件を追加 |
+| 文書 | `SceneLoader.md`、`EditorTools.md`、README、CHANGELOGと生成HTMLを更新 |
+
+新しい `.cs`、テスト、`Editor/Toolbar/` の各 `.meta` はUnity Editorに生成させ、実ファイルと同じコミットへ含めた。公開 Runtime API、シリアライズフィールド名、asmdef参照は変更していない。
+
+### 設計から変えた点
+
+- `release_round.py bump` が設計書のバージョン関連ファイル一覧に加えて `Core/SymphonyConstant.cs` の内部バージョン定数も6.2.0へ更新した。これは既存リリーススクリプトが保証する版整合で、公開APIや設計上の依存方向は変わらない。
+- `SceneLoader.md` の「Play Mode中のみ内容を持つ」という文を、ツールバー行の追加後に誤読されないよう「`Scene Load` パネル」だけを主語に修正した。
+- グローバルMain Toolbarは `uloop screenshot` のEditorWindow撮影対象外で、OS側にもUnityのメインウィンドウハンドルが公開されなかったため、自動スクリーンショット確認は未実施となった。登録属性と状態反映はEditModeテストで確認し、表示とクリックは人の確認へ残した。
+
+### 検証結果
+
+`python scripts/verify_round.py` をファイル変更停止後に2回連続で実行し、両方で次の結果を得た。
+
+| 項目 | 1回目 | 2回目 |
+| --- | --- | --- |
+| compile | Error 0 / Warning 0 | Error 0 / Warning 0 |
+| EditMode | 462/462成功、失敗0、スキップ0 | 462/462成功、失敗0、スキップ0 |
+| PlayMode 1往復目 | 21/21成功、失敗0、スキップ0 | 21/21成功、失敗0、スキップ0 |
+| PlayMode 2往復目 | 21/21成功、失敗0、スキップ0 | 21/21成功、失敗0、スキップ0 |
+
+追加した `SymphonyMainToolbarTests` は単独実行でも3/3成功し、既存全数に3件追加されたことを確認した。`python scripts/release_round.py preflight` はブランチ、テスト変更、6.2.0の版整合、CHANGELOG、UTF-8 BOM 4件、`.meta` 2件、依存レイヤー、テストasmdef、Enter Play Mode Options、生成文書同期をすべて通過した。
+
+### 未実施の確認
+
+設計書の「人の操作が必要な確認」4項目は未実施である。
+
+1. Main Toolbar上の `Scene Init` クリック、Configへの反映、Undo。
+2. off／onそれぞれで次回Play Mode開始時の初期シーン処理が切り替わること。
+3. Inspectorで対象値を変えたとき、Main Toolbar表示がEditor再起動なしで追従すること。
+4. Main Toolbarのコンテキストメニューから項目を非表示・再表示できること。
+
+`uloop screenshot` でSceneビュー自体は撮影できたが、グローバルMain Toolbarは画像に含まれないため、表示文言とレイアウトの自動視認確認も未実施である。
+
+### 振り返り
+
+- 実装コードの差し戻しは無かった。レビューで見つけたのは、モジュール文書の主語がツールバー追加後に曖昧になる1文だけで、公開前に修正した。
+- 強制Domain Reload後にuLoopサーバーのport fallbackが起き、最初のcompile CLIが完了済みUnityを待ち続けた。EditorログでDomain Reload完了を確認して待機プロセスを終了し、復旧後のサーバーからError 0 / Warning 0を再取得した。`verify_round.py` 自体は2回とも完走しているため、リポジトリの手順変更は不要と判断した。
+- グローバルMain Toolbarを撮影できない点は、今回の機能に固有の自動検証上の穴である。将来同種のToolbar項目が増える場合は、uLoop側へUnityメインウィンドウ全体の安全な撮影機能を追加する提案が有効である。今回は外部ツール側の変更をこのRoundへ混ぜず、手動確認事項として明示した。
