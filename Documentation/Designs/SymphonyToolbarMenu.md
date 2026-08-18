@@ -172,3 +172,59 @@ GUIのクリック自体は自動テスト対象にしない。項目の発見�
 `Third Party Notices.md`はバージョン値を持たないが、Lucide派生アセットと同じRoundへ含める。アイコンだけを転載して通知を欠落させない。
 
 `AGENTS.md`、`Documentation~/AgentUsage.md`、`Documentation~/Architecture.md`、Sampleは変更しない。利用側コードの契約、公開型、アセンブリ構成、Runtime初期化、Sample操作を変えないためである。ワークスペース側の`Documentation/CONTRIBUTING.md`と`AGENTS.md`にも、今回の表示パスや内部型を正本として記載した箇所はない。
+
+## 実施レポート
+
+### 結果
+
+- 2026-08-18に設計どおり実装し、パッケージを`6.2.1`へ更新した。
+- Main Toolbarの単独`Scene Init`トグルを、明暗テーマ対応の音符アイコン付き`Symphony Framework`プルダウンへ置き換えた。
+- 属性、項目インターフェース、`TypeCache`による内部カタログを追加した。今後のFramework内Editor操作は項目型を追加するだけで登録でき、ツールバー入口の分岐を変更する必要がない。
+- `Scene Init`の保存先とUndo対応は維持し、メニューを開くたび現在のConfigからチェック状態を取得するようにした。
+- Lucide `music-2`の明暗テーマ用PNGと、ISC／MITの全文を含む`Third Party Notices.md`を配布物へ同梱した。
+- 利用者向けMarkdown、生成HTML、README、CHANGELOGを実装と同じ変更へ含めた。
+- 公開API、Runtime挙動、シリアライズ形式の変更はない。
+
+### 検証
+
+| 確認 | 結果 |
+| --- | --- |
+| Unity compile | Error 0、Warning 0 |
+| 対象EditModeテスト | `SymphonyMainToolbarTests` 9/9成功 |
+| 全EditModeテスト | 468/468成功 |
+| 全PlayModeテスト | 21/21成功を2回 |
+| Domain／Scene Reload設定 | PlayModeテスト後に`1`から前提値`3`へ自動復元済み |
+| 文書生成 | `build_module_docs.py --check`成功（19件同期） |
+| リリース前検証 | `release_round.py preflight`成功 |
+| ライセンス | Lucide公式LICENSEと同梱通知の本文一致、通知内容をEditModeテストで確認 |
+
+`verify_round.py`は成功した。Unity起動時由来のConsole警告5件は検証スクリプトの許容範囲で、コンパイラ警告は0件だった。全体テストが残した一時`InitTestScene`と`runInBackground`設定差分は、対象を確認してRound外の差分へ含めず除去した。既存の`SceneLoadConfig.asset`差分は変更していない。
+
+uLoopのEditorWindowスクリーンショットではグローバルMain Toolbarが撮影範囲に含まれなかったため、次のGUI操作は自動確認できていない。
+
+1. `Symphony Framework`を押して`Scene Init`が表示されること。
+2. 選択ごとにチェック表示が反転すること。
+3. Main Toolbarのコンテキストメニューによる非表示／再表示とEditor再起動後の表示。
+4. 実際の明暗テーマ上でのアイコンの視認性と文字との収まり。
+
+表示名、登録位置、メニュー項目の発見、状態、実行結果、明暗両アイコンの読み込みはEditModeテストで確認済みである。
+
+### 設計との差分
+
+catalogの診断ログは、実装中の全体テストでフレームワーク標準ログ経由が必須と判明したため、Unityの`Debug`直接呼び出しではなく`SymphonyDebugLogger`を使用した。障害隔離とConsoleへ記録する設計上の振る舞いは変えていない。ほかに設計との差分はない。
+
+### リリース
+
+- Package commit: `b06bb99`
+- Pull Request: [#191](https://github.com/HIBIKI5201/SymphonyFramework/pull/191)
+- Parent integration commit: `daf95f4`
+- Package branch: `develop`へマージ済み
+- Parent branch: `main`へpush済み
+
+### 振り返りと改善候補
+
+- `SymphonyFrameWork.System`名前空間があるため、属性基底型の`System.Attribute`が同名前空間へ解決された。新しい属性型では`global::System.Attribute`と`global::System.AttributeUsage`を使用する、という注意をCodeGuidelinesへ追加する候補がある。
+- 全EditModeテストが失敗時に一時`InitTestScene`を残し、Player Settingsの`runInBackground`も復元しなかった。該当テストの`finally`で一時アセットと設定を必ず復元する改善Roundの候補がある。
+- uLoopのEditorWindowスクリーンショットはグローバルMain Toolbarを撮影できない。メインウィンドウ全体を検証用に取得する手順またはツール対応を、表示変更の検証手順へ追加する候補がある。
+
+これらは今回の機能要件を変更しないため、本Roundではガイドラインや既存テスト、検証ツールへ追加変更していない。
