@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: SaveDataConfig
   m_EditorClassIdentifier: SymphonyFrameWork::SymphonyFrameWork.SaveDataConfig
   _loader:
-    rid: 1841141191828307968
+    rid: 1841141370651148753
   references:
     version: 2
     RefIds:
-    - rid: 1841141191828307968
+    - rid: 1841141370651148753
       type: {class: JsonUtilitySaveDataLoaderStrategy, ns: SymphonyFrameWork.System.SaveSystem, asm: SymphonyFrameWork}
       data: 
