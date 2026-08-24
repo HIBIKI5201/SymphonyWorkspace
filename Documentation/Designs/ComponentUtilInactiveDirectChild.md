@@ -84,3 +84,35 @@ Editor UI、Scene、Prefab、シリアライズ形式は変更しないため、
 ## Round分割
 
 1 Roundで完了する。実装1ファイル、テスト1ファイル、利用者向け文書と生成物、4つのバージョン関連ファイルだけを扱い、他のIssueやUtilityのリファクタリングは含めない。
+
+## 実施レポート
+
+実施日: 2026-08-24 / バージョン: 6.3.2 / PR: #197
+
+### 実装した内容
+
+`Runtime/Utility/SymphonyComponentUtil.cs`で、`includeInactive: false`のときに`activeInHierarchy`がfalseの直下の子を検索起点から除外した。`Tests/Editor/SymphonyComponentUtilTests.cs`の不具合固定テストを、既定検索が非アクティブな直下の子を返さない回帰テストへ変更した。
+
+`Documentation~/Modules/Utility.md`へ`includeInactive`の契約を追記してHTMLを再生成し、CHANGELOG、package.json、README、`SymphonyConstant.VERSION`を6.3.2へ更新した。途中成果はチェックポイント`c0ac85d`、完成差分は`8be8095`として作業ブランチへpushした。
+
+### 設計から変えた点
+
+無し。
+
+### 検証結果
+
+`python scripts/verify_round.py`を2回連続で実行し、どちらもUnityコンパイルはエラー0件・警告0件、EditModeは475/475成功、PlayModeは21/21成功を2往復、失敗0件・スキップ0件だった。PlayModeテストが変更したEnter Play Mode Optionsは、各実行で1から前提値3へ復元された。
+
+テスト前Console警告は初回5件、2回目4件だったため本文を再取得した。確定した4件はUnity Entities Editorの既存型2件とホスト側`Assembly-CSharp/TestNameSpace`の既存型2件に対するSerializeReference警告で、今回の差分外だった。
+
+`python scripts/release_round.py preflight`は、テスト差分、6.3.2の版整合、CHANGELOG 239見出し、BOM 3件、`.meta` 0件、Runtime/Core依存、テストasmdef 2件、Enter Play Mode Options、生成文書同期をすべて通過した。
+
+### 未実施の確認
+
+無し。Editor UI、Scene、Prefab、シリアライズ形式を変更しておらず、設計書の動作確認手順はすべて自動検証した。
+
+### 振り返り
+
+新設した`checkpoint`を実際のIssue対応で初めて使用し、本体・テスト・文書の途中成果をUnity検証前にリモートへ退避できた。通常の完成検証、版更新、preflight、PRとの境界も維持でき、追加の手戻りは無かった。
+
+Unity起動直後のConsole警告数は5件から4件へ変動したが、本文を保持する`verify_round.py --skip-editmode --skip-playmode --json`で差分外と確認できた。現時点では新しい仕組み変更の提案は無い。
