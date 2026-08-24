@@ -12,6 +12,7 @@
 フェーズ
 --------
 preflight : 検証のみ。git の状態は一切変更しない
+checkpoint: 途中成果を検証なしで submodule へコミットし、作業ブランチへ push
 commit    : preflight → submodule へコミット → push →（任意で）PR 作成
 finalize  : feature → develop の PR をマージ → gitlink の到達可能性を確認
             → submodule を develop へ揃える → マージ済み feature ブランチを削除
@@ -33,6 +34,7 @@ Exit codes
 Usage
 -----
     python scripts/release_round.py preflight
+    python scripts/release_round.py checkpoint --message "[checkpoint]途中成果を退避" --issue 119
     python scripts/release_round.py commit --message "[add]説明" --issue 119 --pr --pr-body-file body.md
     python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
 """
@@ -80,6 +82,7 @@ KNOWN_EDITOR_REFERENCE_EXCEPTIONS = {
 }
 
 COMMIT_MESSAGE_PATTERN = re.compile(r"^\[(add|update|fix)\][^\s].*$")
+CHECKPOINT_MESSAGE_PATTERN = re.compile(r"^\[checkpoint\][^\s].*$")
 CHANGELOG_HEADING_PATTERN = re.compile(r"^## \[([^\]]+)\]", re.MULTILINE)
 README_VERSION_PATTERN = re.compile(r"^- 現在のバージョン: \*\*([^*]+)\*\*", re.MULTILINE)
 # Playerビルドに package.json は含まれないため、実行時に読む版はソースの定数が正本になる。
@@ -108,6 +111,19 @@ def main() -> int:
         "preflight", help="検証のみ行い、gitの状態を変更しない"
     )
     add_no_tests_reason_argument(preflight_parser)
+
+    checkpoint_parser = subparsers.add_parser(
+        "checkpoint",
+        help="途中成果を検証なしでsubmoduleへコミットし、作業ブランチへpushする",
+    )
+    checkpoint_parser.add_argument(
+        "--message",
+        required=True,
+        help="コミットメッセージ。[checkpoint]で始まる1行",
+    )
+    checkpoint_parser.add_argument(
+        "--issue", help="対応するIssue番号。指定するとトレーラへ入る"
+    )
 
     bump_parser = subparsers.add_parser(
         "bump", help="package.json・CHANGELOG・READMEの版を同時に更新する"
@@ -180,6 +196,8 @@ def main() -> int:
 
     if args.phase == "preflight":
         return 0 if run_preflight(args.no_tests_reason) else 1
+    if args.phase == "checkpoint":
+        return run_checkpoint(args)
     if args.phase == "bump":
         return run_bump(args)
     if args.phase == "commit":
@@ -708,6 +726,57 @@ def validate_bump(current: str, new_version: str) -> None:
 
 
 # --------------------------------------------------------------------- commit
+
+
+def run_checkpoint(args: argparse.Namespace) -> int:
+    """未完成の途中成果を feature/fix ブランチへ退避する。
+
+    完成判定ではないため preflight・Unity compile・テスト・版更新・PR 作成は行わない。
+    親リポジトリの gitlink も更新しないことで、未検証コミットが統合経路へ入らないようにする。
+    """
+    if not CHECKPOINT_MESSAGE_PATTERN.match(args.message):
+        print(
+            "NG: チェックポイントのメッセージは'[checkpoint]'で始まる1行にしてください。"
+            f"\n  受け取った値: {args.message!r}"
+        )
+        return 2
+
+    branch_failures = check_branch()
+    if branch_failures:
+        print("NG: チェックポイントを作成できません。")
+        for failure in branch_failures:
+            print(f"  - {failure}")
+        return 1
+
+    print("\n== checkpoint ==")
+    if not submodule_git("status", "--porcelain"):
+        print("NG: submoduleに退避する変更がありません。")
+        return 1
+
+    submodule_git("add", "-A")
+
+    body_lines = []
+    if args.issue:
+        body_lines.append(f"Issue: #{args.issue}")
+    body_lines.extend((
+        "Checkpoint: true",
+        "Verification: not-run",
+        "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>",
+    ))
+    message = args.message + "\n\n" + "\n".join(body_lines) + "\n"
+
+    submodule_git("commit", "-m", message)
+    head = submodule_git("rev-parse", "--short", "HEAD")
+    print(f"[checkpoint] OK: {head} {args.message}")
+
+    branch = current_branch(SUBMODULE_ROOT)
+    submodule_git("push", "-u", "origin", branch)
+    print(f"[push] OK: origin/{branch}")
+    print(
+        "\n途中成果を退避しました。Round完成時は verify_round.py と preflight を通し、"
+        "release_round.py commit で通常コミットとPR作成を行ってください。"
+    )
+    return 0
 
 
 def run_commit(args: argparse.Namespace) -> int:

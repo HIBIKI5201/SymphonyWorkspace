@@ -13,6 +13,16 @@ SymphonyFramework 本体（`Assets/SymphonyFrameWork/`）へ機能を追加・�
 
 各ステップは前のステップの完了を前提にする。**ステップを飛ばさない。** 特に 1 を飛ばしてワーカーに実装させないこと。設計判断が残らず、レビューの基準も失われる。
 
+## 作業中はチェックポイントで退避する
+
+ステップ2以降は、ひとまとまりの変更ができるたびにパッケージ側の作業ブランチへチェックポイントを作り、push してよい。**チェックポイントごとのコンパイル・テスト・preflight は不要**で、未完成や一時的にコンパイルできない状態も退避できる。
+
+```bash
+python scripts/release_round.py checkpoint --message "[checkpoint]途中成果を退避" --issue <番号>
+```
+
+チェックポイントはバックアップであり、Round の完成判定ではない。版更新、PR作成、親リポジトリの gitlink 更新は行わず、`Checkpoint: true` と `Verification: not-run` をコミットへ残す。**ステップ3の一括検証と、通常の `commit` / `finalize` は Round の最後に必ず行う。**
+
 ## 全 Round 共通: テストの実装は必須
 
 **本体のソース（`Runtime/` `Core/` `Editor/`）を変更する Round は、同じ Round でテストを追加または変更する。** ステップ2の成果物にテストを含め、ステップ3で件数の増加を実測する。
@@ -104,7 +114,7 @@ clear-console → compile（確定後の値を採用）→ Console 確認 → Ed
 
 `package.json` の `version` と `CHANGELOG.md` の見出しを**同時に**更新し、submodule → 親リポジトリの順でコミットする。
 
-**git は手で叩かず `scripts/release_round.py` を使う**（`preflight` / `commit` / `finalize`）。順序と検証がコード化してある。
+**git は手で叩かず `scripts/release_round.py` を使う**（`checkpoint` / `preflight` / `commit` / `finalize`）。順序と検証がコード化してある。
 
 → **[references/release.md](references/release.md)**（スクリプトの使い方、CHANGELOG の書き方、2段階コミットとPRの手順）
 

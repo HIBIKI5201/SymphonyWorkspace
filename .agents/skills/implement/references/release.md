@@ -10,6 +10,7 @@ CHANGELOG の書き方と、submodule から親リポジトリまでの2段階�
 
 ```bash
 python scripts/release_round.py bump --level minor
+python scripts/release_round.py checkpoint --message "[checkpoint]途中成果を退避" --issue 119
 python scripts/release_round.py preflight
 python scripts/release_round.py commit --message "[add]日本語の要約" --issue 119 --pr --pr-body-file <本文ファイル>
 python scripts/release_round.py finalize --paths Documentation/Designs/<機能名>.md
@@ -17,6 +18,7 @@ python scripts/release_round.py finalize --paths Documentation/Designs/<機能�
 
 | フェーズ | 内容 | 落ちる条件 |
 | --- | --- | --- |
+| `checkpoint` | **preflight・Unityのコンパイル・テストを行わず**、submodule の途中成果をコミットして作業ブランチへ push する。版更新、PR作成、親の gitlink 更新はしない | 作業ブランチでない、メッセージが `[checkpoint]` で始まらない、変更が無い |
 | `bump` | `package.json`、CHANGELOG の見出し、README の「現在のバージョン」を1回の操作で揃える。**git の状態は変更しない** | 現在より小さい・同じ版、`YYYY-MM-DD` でない日付 |
 | `preflight` | ブランチ、`version` と CHANGELOG と README の一致、CHANGELOG の `Fix` 分離、`.cs` の UTF-8 BOM、`.meta` の対、Runtime/Core からの `UnityEditor` 参照、テスト asmdef の `UNITY_INCLUDE_TESTS` を検証する。**git の状態は変更しない** | 検証に1件でも失敗 |
 | `commit` | preflight を通してから submodule へコミットし push する。`--pr` で Pull Request も作成する | メッセージが `[add]`/`[update]`/`[fix]` で始まる1行でない、preflight 失敗、変更が無い |
@@ -49,6 +51,19 @@ python scripts/release_round.py finalize --paths Documentation/Designs/<機能�
 削除対象を `feature/*` に限っているのは、フローの命名規則に沿うブランチだけを消し、別目的のローカルブランチへ触らないためである。
 
 `preflight` はステップ3の検証のうち機械的に判定できる部分だけを見る。**`uloop-compile` とテストの実行は別途行う。** スクリプトは Unity を起動しない。
+
+### 作業中のチェックポイント
+
+実装途中は、変更の意図がひとまとまりになるたびに `checkpoint` で commit と push を行う。ここでは検証を要求しないため、テスト追加前や一時的にコンパイルできない状態もバックアップできる。
+
+```bash
+python scripts/release_round.py checkpoint --message "[checkpoint]ログ出力先の判定を切り出し" --issue 193
+```
+
+- チェックポイントには `Checkpoint: true` と `Verification: not-run` が記録される
+- チェックポイントから PR は作らず、親リポジトリの gitlink も更新しない
+- 版番号と CHANGELOG は Round 完成時に更新する
+- Round 完成時は全差分を対象に `verify_round.py` と `preflight` を実行し、通常の `commit --pr` と `finalize` まで行う
 
 以下は、スクリプトが何をしているかと、スクリプトが担当しない部分の説明である。
 

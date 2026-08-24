@@ -136,6 +136,7 @@ uLoopで確認できない範囲は依頼者へ依頼します。変更を報告
 この節の手順は `scripts/release_round.py` にコード化してあります。**手で git を叩く代わりにこれを使ってください。**
 
 ```bash
+python scripts/release_round.py checkpoint --message "[checkpoint]途中成果を退避" --issue 119
 python scripts/release_round.py preflight
 python scripts/release_round.py commit --message "[add]日本語の要約" --issue 119 --pr --pr-body-file body.md
 python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
@@ -143,6 +144,7 @@ python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
 
 | フェーズ | 内容 |
 | --- | --- |
+| `checkpoint` | 作業中の途中成果を、**コンパイル・テスト・preflight なしで** submodule の作業ブランチへコミットして push する。版更新、PR作成、親の gitlink 更新は行わない |
 | `preflight` | ブランチ名、**ソース変更に対するテストの有無**、`version` と CHANGELOG の一致、`.cs` の UTF-8 BOM、`.meta` の対、Runtime/Core からの `UnityEditor` 参照、テスト asmdef の `UNITY_INCLUDE_TESTS` を検証する。**git の状態は変更しない** |
 | `commit` | preflight を通してから submodule へコミットし push する。`--pr` で Pull Request も作成する |
 | `finalize` | PRを `develop` へマージし、**gitlink が `origin/develop` から到達可能かを確認してから**、作業ブランチを削除し、親リポジトリをコミットして push する |
@@ -154,6 +156,8 @@ python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
 3. **親リポジトリへ `git add -A` しない**（無関係な未コミット変更を巻き込む）
 
 **PR の `develop` へのマージと作業ブランチの削除は `finalize` が自動で行います。** `gh pr merge` を手で実行しないでください。人の承認を必要とする `develop` から `main` へのリリースだけは、このスクリプトの対象外です。
+
+作業中は、変更の意図がひとまとまりになるたびに `checkpoint` を実行してかまいません。チェックポイントはバックアップ用の未検証コミットで、`Checkpoint: true` と `Verification: not-run` が履歴へ残ります。**Round の最後には全差分をまとめてコンパイル・テスト・preflight し、通常の `commit` と `finalize` を省略しないでください。**
 
 以下は、スクリプトが何をしているかの説明です。
 
