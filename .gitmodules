@@ -2,7 +2,3 @@
 	path = Assets/SymphonyFrameWork
 	url = https://github.com/HIBIKI5201/SymphonyFramework.git
 	branch = develop
-[submodule "Articles"]
-	path = Articles
-	url = https://github.com/HIBIKI5201/TechArticles.git
-	branch = main
