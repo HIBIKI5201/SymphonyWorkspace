@@ -14,7 +14,7 @@
 | パッケージを**使う**コードをホスト側（`Assets/Scripts/` など）に書く | [Assets/SymphonyFrameWork/AGENTS.md](./Assets/SymphonyFrameWork/AGENTS.md)。使うモジュールの文書は [Documentation~/Modules/](./Assets/SymphonyFrameWork/Documentation~/Modules/) に1モジュール1ファイルであり、機能一覧は [README.md](./Assets/SymphonyFrameWork/README.md) |
 | Markdown文書（`README.md`、`Documentation~/`、`AGENTS.md`、`Documentation/`）を書く | [Documentation/DocumentationGuidelines.md](./Documentation/DocumentationGuidelines.md)。文書ごとの役割、節の順序、冒頭に置かないもの、分量、AIに書かせるときの手順 |
 | 利用者向けドキュメント（`README.md`、`Documentation~/**/*.md`）を変更する | 上記に加えて、変更後に `python scripts/build_module_docs.py` を実行し、`Documentation~/Html/` の生成物を同じコミットへ含める。詳細は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §6 |
-| 技術記事を書く・投稿する（Qiita / note） | [Articles/.claude/skills/tech-article/SKILL.md](./Articles/.claude/skills/tech-article/SKILL.md)。題材決め → 骨子 → 本文 → コードの突き合わせ → 公開前チェック → 投稿。**記事リポジトリは記事だけを扱い、このワークスペースのコードは変更しません。** 記事に載せるコードは実在するファイルから引用して突き合わせます |
+| このワークスペースを題材に**技術記事を書く** | 記事は別リポジトリ `HIBIKI5201/TechArticles` にあります（`HIBIKI5201/HIBIKI5201` の `Articles/`）。執筆手順はそちらの `.claude/skills/tech-article/SKILL.md`。**このワークスペースは題材の一次資料であり、記事のために変更しません** |
 | ホストプロジェクトの設定・シーン・アセットを触る | このファイル |
 | 直近の変更の経緯を知る | [Assets/SymphonyFrameWork/CHANGELOG.md](./Assets/SymphonyFrameWork/CHANGELOG.md) |
 
@@ -36,17 +36,14 @@
 
 コードとドキュメントの乖離はバグとして扱います（[Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) §6）。
 
-## 1. 3つのリポジトリ
+## 1. 2つのリポジトリ
 
-| | ワークスペース（親） | パッケージ（submodule） | 記事（submodule） |
-| --- | --- | --- | --- |
-| リポジトリ | `HIBIKI5201/SymphonyWorkspace` | `HIBIKI5201/SymphonyFramework` | `HIBIKI5201/TechArticles`（private） |
-| ルート | このリポジトリのルート | `Assets/SymphonyFrameWork/` | `Articles/` |
-| 役割 | 開発環境。Unityプロジェクト、検証用シーン、開発ドキュメント | 配布物。UPMパッケージ本体 | 技術記事の原稿と、Qiita / note への投稿・変換スクリプト |
-| 既定ブランチ | `main` | `develop` | `main` |
-
-- **`Articles/` は `Assets/` の外にあり、Unityのインポート対象ではありません。** 記事の変更でコンパイルやアセットに影響は出ません。
-- **`Articles/` は private リポジトリです。** クローンする側にも権限が要ります。権限が無い環境では submodule の取得だけが失敗し、Unityプロジェクト自体は動きます。
+| | ワークスペース（親） | パッケージ（submodule） |
+| --- | --- | --- |
+| リポジトリ | `HIBIKI5201/SymphonyWorkspace` | `HIBIKI5201/SymphonyFramework` |
+| ルート | このリポジトリのルート | `Assets/SymphonyFrameWork/` |
+| 役割 | 開発環境。Unityプロジェクト、検証用シーン、開発ドキュメント | 配布物。UPMパッケージ本体 |
+| 既定ブランチ | `main` | `develop` |
 
 - **コミットからgitlink更新までは `scripts/release_round.py` を使ってください。** 手順と検証がコード化してあります（`preflight` / `commit` / `finalize`）。詳細は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §5。`finalize` がPRの `develop` へのマージ、作業ブランチの削除、gitlink更新まで自動で行います。人が行うのは `develop` から `main` へのリリースだけです。
 - **git コマンドを実行する前に、どちらのリポジトリが対象かを必ず確認してください。** submodule 側は `git -C "Assets/SymphonyFrameWork" ...` と明示するのが安全です。
