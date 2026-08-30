@@ -26,6 +26,7 @@ Issue タイトルの「永続化」は、ユーザー確認のうえ**ブロッ
 - **Round A だけでもリリースできる。** アセットを作ってシーン構成を書き始められ、依存グラフの検証結果を例外の形で受け取れる。
 - **Round B が Issue #202 の本体。** 保持規則（ハイブリッド共存と永続化）はここで確定する。**Round A で中途半端なロードAPIを出して Round B で意味を変えることはしない。**
 - **Round C は表示だけ。** 公開APIを増やさない。
+- **サンプルは Round B で追加する。** Round A の時点ではロードできないため、動かせるサンプルにならない。Round C ではサンプルへ Administrator の見方を1行足すだけにする。
 
 ブランチは Round ごとに `develop` から切る。`feature/202-scene-block-asset`、`feature/202-scene-block-loader`、`feature/202-scene-block-window`。
 
@@ -187,6 +188,38 @@ Issue #202 の中心。**シーンごとに「どのブロックが保持して�
 
 ---
 
+## サンプル
+
+`Samples~/Runtime/SceneBlockSample/` を Round B で追加する。**既存のサンプルと同じ構成**（コントローラのシーン1つ、追加ロードされるメンバーシーン、IMGUIで実況する `*_Controller`、生存確認用の `*_SceneMarker`）にする。
+
+Issue #202 が求めるハイブリッド共存を、**サンプルの操作だけで再現できる**ことを最優先の要件にする。
+
+| ファイル | 役割 |
+| --- | --- |
+| `SceneBlockSample.unity` | コントローラを置く起点シーン |
+| `SceneBlockSample_Base.unity` | 両方のブロックに属し、`IsPersistent` を付ける常駐シーン |
+| `SceneBlockSample_Town.unity` | Town ブロックだけに属するシーン。`Base` に依存する |
+| `SceneBlockSample_Dungeon.unity` | Dungeon ブロックだけに属するシーン。`Base` に依存する |
+| `SceneBlockSample_Shared.unity` | **両方のブロックに属する共有シーン。** ブロック切り替えでアンロードされないことを見せる |
+| `TownBlock.asset` / `DungeonBlock.asset` | `SceneBlockAsset` の実物 |
+| `Scripts/SceneBlockSample_Controller.cs` | ロード・アンロード・切り替え・単体ロードの操作と実況ログ |
+| `Scripts/SceneBlockSample_SceneMarker.cs` | 各メンバーシーンの生存確認用マーカー |
+
+サンプルが見せる操作は次の5つにする。**それぞれが設計上の規則と1対1で対応する。**
+
+| 操作 | 見せる規則 |
+| --- | --- |
+| Load Town Block | 依存順の層ロード。`Base` が先、`Town` と `Shared` が後 |
+| Switch to Dungeon（次をロード→前をアンロード） | 共有シーンが保持されたままブロックだけ入れ替わる |
+| Unload All Blocks | `IsPersistent` の `Base` だけが残る |
+| Load Shared Scene Directly（`SceneLoader.LoadSceneAsync`） | **外部保持。** その後ブロックをアンロードしても `Shared` が残る |
+| Unload Shared Scene Directly（`SceneLoader.UnloadSceneAsync`） | 外部保持したシーンは利用側が明示的に落とす |
+
+- **サンプルは公開APIだけで書く。** `internal` へ触れない（[CONTRIBUTING §8](../CONTRIBUTING.md)）。
+- `package.json` の `samples` へ `Scene Block Sample` の項目を追加する。**追加を忘れると Package Manager からインポートできない。**
+- **メンバーシーンは利用側の Build Settings へ登録が必要**である。既存の `SceneLoaderSample` と同じく、コントローラの実況ログ冒頭でその手順を案内する。
+- **`Samples~` は Unity のインポート対象外**のため、このワークスペースではサンプルのスクリプトがコンパイルされない。**サンプルの動作確認は、対象フォルダを `Assets/` 配下へコピーして行う**（[CONTRIBUTING §4](../CONTRIBUTING.md)）。Round B の動作確認手順に含める。
+
 ## ファイル構成
 
 パスはすべて `Assets/SymphonyFrameWork/` 起点。名前空間は Runtime 側がすべて `SymphonyFrameWork.System.SceneBlock`、Editor 側が `SymphonyFrameWork.Editor`。**`Internal/` 配下でも名前空間へ `Internal` を含めない。**
@@ -222,6 +255,8 @@ Issue #202 の中心。**シーンごとに「どのブロックが保持して�
 - 変更 `Runtime/Service/SceneLoader/SceneLoader.cs` — `internal static SceneLoadService CurrentService` を追加
 - 変更 `Runtime/Orchestrator/Internal/SymphonyOrchestrator.cs` — `SceneLoader.Initialize()` の**後**に `SceneBlockLoader.Initialize()`、`RecordInitializedSubsystem(SceneBlockLoader.ResetRuntimeState)`
 - 新規テスト `Tests/Editor/SceneBlockLoaderTests.cs` / `SceneBlockInfoTests.cs` / `SceneBlockLoadStateEnumTests.cs` / `SceneBlockLoadEntityTests.cs` / `SceneBlockRegistryTests.cs` / `SceneBlockServiceTests.cs`
+- 新規 `Samples~/Runtime/SceneBlockSample/`（上記「サンプル」の全ファイル）
+- 変更 `package.json` の `samples` — `Scene Block Sample` の項目を追加
 - 変更 `Documentation~/Modules/SceneBlock.md`、`Documentation~/Architecture.md`、`Documentation~/AgentUsage.md`、版一式
 
 ### Round C
@@ -233,6 +268,7 @@ Issue #202 の中心。**シーンごとに「どのブロックが保持して�
 - 変更 `Editor/Documentation/SymphonyDocumentPageEnum.cs` へ `SceneBlock` を追加
 - 変更 `Editor/Administrator/SymphonyAdministrator.cs` — ウィンドウの登録
 - 新規テスト `Tests/Editor/SceneBlockDtoTests.cs` / `SceneBlockViewModelTests.cs` / `SceneBlockWindowTests.cs`
+- 変更 `Samples~/Runtime/SceneBlockSample/Scripts/SceneBlockSample_Controller.cs` — 実況ログへ Administrator の Scene Block パネルを見る案内を1行追加
 - 変更 `Documentation~/Modules/SceneBlock.md` の `## Editor機能`、`Documentation~/EditorTools.md` の `## 一覧`、版一式
 
 新規 `.cs` の `.meta` は Unity に生成させる。
@@ -390,12 +426,14 @@ Issue #202 の中心。**シーンごとに「どのブロックが保持して�
 9. `IsPersistent` のシーンが、そのシーンを含むブロックを全部アンロードしても残ること。
 10. ロード中にキャンセルし、**ロード済みのシーンが消えないこと**と、その後 `UnloadAsync` で片付けられること。
 11. Play Mode の開始・終了を2回繰り返し、Registry の保持情報が持ち越されないこと。
+12. **`Samples~/Runtime/SceneBlockSample/` を `Assets/` 配下へコピーし、メンバーシーンを Build Settings へ登録して Play する。** 上記7〜9の規則が、サンプルのボタン操作と実況ログだけで再現できること。確認後にコピーを削除し、コミットしないこと。
 
 **Round C**
 
 12. Symphony Administrator に Scene Block パネルが出て、ロード中の進捗と保持シーン一覧が更新されること。
 13. **パネルを開いたままブロックをロード・アンロードし、表示が追従すること。** 開き直すと直る不具合をここで潰す。
 14. `SceneBlockAsset` の Inspector が、循環依存のあるアセットで検証エラーと算出した層を表示すること。
+15. サンプルをコピーして Play し、Administrator のパネルとサンプルの実況ログが同じ保持状態を示すこと。
 
 ---
 
@@ -413,7 +451,7 @@ Issue #202 の中心。**シーンごとに「どのブロックが保持して�
 
 | ファイル | 触る箇所 |
 | --- | --- |
-| `Assets/SymphonyFrameWork/package.json` | `version` |
+| `Assets/SymphonyFrameWork/package.json` | `version`。Round B では `samples` への項目追加も同じPRへ含める |
 | `Assets/SymphonyFrameWork/Core/SymphonyConstant.cs` | `VERSION` |
 | `Assets/SymphonyFrameWork/CHANGELOG.md` | 見出しと `### Add` |
 | `Assets/SymphonyFrameWork/README.md` | 「現在のバージョン」と機能索引（Round A で1行追加） |
