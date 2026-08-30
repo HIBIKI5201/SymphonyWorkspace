@@ -457,3 +457,52 @@ Issue #202 が求めるハイブリッド共存を、**サンプルの操作だ�
 | `Assets/SymphonyFrameWork/README.md` | 「現在のバージョン」と機能索引（Round A で1行追加） |
 
 3つの Round が同じファイルを触るため、**Round が終わるたびにコミットとマージまで進めてから次へ着手する。** 同じファイルへ複数 Round の変更が同時に載ると、コミットを意図ごとに分けられなくなる。
+
+---
+
+## 実施レポート
+
+実施日: 2026-08-30 / バージョン: 6.6.0 → 6.7.1 / PR: [#203](https://github.com/HIBIKI5201/SymphonyFramework/pull/203)、[#204](https://github.com/HIBIKI5201/SymphonyFramework/pull/204)、[#205](https://github.com/HIBIKI5201/SymphonyFramework/pull/205)
+
+### 実装した内容
+
+| Round | 版 | 主な成果物 |
+| --- | --- | --- |
+| A | 6.6.0 | `SceneBlockAsset` / `SceneBlockEntry` / `SceneBlockPlanException`、`SceneBlockEntryReader`、`Documentation~/Modules/SceneBlock.md`、テスト21件 |
+| B | 6.7.0 | `SceneBlockLoader` / `SceneBlockInfo` / `SceneBlockLoadStateEnum`、Entity・Registry・Service・`IBlockSceneLoader`・`SceneLoadServiceLoader`・Query、Orchestrator配線、`SceneBlockSample`、テスト37件 |
+| C | 6.7.1 | `SceneBlockDto` / `SceneBlockViewModel` / `SceneBlockWindow` / `SceneBlockAssetDrawer`、`SymphonyDocumentPageEnum.SceneBlock`、テスト15件 |
+
+保持規則は設計どおり `SceneBlockRegistry` が「シーン → 保持ブロック集合」と「外部保持のシーン集合」の2つを持ち、`SceneBlockService` がロード開始前に外部保持を判定してから保持を記録する形で実装した。
+
+### 設計から変えた点
+
+- **`SceneBlockAssetEditor` を `SceneBlockAssetDrawer` へ改名した。** 既存の `[CustomEditor]` が `SceneLoadConfigDrawer` / `AudioConfigDrawer` と `Drawer` で終えているため、そちらへ揃えた。置き場も `Editor/Configs/Drawer/` にした。
+- **`IBlockSceneLoader` の具象を `SceneLoadServiceLoader` のまま採用した。** 設計書で「名前は要レビュー」としていたが、`ISceneLoader` / `UnitySceneLoader` の並び（実装手段 + 契約名）に沿う名前がこれ以外に見つからなかった。
+- **`SceneBlockEntryReader` の公開面を `TryCreateLayers` / `ReadPriorities` / `ReadPersistentSceneNames` / `Describe` にした。** 設計書は `ReadNodeIds` / `ReadEdges` / `ReadRequests` に分ける想定だったが、**シーン名が空のエントリは `SceneBlockGraphPlanner.Plan` が例外にしてしまい、他の異常とまとめて報告できない。** そのため検証と層の算出を1つの入口へまとめ、空のシーン名と空の依存はReader側で説明へ変換してからPlannerへ渡すようにした。
+- **`SceneBlockLoadEntity` は保持シーンを持たない。** 設計時は Entity と Registry の両方に保持を置く形だったが、正本が2つになるため Registry だけが持つ。`SceneBlockInfo.HeldSceneNames` は Query が Registry から組み立てる。
+- **失敗・キャンセルしたブロックの状態は `Loading` のまま残す。** 設計書では状態を明示していなかった。`Complete` にしないことと、`UnloadAsync` で片付けられることをモジュール文書へ書いた。
+
+### 検証結果
+
+| 項目 | Round A | Round B | Round C |
+| --- | --- | --- | --- |
+| `release_round.py preflight` | 全項目通過（tests ソース4件/テスト8件、meta 8件） | 全項目通過（tests ソース9件/テスト12件、meta 24件） | 全項目通過（tests ソース9件/テスト8件、meta 9件） |
+| `build_module_docs.py --check` | OK 20件 | OK 20件 | OK 20件 |
+| `verify_round.py` | **実行できず** | **実行できず** | **実行できず** |
+
+**3 Round とも、コンパイル・EditMode / PlayMode テスト・Inspector と Administrator の表示確認は未実施である。** 実行環境に Unity Editor が無く、uLoopMCP が `Unity project not found` を返す。「動作確認手順」の項目はすべて Unity 上で行う必要がある。
+
+新規 `.cs` / `.uxml` / フォルダの `.meta` は、Unity が無い環境のため**スクリプトで生成した**（既存の同種 `.meta` と同じ形式、新規GUID）。既存アセットのGUIDは変更していない。
+
+**サンプルの `.unity` と `.asset` も手作業で用意した。** シーンは既存の `SceneLoaderSample` のシーンから、スクリプトのGUIDと表示名を置き換えて派生させた。`SceneBlockAsset` のアセットYAMLは新規に書いた。**`Samples~` は Unity のインポート対象外でコンパイルもされないため、サンプルは一度も Unity で開いていない。** 動作確認手順の12番で最初に確認されることになる。
+
+### 振り返り
+
+| 気づき | 提案先 |
+| --- | --- |
+| **版の更新先は4か所ある。** `Core/SymphonyConstant.cs` の `VERSION` が、CONTRIBUTING §6「バージョンとCHANGELOG」と implement スキルの設計書テンプレートの両方で挙げられていない。`preflight` が検出するため事故にはならないが、設計書を書く段階で毎回落とす | `Documentation/CONTRIBUTING.md` と `.agents/skills/implement/references/design-doc.md` |
+| **`DesignPhilosophy.md` の `### 公開範囲` に、利用側が作成する Authoring 用 `ScriptableObject` の項目が無い。** 最も近い「Unity上で利用側が配置または生成するAdaptor層のComponent」は `ScriptableObject` を含まず、`Config` 用 `ScriptableObject` は `internal` と明記されている。`SceneBlockAsset` はどちらでもない | `Documentation/DesignPhilosophy.md` |
+| **公開型を1つ足すたびにテストファイルが1つ要るため、Round の大きさは公開型の数でほぼ決まる。** 今回はこれを前提に Round を割ったが、設計書テンプレートの「Round 分割」にはこの観点が無い | `.agents/skills/implement/references/rounds.md` |
+| **Unity が無い実行環境では `.meta` を生成できず、`preflight` が必ず止まる。** 今回はスクリプトで生成して通したが、これは手順として文書化されていない抜け道である。許容するのか、そういう環境では commit まで進めないのか、方針を決めたい | `Documentation/CONTRIBUTING.md` §2 |
+
+**いずれも提案にとどめており、ドキュメントは書き換えていない。**
