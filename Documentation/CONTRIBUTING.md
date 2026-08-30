@@ -59,6 +59,10 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 例外は、`Assets/`の外にあるファイル（このワークスペースの`Documentation/`など）と、Unity PackageでAsset Import対象外となる`Documentation~/`です。それ以外の`Assets/`配下へ追加したファイルには、すべて`.meta`が必要です。
 
 - **`.meta` を手書きしない。** GUIDを自分で生成しないでください。新規ファイルを追加したら、Unity Editorに一度フォーカスを当てて生成させます。エージェントが新規ファイルを作った場合は、`.meta` が生成されたことを確認してからコミットしてください（→ §4）。
+- **Unity Editorが無い実行環境では、新規ファイルの `.meta` をスクリプトで生成してかまいません。** `release_round.py preflight` が `.meta` の欠落で必ず止まるため、この場合だけ例外を認めます。**認めるのは新規ファイルに限ります。** 既存アセットのGUIDは、参照とシリアライズ済みデータが繋がっているため決して作り直さないでください。生成した場合は次を守ります。
+  - 既存の同種 `.meta` と同じ形式にし、GUIDは重複しない新しい値にする（`grep -rh "^guid: " --include=*.meta . | sort | uniq -d` が空であること）
+  - **スクリプトで生成した事実を、PR説明とコミットの報告へ明記する**
+  - 後で Unity で開いたときに再生成や差分が出ないことを、依頼者の確認項目として提示する（→ §4「依頼者に確認してもらうこと」）
 - **既存の `.meta` の中身（特に `guid`）を編集しない。**
 - **移動・リネームは `.meta` と必ずセットで行う。** `git mv` を使い、`.cs` だけを動かして `.meta` を置き去りにしないこと。GUIDを維持すれば利用者側の参照は切れません（実例: CHANGELOG 2.2.1 の `Runtime/Obsolete/` への集約）。
 - **削除も対で行う。** 片方だけ残った `.meta` はUnityが警告を出します。
@@ -214,7 +218,8 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 
 ### バージョンとCHANGELOG
 
-- `package.json` の `version`、CHANGELOG の見出し、**README の「現在のバージョン」** は同時に更新します。READMEはこの3か所目で、更新漏れが最も起きやすい箇所です。SemVerの判断基準は [DesignPhilosophy.md `### バージョニング`](./DesignPhilosophy.md) を参照してください（破壊的変更=メジャー / 後方互換な追加=マイナー / 実装のみの修正=パッチ）。
+- **版は4か所を同時に更新します。** `package.json` の `version`、`Assets/SymphonyFrameWork/Core/SymphonyConstant.cs` の `VERSION`、CHANGELOG の見出し、**README の「現在のバージョン」**。SemVerの判断基準は [DesignPhilosophy.md `### バージョニング`](./DesignPhilosophy.md) を参照してください（破壊的変更=メジャー / 後方互換な追加=マイナー / 実装のみの修正=パッチ）。
+- **`SymphonyConstant.VERSION` は設計書の「この Round で触るバージョン関連ファイル」から落ちやすい箇所です。** `release_round.py preflight` の `[version]` が `package.json` との一致を検査するため事故にはなりませんが、設計を書く時点で4か所すべてを列挙してください。READMEは4か所目で、こちらは検査が無いぶん漏れが残りやすい箇所です。
 - CHANGELOG の形式:
 
 ```markdown

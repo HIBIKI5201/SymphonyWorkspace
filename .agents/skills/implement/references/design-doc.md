@@ -107,8 +107,10 @@ Play Mode で何をどう確認すれば成功と言えるか。期待するロ�
 複数Roundに分けるなら、Roundごとにどのバージョンを出すかも書く。
 
 ## この Round で触るバージョン関連ファイル
-`package.json` の `version`、`CHANGELOG.md` の見出し、`README.md` の「現在のバージョン」、
-`AGENTS.md` のAPI早見表など、この Round で更新するものを列挙する。
+**版は4か所ある。** `package.json` の `version`、`Core/SymphonyConstant.cs` の `VERSION`、
+`CHANGELOG.md` の見出し、`README.md` の「現在のバージョン」。
+`SymphonyConstant.VERSION` が最も落ちやすいため、テンプレートへ最初から書いておく。
+加えて `AGENTS.md` のAPI早見表など、この Round で更新するものを列挙する。
 **複数Roundが同じファイルを触る場合は、どのRoundがどの行を触るかまで書く。**
 同じファイルへ複数Roundの変更が同時に載ると、コミットを意図ごとに分けられなくなる。
 ```
