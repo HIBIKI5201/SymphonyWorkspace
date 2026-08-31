@@ -59,7 +59,7 @@
 - Asset Serialization: **Force Text**
 - Scripting Define Symbols: `UNITY_POST_PROCESSING_STACK_V2;DOTWEEN`
 - **Enter Play Mode Options が有効で、Domain Reload と Scene Reload の両方が無効です**（`ProjectSettings/EditorSettings.asset` の `m_EnterPlayModeOptions: 3`）。static状態はPlay Mode終了時にリセットされません。フレームワーク各Facadeに `ResetRuntimeState()` があるのはこのためです。この前提を崩すコードを書かないでください。
-- **DOTween（`Assets/Plugins/Demigiant/`）は `.gitignore` 済みで、リポジトリに含まれません。** クローン直後は存在せず、`SymphonyTween` 周辺がコンパイルエラーになります。別途導入が必要です。
+- **DOTween は `.gitignore` 済み（`Assets/Plugins/`）で、リポジトリに含まれません。** 依存しているのは `Assets/LibraryResearch/DOTween/` の検証用サンプルだけで（`LibraryResearch.DOTween.asmdef` が `DOTween.dll` を `precompiledReferences` に持つ）、**パッケージ本体（`SymphonyTween` を含む）は DOTween を参照しません。** クローン直後にコンパイルエラーが出るのは LibraryResearch 側であり、パッケージの検証には影響しません。
 - 主な依存パッケージ（`Packages/manifest.json`）: Addressables 2.9.0、Input System、Cinemachine 3.1.5、Behavior、ProBuilder、Visual Effect Graph、Test Framework 1.6.0。git URL 経由で `com.unity.springbone` と `io.github.hatayama.uloopmcp`。
 
 ## 3. `Assets/` 配下の区分
@@ -74,7 +74,8 @@
 | `Assets/Arts/Shaders/` | Shader Graph + HLSL | `ToonShader` / `CharacterToonShader` / `OutLineShader` / `DashedLineShader`、`ToonLighting.hlsl` / `AdvancedOutline.hlsl` |
 | `Assets/Settings/` | URP設定 | `PC_*` / `Mobile_*` の RP Asset と Renderer |
 | `Assets/Editor/Scripts/VersionLogGenerator.cs` | ワークスペース側のEditorツール | `Tools/VersionLogGenerator`。CHANGELOGへのエントリ追記と `package.json` の version 更新を補助する |
-| `Assets/Plugins/` | **git管理外** | DOTween |
+| `Assets/Plugins/` | **git管理外** | DOTween の導入先。既定では存在しません |
+| `Assets/LibraryResearch/` | 外部ライブラリの検証用サンプル | `DOTween` / `R3` など。ライブラリ本体は含まず、未導入だとこの配下だけがコンパイルエラーになります |
 | `Assets/TextMesh Pro/`, `Assets/TutorialInfo/` | Unityテンプレート由来 | 触らない |
 
 `Assets/SymphonyFrameWork/` 配下のアセットは、`SymphonyAssetProtector`（`AssetPostprocessor`）が移動を検知して自動的に差し戻します。意図して動かす場合は `Project Settings > SymphonyFrameWork` の `Asset Protection Mode` を `Warning` または `Disabled` にしてください（保存先は `UserSettings/SymphonyFrameWork/SymphonyUserSettingConfig.asset`）。
@@ -116,6 +117,12 @@ Domain Reload が無効なため、**Play Modeの開始・終了を2回繰り返
 テストで再現できない範囲（モーダルダイアログ、Unityのホストライフサイクル、Play Mode の往復など）は、`Assets/SymphonyFrameWork/Samples~/Runtime/*Sample/` のサンプルシーンと手動確認で担保します。**`Samples~` はUnityのインポート対象外です。**このワークスペースではサンプルシーンをそのまま開けません（→ [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §4）。
 
 権限設定は `.uloop/settings.permissions.json`（`allowThirdPartyTools: false`、`dynamicCodeSecurityLevel: 1`）にあります。
+
+### Unity Editor が無い実行環境
+
+**Claude Code on the web などのリモートコンテナには Unity Editor が無く、uLoopMCP も使えません。** `python scripts/verify_round.py` が `exit 3` を返したらその環境です。**Unity をコンテナへ導入することはできません**（配布ホストへの接続がプロキシに拒否されます）。
+
+この場合もフローは飛ばさず、**上記の検証だけを代替の機械検査へ差し替えます。** 代替の検査、`.meta` のスクリプト生成（`scripts/generate_meta.py`）、未実施項目の残し方、git 固有の落とし穴は [.agents/skills/implement/references/remote.md](./.agents/skills/implement/references/remote.md) にまとめてあります。
 
 ## 7. やってはいけないこと
 

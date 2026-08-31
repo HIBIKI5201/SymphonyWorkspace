@@ -49,6 +49,20 @@ python scripts/release_round.py commit --message "[fix]説明" --no-tests-reason
 
 **詳細は各ステップの参照先にある。着手するステップの参照先を読んでから進めること。**
 
+## 着手前: Unity が使えるかを確かめる
+
+**リモートコンテナ（Claude Code on the web など）には Unity Editor が無く、ステップ3の検証が成立しない。** 着手前に判定する。
+
+```bash
+python scripts/verify_round.py
+```
+
+`exit 3` が返ったらリモート環境である。**フローは飛ばさず、ステップ3だけを差し替える。**
+
+→ **[references/remote.md](references/remote.md)**（代替の検査、`.meta` の生成、未実施項目の残し方、git 固有の落とし穴）
+
+**Unity をコンテナへ導入することはできない。** 配布ホストへの接続がプロキシに拒否される。試し直さないこと（理由と実測は remote.md）。
+
 ---
 
 ## 着手前: タスクの大きさとブランチ
@@ -98,6 +112,8 @@ python scripts/verify_round.py
 ```
 
 clear-console → compile（確定後の値を採用）→ Console 確認 → EditMode → PlayMode 2往復 → Enter Play Mode Options の検査を1プロセスで行い、結果を1つの要約で返す。**Domain Reload 中の待ち直しと、確定前の値を捨てる処理を内部で持つ**ため、手で叩いたときの往復（今回のラウンドで10回以上）が1回になる。
+
+**`exit 3`（Unity へ接続できない）が返る環境では、代替の検査へ差し替える。→ [references/remote.md](references/remote.md)**
 
 → **[references/review.md](references/review.md)**（レビュー観点、機械的検索、Unity Scene の検証ガード）
 

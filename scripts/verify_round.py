@@ -23,6 +23,14 @@
     python scripts/verify_round.py                # 全部
     python scripts/verify_round.py --skip-playmode # EditModeまで
     python scripts/verify_round.py --json          # 機械可読な要約だけ
+
+Exit codes
+----------
+0 : 検証を通過した
+1 : 検証に失敗があった
+2 : 検証を続行できない（タイムアウト、応答を解釈できない）
+3 : **Unity Editor へ接続できない。** Unity の無い実行環境ではこれが正常な結果であり、
+    代替の検査は `.agents/skills/implement/references/remote.md` にある
 """
 
 from __future__ import annotations
@@ -63,6 +71,23 @@ class VerifyError(RuntimeError):
     """検証を続行できない状態を表す。"""
 
 
+class UnityUnavailableError(VerifyError):
+    """Unity Editor へ接続できない状態を表す。
+
+    **リモートコンテナのように Unity が存在しない環境と、Unity が落ちているだけの環境を
+    区別できないため、ここでは接続できない事実だけを表す。** 判断は呼び出し側が行う。
+    """
+
+
+# uloop が Unity へ到達できないときに返す文言。**JSONではなくエラー文で返る。**
+UNAVAILABLE_MARKERS = (
+    "Unity project not found",
+    "Failed to connect",
+    "ECONNREFUSED",
+    "Unity Editor is not running",
+)
+
+
 def run_uloop(*arguments: str, timeout: int = 900) -> dict:
     """uloop を実行し、Domain Reload 中なら収まるまで待って取り直す。
 
@@ -85,6 +110,11 @@ def run_uloop(*arguments: str, timeout: int = 900) -> dict:
         if any(marker in output for marker in BUSY_MARKERS):
             time.sleep(RELOAD_WAIT_SECONDS)
             continue
+
+        # Unity へ到達できないこと自体を、JSONのパース失敗と区別して返す。
+        # **区別しないと「応答をJSONとして読めません」になり、Unityが無いだけだと分からない。**
+        if any(marker in output for marker in UNAVAILABLE_MARKERS):
+            raise UnityUnavailableError(output.strip()[:400])
 
         match = re.search(r"\{.*\}", output, re.S)
         if match is None:
@@ -351,6 +381,15 @@ def main() -> int:
 
     try:
         summary = build_summary(args)
+    except UnityUnavailableError as error:
+        print("NG: Unity Editor へ接続できません。")
+        print(f"    {error}")
+        print("")
+        print("Unity が起動しているだけなら `uloop-launch` で解決します。")
+        print("**Unity がそもそも無い実行環境（リモートコンテナなど）なら、この検証は行えません。**")
+        print("代替の検査と、依頼者へ残す未実施項目の扱いは次にあります。")
+        print("    .agents/skills/implement/references/remote.md")
+        return 3
     except VerifyError as error:
         print(f"NG: {error}")
         return 2
