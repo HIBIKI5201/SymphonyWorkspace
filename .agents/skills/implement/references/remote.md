@@ -31,7 +31,7 @@ Unity の配布ホスト（`services.api.unity.com` / `download.unity3d.com` /
 | 1. 設計書 | 変わらない | **重要度が上がる。** コンパイルで拾えない誤りを設計時に潰す（→ 下記「設計で前倒しに潰す」） |
 | 2. ワーカー | `codex_runner.py` | Codex CLI が無い環境では自分で実装する。設計書・検証・振り返りは省略しない |
 | 3. 確認 | `verify_round.py` | **機械検査と差分の通読だけ。**（→ 下記「代替の検査」）実行できない項目は未実施として記録する |
-| 4. 版更新 | 変わらない | 変わらない |
+| 4. 版更新 | 変わらない | **CHANGELOGの区分まで設計時に決める。**（→ 下記「版の粒度を設計時に決める」） |
 | 5. コミット・PR | `release_round.py` | 変わらない。ただし `.meta` と finalize に固有の落とし穴がある（→ 下記） |
 | 6. 振り返り | 変わらない | 変わらない |
 | 7. 実施レポート | 変わらない | **「未実施の確認」が必須項目になる。**（→ 下記「未実施リストを積み上げる」） |
@@ -50,6 +50,21 @@ python scripts/build_module_docs.py --check # Documentation~/Html/ の同期
 python scripts/audit_scan.py                # 機械走査での規約違反
 python scripts/comment_only_diff.py         # コメントだけの差分を除いて読む
 ```
+
+**そして、同名型が増えていないかを必ず見る。** リモートには `CS0101` を教えてくれるコンパイラが無く、
+**重複定義はマージするまで誰も気づかない。** 実際に、同じ役割の Authoring 層が2系統
+`develop` へ入り、`SceneBlockAsset` と `SceneBlockAssetDrawer` が二重定義になって
+コンパイルできない状態になった。
+
+```bash
+git -C Assets/SymphonyFrameWork grep -hoE \
+  "^\s*(public|internal)\s+(sealed\s+|static\s+|abstract\s+|partial\s+)*(class|struct|interface|enum)\s+[A-Za-z0-9_]+" \
+  -- 'Runtime/*.cs' 'Editor/*.cs' 'Core/*.cs' \
+  | sed -E 's/.*(class|struct|interface|enum)\s+//' | sort | uniq -d
+```
+
+ジェネリック引数違いの多重定義（`IInjectable<T0>` など）は同名で出るため、
+**出た名前は名前空間まで見て判断する。** `partial` も同様。
 
 加えて、**[review.md](review.md) の「機械的検索」の観点は grep で全部実行できる。**
 Unity が無いことは、レビュー観点を減らす理由にならない。
@@ -134,6 +149,19 @@ git -C Assets/SymphonyFrameWork fetch origin
 **セッションの最初に1回実行しておく。** 失敗してから直すと、finalize が中途半端な
 状態で止まったところから復旧することになる。
 
+### `commit --pr` と `finalize` は `gh` を必要とする
+
+**コンテナに `gh` CLI は無い。** `release_round.py commit --pr` は
+`FileNotFoundError: 'gh'` で落ちるが、**その手前のコミットとpushは成功している。**
+落ちた後に同じコマンドをやり直さず、PRだけ GitHub MCP ツールで作る。
+
+```bash
+python scripts/release_round.py commit --message "[fix]説明" --issue <番号>   # --pr を付けない
+```
+
+PRの作成とマージは `mcp__github__create_pull_request` と `mcp__github__merge_pull_request`
+で行い、その後の後始末は下記の分解手順に従う。
+
 ### `finalize` が実行を拒否されたとき
 
 リモートの権限判定で `release_round.py finalize` そのものが弾かれることがある。
@@ -164,6 +192,16 @@ finalize がこれを検査しているのは、実際に踏んだからであ�
 切り分けられない。**1 Round = 1つの検証可能な変更**を通常より厳しく守る。
 
 Round の大きさが公開型の数でほぼ決まることは変わらない（→ [rounds.md](rounds.md)）。
+
+### 版の粒度を設計時に決める
+
+**`preflight` は、CHANGELOGの同じ版で `Fix` と `Change` が同居していると止まる。**
+修正は独立したパッチ版へ分ける規則である。**設計の段階で「この Round はどの区分か」を
+決めておかないと、実装が終わってから Round を割り直すことになる。**
+
+実際に、重複定義の解消（Fix）と依存先候補の絞り込み（Change）を1つの Round として設計し、
+`preflight` で割り直した。**割った結果は正しかった。** 壊れている `develop` の復旧が、
+機能追加のレビューを待たずに先に入る。**壊れている状態を直す Round は、常に単独で先に出す。**
 
 ---
 
