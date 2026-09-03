@@ -278,3 +278,83 @@ SymphonyFrameWork.Editor ──> SymphonyFrameWork ──> SymphonyFrameWork.Cor
 5. **カテゴリー名を追加・削除したとき、開いたままの Administrator と Project Settings が追従すること**
    （開き直せば直る不具合を見逃さないため）
 6. Play Mode の開始・終了を2回繰り返し、`ResetRuntimeState()` 後にカテゴリー状態が残らないこと
+
+## 実施レポート
+
+実施日: 2026-09-03 / バージョン: 6.10.0 〜 6.14.0 / PR: [#210](https://github.com/HIBIKI5201/SymphonyFramework/pull/210) [#211](https://github.com/HIBIKI5201/SymphonyFramework/pull/211) [#212](https://github.com/HIBIKI5201/SymphonyFramework/pull/212) [#213](https://github.com/HIBIKI5201/SymphonyFramework/pull/213) [#214](https://github.com/HIBIKI5201/SymphonyFramework/pull/214)
+
+### 実装した内容
+
+| Round | 版 | 内容 |
+| --- | --- | --- |
+| 1 | 6.10.0 | `PauseCategoryResolver` 新規。`PauseStateEntity` を `Dictionary<Type, bool>` へ、`PausableRegistry` へ停止要因の件数、`PauseService` をカテゴリー単位通知へ。**公開APIは据え置き** |
+| 2 | 6.11.0 | `SetPause<T>` / `IsPaused<T>` / `SetPauseAll` / `IsPausedAny` / `AddPauseChangedHandler<T>` / `GetPauseInfo<T>`、`PauseInfo.Category` |
+| 3 | 6.12.0 | 待機系6件の型パラメータ版、`SymphonyTween.PausableTweening<T, TCategory>`、旧API 8件の `[Obsolete]` 化と `Deprecations.md` |
+| 4 | 6.13.0 | `PauseCategoryGenerator` / `PauseCategoryConfig` / `PauseCategorySettingProvider`、生成先 `SymphonyFrameWork.PauseCategory` アセンブリ |
+| 5 | 6.14.0 | Administrator の `Categories` 一覧、`PauseCategoryDto`、サンプルのカテゴリー対応、モジュール文書 |
+
+### 設計から変えた点
+
+**1. カテゴリー未実装の登録を例外にしなかった。** 当初は「`ArgumentException` にする」としていたが、**公開APIの破壊的変更**になる。`IPausable` を直接実装した対象は既に存在し（サンプル、テスト）、Round 1 は「公開APIを変えない」Round であるため成立しない。既定カテゴリー（`IPausable` 自身）へ寄せることで「絶対に止まらない対象を作らない」という当初の意図は保った。
+
+**2. モジュール文書の更新を Round 5 から Round 4 へ前倒した。** 版関連ファイルの表では Round 5 のみとしていたが、Round 4 で `EditorTools.md` から `PauseManager.md#editor機能` を参照する行を足したため、参照先に内容が無い状態が残る。コードとドキュメントの乖離はバグとして扱う規約に反する。
+
+**3. `PauseDto` へカテゴリー一覧を持たせた。** 設計では「カテゴリー別の一覧を持つ」とだけ書いており、要素型を決めていなかった。`PauseCategoryDto` を新設した。
+
+### 実装中に見つけて直した欠陥
+
+いずれもコンパイラでは見つからない類で、**リモート環境では差分の通読だけが担保だった**。
+
+| 見つけたもの | 内容 |
+| --- | --- |
+| `SetPausedAll` の取りこぼし | 状態側は「一度でも操作したカテゴリー」しか知らないため、まだ誰も止めていないカテゴリーの対象へ届かない。レジストリの `GetAllCategories()` との和を取る形にした |
+| カテゴリーごとの通知で中断する | 購読者が例外を投げると残りのカテゴリーが未設定のまま中断する。**状態を全部確定させてから通知する**形へ変えた。表示への通知も1回にまとまった |
+| 非推奨APIの内部呼び出し | `PausableDestroy` が `PausableWaitForSecondAsync` を呼んでおり、`[Obsolete]` を付けると自分のコードから警告が出る。待機処理の本体を private ヘルパーへ切り出した |
+| カテゴリー一覧の並びが揺れる | 辞書の列挙順は保証されず、内容が同じでも ViewModel が変化として通知してしまう。表示名の昇順で並べ替え、テストで固定した |
+| `generate_meta.py` が `Samples~` を見ない | `~` で終わるディレクトリを一律除外していたが、preflight は `Samples~` 配下の `.meta` を要求する。「除外するか」と「中を走査するか」を分けた |
+
+### 検証結果
+
+`python scripts/release_round.py preflight` — 5 Round とも全項目通過。
+
+| | R1 | R2 | R3 | R4 | R5 |
+| --- | --- | --- | --- | --- | --- |
+| version | 6.10.0 | 6.11.0 | 6.12.0 | 6.13.0 | 6.14.0 |
+| tests | ソース7/テスト6 | 6/6 | 4/2 | 3/2 | 5/1 |
+| bom / meta / layer / asmdef / playmode / docs / question | すべてOK | 同左 | 同左 | 同左 | 同左 |
+
+加えて機械的に確認した項目。
+
+- 同名型の重複は `IInjectable`（ジェネリック引数違いの多重定義）だけで、`CS0101` の対象は無い
+- フレームワーク内から非推奨APIを呼んでいる箇所が0件。**サンプルからも0件**
+- テストが Editor の `internal` を呼ぶ経路は `Editor/AssemblyInfo.cs` の `InternalsVisibleTo` で成立する
+
+**テストは合計 60 件前後増えた。** `PauseCategoryResolverTests`（14）、`PauseManagerTests`（新規17）、`PauseCategoryGeneratorTests`（新規12）、`PauseServiceTests` / `PausableRegistryTests` / `PauseStateEntityTests` / `PauseViewModelTests` / `PauseInfoTests` への追加。
+
+**`PauseManager` と `IPausable` を `UntestedPublicTypes` のバックログから外した。** 一覧は縮む方向にしか変えていない。
+
+### 未実施の確認
+
+**Unity Editor の無いリモート環境で実装したため、次はすべて未実施。** 依頼者の一括検証で確認する。優先度の高い順に並べる。
+
+1. **コンパイルの警告0。** `[Obsolete]` を8件付けたため、フレームワーク内とホスト側 `Assets/Scripts/` の双方に `CS0618` が出ていないこと
+2. **`Project Settings > SymphonyFrameWork > Pause Category` が表示されること。** `[SettingsProvider]` を `internal` にしたため、**出なければ `public` へ戻す必要がある**。この環境では実行確認できていない
+3. **PlayMode テスト全数成功。** `PauseAwaitableRuntimeTests` を型パラメータ版へ書き換えたため、壊れやすい
+4. **`PauseManagerSample` のシーンで `_range` / `_speed` が 3 / 2 のまま繋がっていること。** 基底クラスを抽出したため
+5. EditMode テスト全数成功（約60件増）
+6. カテゴリーを2つ生成し、実装したクラスが `SetPause<T>` で個別に止まること
+7. `Symphony Administrator > Pause` の `Categories` 一覧の表示。**カテゴリーを追加・削除したとき、開いたままのウィンドウが追従すること**
+8. サンプルで `Pause Gameplay` が白いCubeだけを止め、水色は動き続けること
+9. Play Mode 2往復で `ResetRuntimeState()` 後にカテゴリー状態が残らないこと
+10. スクリプトで生成した `.meta` 計11件を、Unity が再生成・差分にしないこと
+
+### 振り返り
+
+| 気づき | 扱い |
+| --- | --- |
+| **「公開APIを変えない Round」で例外を追加すると破壊的変更になる。** Round の区分と、追加する検証の強さが噛み合っているかを設計時に照合する | 設計書テンプレートへの追加候補。今回は実施レポートへ記録するに留める |
+| **`generate_meta.py` と `preflight` で `.meta` の要否判定が食い違っていた。** 同じ規則を2箇所が別々に持つと、片方だけ直っても気づけない | 判定を揃えた。**将来は preflight 側の免除リストを generate_meta が読む形にするのが本筋** |
+| 表示用の値を毎回作り直す Query と、内容比較で通知する ViewModel の組み合わせでは、**列挙順の非決定性がそのまま無駄な再描画になる** | Scene Block でも同じ構造を使っている。`review.md` のレビュー観点へ「一覧を返す Query は順序を決めているか」を足す候補 |
+| Round を5つに割ったことで、各 Round の差分を全部読み切れた。**リモートでは「公開APIを変えない内部だけの Round」を先頭に置くと、後段の破壊的変更が切り分けやすい** | remote.md §6 への追加候補 |
+
+**提案にとどめる。** 上記のうちスキルとドキュメントへの反映は、承認をもらってから行う。

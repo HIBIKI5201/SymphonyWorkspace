@@ -45,6 +45,13 @@ DEFAULT_ROOT = "Assets/SymphonyFrameWork"
 EXCLUDED_DIR_NAMES = frozenset({"cvs"})
 EXCLUDED_SUFFIXES = (".tmp", ".meta")
 
+# `~` で終わるが、**中身は** `.meta` を必要とするディレクトリ。
+# **`Samples~` 自身は `.meta` を持たない**（`~` は Unity に取り込ませないための印である）が、
+# 中のファイルとフォルダは持つ。Package Manager がサンプル導入時に `.meta` ごとコピーし、
+# 利用側で GUID を引き継ぐためである。実際に既存のサンプルもその形になっている。
+# `release_round.py` の preflight も `Documentation~/` だけを免除しており、そこと揃える。
+META_REQUIRED_TILDE_DIRS = frozenset({"Samples~"})
+
 # 拡張子ごとの importer ブロック。**末尾の空白は Unity の出力そのままで、消さない。**
 # 既存の `.meta` と diff を取ったときに、内容の違いではなく整形の違いで差分が出るのを防ぐ。
 MONO_IMPORTER = """MonoImporter:
@@ -148,9 +155,8 @@ def run_git(*arguments: str, cwd: Path) -> subprocess.CompletedProcess:
     )
 
 
-def is_excluded(path: Path) -> bool:
-    """Unity が Asset Import の対象にしないパスかを判定する。"""
-    name = path.name
+def is_excluded(name: str) -> bool:
+    """Unity が Asset Import の対象にしない名前かを判定する。"""
     if name.startswith("."):
         return True
     if name.endswith("~"):
@@ -162,17 +168,32 @@ def is_excluded(path: Path) -> bool:
     return False
 
 
+def is_traversable(name: str) -> bool:
+    """中を走査してよい名前かを判定する。
+
+    **除外されるディレクトリでも、中身が `.meta` を必要とする場合がある。**
+    `Samples~` は自身が `.meta` を持たない一方、中のファイルは持つ。
+    """
+    if name in META_REQUIRED_TILDE_DIRS:
+        return True
+
+    return not is_excluded(name)
+
+
 def collect_import_targets(root: Path) -> list[Path]:
     """`root` 配下で `.meta` を持つべきパスを、ファイルとフォルダの両方について集める。"""
     targets: list[Path] = []
     for path in sorted(root.rglob("*")):
-        if any(is_excluded(part) for part in [path, *path.relative_to(root).parents][:-1]):
+        parts = path.relative_to(root).parts
+
+        # 走査できない親を持つパスは、その中身ごと対象から外す。
+        if any(not is_traversable(name) for name in parts[:-1]):
             continue
-        if is_excluded(path):
+
+        # 自身が除外対象なら、走査は続けても `.meta` は要らない。
+        if is_excluded(path.name):
             continue
-        # 除外ディレクトリの中身も落とす。`rglob` は親の除外を引き継がない。
-        if any(is_excluded(Path(name)) for name in path.relative_to(root).parts[:-1]):
-            continue
+
         targets.append(path)
     return targets
 
