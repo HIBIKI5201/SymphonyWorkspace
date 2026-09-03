@@ -68,9 +68,15 @@ bool paused = PauseManager.IsPaused<IGameplayPausable>();
 
 ### `IPausable` を直接実装した対象
 
-**カテゴリーを1つも実装していない対象は登録時に `ArgumentException` にする。**
+**カテゴリーを1つも実装していない対象は、既定カテゴリー（`IPausable` 自身）に属する。**
 黙って「どのカテゴリーにも属さない＝絶対に止まらない」対象になると、
-ポーズしても動き続ける原因が分からない。
+ポーズしても動き続ける原因が分からないためで、`SetPauseAll` でも `SetPause<IPausable>` でも止まる。
+
+> **着手後に変えた判断。** 当初は「カテゴリー未実装の登録は `ArgumentException`」としていたが、
+> **それは公開APIの破壊的変更である。** `IPausable` を直接実装した対象は既に存在し
+> （サンプルの `PauseManagerSample_Mover`、テストの `TestPausable`）、Round 1 は
+> 「公開APIを変えない」Round であるため成立しない。既定カテゴリーへ寄せれば
+> 「絶対に止まらない対象を作らない」という当初の意図は保たれる。
 
 ## 公開API
 
@@ -175,8 +181,8 @@ SymphonyFrameWork.Editor ──> SymphonyFrameWork ──> SymphonyFrameWork.Cor
 
 | 状況 | 扱い |
 | --- | --- |
-| `TCategory` に `IPausable` 自身を渡した | `ArgumentException`。カテゴリーとして使えない |
-| カテゴリーを1つも実装しない対象を `Register` | `ArgumentException`。止まらない対象が黙って生まれるのを防ぐ |
+| `TCategory` に `IPausable` 自身を渡した | **例外にしない。** 既定カテゴリー、つまり「カテゴリーを明示していない対象」を指す |
+| カテゴリーを1つも実装しない対象を `Register` | **例外にしない。** 既定カテゴリーへ入れる（→ 上記「着手後に変えた判断」） |
 | `Register(null)` / `Unregister(null)` | `ArgumentNullException`（現状維持） |
 | 未登録カテゴリーの `IsPaused<T>()` | **例外にしない。** `false` を返す。まだ誰も止めていない状態と区別する意味が無い |
 | 初期化前の呼び出し | `SymphonyNotInitializedException`（現状維持） |
