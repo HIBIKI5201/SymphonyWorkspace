@@ -357,4 +357,11 @@ SymphonyFrameWork.Editor ──> SymphonyFrameWork ──> SymphonyFrameWork.Cor
 | 表示用の値を毎回作り直す Query と、内容比較で通知する ViewModel の組み合わせでは、**列挙順の非決定性がそのまま無駄な再描画になる** | Scene Block でも同じ構造を使っている。`review.md` のレビュー観点へ「一覧を返す Query は順序を決めているか」を足す候補 |
 | Round を5つに割ったことで、各 Round の差分を全部読み切れた。**リモートでは「公開APIを変えない内部だけの Round」を先頭に置くと、後段の破壊的変更が切り分けやすい** | remote.md §6 への追加候補 |
 
-**提案にとどめる。** 上記のうちスキルとドキュメントへの反映は、承認をもらってから行う。
+**上記4件は承認を得て反映済みである。**
+
+| 気づき | 反映先 |
+| --- | --- |
+| Round の区分と検証の強さの照合 | `design-doc.md` 「Round の区分と、追加する検証の強さを突き合わせる」 |
+| `.meta` の要否判定の一本化 | `generate_meta.py` が `release_round.py` の `META_EXEMPT_PREFIXES` を読む形へ変更 |
+| 一覧を返す Query の順序 | `review.md` 「一覧を返す Query は順序を決めているか」 |
+| 内部だけの Round を先頭に置く | `remote.md` §6 「公開APIを変えない Round を先頭に置く」 |

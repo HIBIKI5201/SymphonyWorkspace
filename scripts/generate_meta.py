@@ -15,6 +15,10 @@
 3. **拡張子ごとの importer ブロックが違う。** `.cs` は MonoImporter、`.asset` は
    NativeFormatImporter、フォルダは `folderAsset: yes` を伴う DefaultImporter である。
 
+`.meta` を免除する領域は preflight 側の `META_EXEMPT_PREFIXES` を読んで決める。
+**要否の規則を2箇所に持たない。** 過去に `Samples~` を巡って両者がずれ、
+生成しても preflight が止まる状態になった。免除領域を増やすときは preflight だけを直す。
+
 使い方:
 
     python scripts/generate_meta.py --check     # 欠落を一覧するだけ。生成しない
@@ -45,12 +49,25 @@ DEFAULT_ROOT = "Assets/SymphonyFrameWork"
 EXCLUDED_DIR_NAMES = frozenset({"cvs"})
 EXCLUDED_SUFFIXES = (".tmp", ".meta")
 
-# `~` で終わるが、**中身は** `.meta` を必要とするディレクトリ。
-# **`Samples~` 自身は `.meta` を持たない**（`~` は Unity に取り込ませないための印である）が、
-# 中のファイルとフォルダは持つ。Package Manager がサンプル導入時に `.meta` ごとコピーし、
-# 利用側で GUID を引き継ぐためである。実際に既存のサンプルもその形になっている。
-# `release_round.py` の preflight も `Documentation~/` だけを免除しており、そこと揃える。
-META_REQUIRED_TILDE_DIRS = frozenset({"Samples~"})
+
+
+def load_meta_exempt_paths() -> frozenset[Path]:
+    """preflight が `.meta` を免除している領域を、preflight 自身から読み取る。
+
+    **要否の判定を2箇所に持たない。** 免除領域はリリース検査の仕様であり、
+    正本は `release_round.py` の `META_EXEMPT_PREFIXES` にある。ここで写しを持つと、
+    生成しても preflight が止まる（あるいはその逆の）状態が黙って生まれる。
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import release_round
+
+    return frozenset(
+        (release_round.SUBMODULE_ROOT / prefix.rstrip("/")).resolve()
+        for prefix in release_round.META_EXEMPT_PREFIXES
+    )
+
+
+META_EXEMPT_PATHS = load_meta_exempt_paths()
 
 # 拡張子ごとの importer ブロック。**末尾の空白は Unity の出力そのままで、消さない。**
 # 既存の `.meta` と diff を取ったときに、内容の違いではなく整形の違いで差分が出るのを防ぐ。
@@ -168,26 +185,46 @@ def is_excluded(name: str) -> bool:
     return False
 
 
-def is_traversable(name: str) -> bool:
-    """中を走査してよい名前かを判定する。
+def is_meta_exempt(path: Path) -> bool:
+    """preflight が `.meta` を免除している領域かを判定する。"""
+    resolved = path.resolve()
+    return any(
+        resolved == exempt or exempt in resolved.parents for exempt in META_EXEMPT_PATHS
+    )
+
+
+def is_traversable(path: Path) -> bool:
+    """中を走査してよいディレクトリかを判定する。
 
     **除外されるディレクトリでも、中身が `.meta` を必要とする場合がある。**
-    `Samples~` は自身が `.meta` を持たない一方、中のファイルは持つ。
+    `~` で終わるディレクトリは自身が `.meta` を持たない一方、中のファイルとフォルダは持つ。
+    Package Manager がサンプル導入時に `.meta` ごとコピーし、利用側で GUID を引き継ぐためで、
+    preflight も `git ls-files -o` の結果をそのまま検査対象にしている。
     """
-    if name in META_REQUIRED_TILDE_DIRS:
+    if is_meta_exempt(path):
+        return False
+
+    if path.name.endswith("~"):
         return True
 
-    return not is_excluded(name)
+    return not is_excluded(path.name)
 
 
 def collect_import_targets(root: Path) -> list[Path]:
     """`root` 配下で `.meta` を持つべきパスを、ファイルとフォルダの両方について集める。"""
     targets: list[Path] = []
     for path in sorted(root.rglob("*")):
-        parts = path.relative_to(root).parts
+        relative_parts = path.relative_to(root).parts
+        ancestors = [
+            root.joinpath(*relative_parts[:depth]) for depth in range(1, len(relative_parts))
+        ]
 
         # 走査できない親を持つパスは、その中身ごと対象から外す。
-        if any(not is_traversable(name) for name in parts[:-1]):
+        if any(not is_traversable(ancestor) for ancestor in ancestors):
+            continue
+
+        # 自身が免除領域なら、中身ごと `.meta` は要らない。
+        if is_meta_exempt(path):
             continue
 
         # 自身が除外対象なら、走査は続けても `.meta` は要らない。
