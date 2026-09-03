@@ -68,6 +68,7 @@
 | --- | --- | --- |
 | `Assets/SymphonyFrameWork/` | **submodule**（成果物） | 変更時は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) に従う |
 | `Assets/Scripts/SymphonyFrameWork/` | **自動生成** | `SceneListEnum` / `TagsEnum` / `LayersEnum` / `AudioGroupTypeEnum` と `SymphonyFrameWork.Enum.asmdef`。`EnumGenerator` / `AutoEnumGenerator` が生成する。**手で編集しない** |
+| `Assets/Scripts/SymphonyFrameWork/PauseCategory/` | **自動生成** | ポーズカテゴリーの interface と `SymphonyFrameWork.PauseCategory.asmdef`。`PauseCategoryGenerator` が `Project Settings > SymphonyFrameWork > Pause Category` の設定から生成する。**手で編集しない。** 設定から消してもファイルは自動削除されない |
 | `Assets/Resources/SymphonyFrameWork/` | **自動生成** | `SceneLoadConfig` / `AudioConfig` / `SaveDataConfig`。`SymphonyConfigManager.AllConfigCheck()` が `[InitializeOnLoad]` で生成する。型は `internal` なのでコードから参照できず、Inspector と Project Settings 経由でのみ設定する |
 | `Assets/Scripts/DebugScripts/` | 手書きの検証用スクラッチ | ServiceLocator等の動作確認用。テストではない |
 | `Assets/Level/Scenes/` | 動作確認用シーン | `NewScene` / `Scene2` / `Scene3` の3つだけがBuild Settingsに登録済み。**この登録順が `SceneListEnum` に反映される** |
@@ -84,10 +85,13 @@
 
 ```text
 SymphonyFrameWork.Editor ──> SymphonyFrameWork ──> SymphonyFrameWork.Core
-（Editor専用）                     │
+（Editor専用）                     │        ▲
+                                   │        └── SymphonyFrameWork.PauseCategory（自動生成）
                                    ├──> SymphonyFrameWork.Enum（自動生成・Assets/Scripts 配下）
                                    └──> Unity.Addressables / Unity.ResourceManager
 ```
+
+- **`SymphonyFrameWork.PauseCategory` は参照の向きが逆です。** 生成物が `SymphonyFrameWork` を参照し、フレームワーク側はこれを参照しません。カテゴリーは `PauseManager.IPausable` を継承するため参照が要りますが、`SymphonyFrameWork.Enum` へ置くと循環するためです。`PauseManager.SetPause<TCategory>` はジェネリックで、フレームワークが具体的なカテゴリー型を名指しする必要が無いため片方向で成立します。
 
 - ホスト側 `Assets/Scripts/` に新しい asmdef を作る場合は、`SymphonyFrameWork` を参照に追加してください。自動生成enumを直接使うなら `SymphonyFrameWork.Enum` も追加します。
 - **`SymphonyFrameWork.asmdef` の `SymphonyFrameWork.Enum` への参照は、`PackageInitializer` がEditor起動時に自動で注入します**（`AssemblyGenerator.AddAsssemblyReference`）。submodule に asmdef の差分が出ても手で戻さないでください。
