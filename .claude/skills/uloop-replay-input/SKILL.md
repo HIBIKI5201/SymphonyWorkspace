@@ -1,5 +1,6 @@
 ---
 name: uloop-replay-input
+toolName: replay-input
 description: "Replay recorded PlayMode keyboard and mouse input. Use for exact gameplay reproduction, E2E runs, or consistent demos from JSON recordings."
 ---
 

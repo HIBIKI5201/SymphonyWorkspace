@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -39,16 +40,22 @@ from pathlib import Path
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
-def resolve_npx() -> str:
-    """npx の実体を解決する。
+def resolve_uloop() -> str:
+    """uloop の実体を解決する。
 
-    **Windows の `npx` は `.cmd` シムで、`subprocess` は PATH 上の拡張子を補わない。**
-    `shutil.which` に解決させ、見つからない場合だけ素の名前へ落とす。
+    **V3 から npm 配布ではなくなり、インストーラが置く実行ファイルを直接叩く。**
+    PATH へ通るのは新しいターミナルからなので、`shutil.which` が空振りする間は
+    インストール先の既定パスへ落とす。
     """
-    return shutil.which("npx") or "npx"
+    found = shutil.which("uloop")
+    if found:
+        return found
+
+    default = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "uloop" / "bin" / "uloop.exe"
+    return str(default) if default.exists() else "uloop"
 
 
-ULOOP = [resolve_npx(), "--yes", "uloop-cli@2.2.0"]
+ULOOP = [resolve_uloop()]
 
 # Domain Reload の待ち。1回あたりの間隔と、諦めるまでの回数。
 RELOAD_WAIT_SECONDS = 10
@@ -114,14 +121,14 @@ def compile_project() -> dict:
     """コンパイルし、確定後の集計だけを採用する。
 
     force-recompile の直後は確定前の値が返るため、**必ずもう一度問い合わせる。**
-    2回目は再コンパイルを起こさない（`--force-recompile false`）。
+    2回目は再コンパイルを起こさない（V3の`--force-recompile`は既定無効のため付けない）。
 
     大量のアセットを動かした直後などは、要求時点で既にコンパイルが走っていることがある。
     そのときの応答はコードのエラーではないため、収まるまで待って取り直す。
     """
     for _ in range(RELOAD_MAX_RETRIES):
-        run_uloop("compile", "--force-recompile", "true")
-        settled = run_uloop("compile", "--force-recompile", "false")
+        run_uloop("compile", "--force-recompile")
+        settled = run_uloop("compile")
 
         if not is_compile_busy(settled):
             return {

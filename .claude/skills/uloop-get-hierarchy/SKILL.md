@@ -1,5 +1,6 @@
 ---
 name: uloop-get-hierarchy
+toolName: get-hierarchy
 description: "Get the Unity scene hierarchy as a structured tree. Use for parent-child structure, descendants, roots, or subtrees under objects the user currently selected."
 ---
 

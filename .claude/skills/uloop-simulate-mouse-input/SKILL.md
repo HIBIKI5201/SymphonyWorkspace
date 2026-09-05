@@ -1,6 +1,7 @@
 ---
 name: uloop-simulate-mouse-input
-description: "Simulate Mouse.current input in PlayMode through Unity Input System. Use for gameplay clicks, mouse delta, or scroll; use simulate-mouse-ui for EventSystem UI elements."
+toolName: simulate-mouse-input
+description: "Simulate Mouse.current input in PlayMode through Unity Input System. Use for gameplay mouse clicks, long-press (LongPress), movement delta (MoveDelta/SmoothDelta), or scroll. Use --dry-run to check what a Game View coordinate hits in 3D physics before clicking (works in EditMode; no Input System required). Use simulate-mouse-ui for UI. Requires the Input System package and Active Input Handling set to 'Input System Package (New)' or 'Both' (except --dry-run)."
 context: fork
 ---
 

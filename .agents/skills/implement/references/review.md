@@ -41,7 +41,7 @@
    対象をこの Round の差分に限っているのは、パッケージ内に BOM 無しの既存ファイルが残っているためである（全体の一括修正は独立した Round で扱う）。毎回同じ既存違反を報告する検索は読まれなくなる。
 3. **コンパイル** — `uloop-clear-console` → `uloop-compile` → `uloop-get-logs`。エラー0件、意図しない警告なし。
 
-   **`uloop-compile` が `is compiling` や `Domain Reload in progress` を返し続ける場合、`--force-recompile true` で再試行しない。** 再試行のたびに新しい Domain Reload を起こすため、次のポーリングが必ず「reloading」を見る。**自分で終わらない状態を作っていることに気づけない。** `Temp/` の `compiling.lock`・`domainreload.lock`・`serverstarting.lock` を確認して `uloop fix` を実行し、そのうえで **`uloop-get-logs` のコンソール内容を真実として読む。**
+   **`uloop-compile` が `is compiling` や `Domain Reload in progress` を返し続ける場合、`--force-recompile` で再試行しない。** 再試行のたびに新しい Domain Reload を起こすため、次のポーリングが必ず「reloading」を見る。**自分で終わらない状態を作っていることに気づけない。** `Temp/` の `compiling.lock`・`domainreload.lock`・`serverstarting.lock` を確認して `uloop fix` を実行し、そのうえで **`uloop-get-logs` のコンソール内容を真実として読む。**
 
    実際に、`compiling.lock` が残っているだけでコンパイル自体は完了していたケースで、再試行ループを回してユーザーに指摘されるまで気づけなかった。**`uloop-compile` の応答はコンパイル結果そのものではなく、コンパイル結果を読める状態かどうかを示すに過ぎない。**
 
@@ -69,7 +69,7 @@ Editor の画面（Project Settings、EditorWindow、Inspector）を変更した
 **1. 開いてスクリーンショットを撮り、レイアウトを目で見る。**
 
 ```bash
-npx --yes uloop-cli@2.2.0 screenshot --window-name "Project Settings" --match-mode exact --project-path <ワークスペースルート>
+uloop screenshot --window-name "Project Settings" --match-mode exact --project-path <ワークスペースルート>
 ```
 
 Project Settings は `SettingsService.OpenProjectSettings("Project/<設定パス>")`、EditorWindow は `EditorWindow.GetWindow<T>()` を `uloop execute-dynamic-code` で呼んで開く。撮った PNG はそのまま読める。

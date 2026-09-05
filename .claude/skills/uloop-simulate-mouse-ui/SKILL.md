@@ -1,6 +1,7 @@
 ---
 name: uloop-simulate-mouse-ui
-description: "Simulate PlayMode EventSystem UI mouse actions using top-left Game View coordinates. Use for UI clicks, long-presses, or drags from annotated screenshots."
+toolName: simulate-mouse-ui
+description: "Simulate PlayMode EventSystem UI mouse actions using screen coordinates. Use for UI clicks, long-presses, or drags from annotated screenshots."
 context: fork
 ---
 

@@ -536,15 +536,15 @@
       "url": "https://packages.unity.com"
     },
     "io.github.hatayama.uloopmcp": {
-      "version": "https://github.com/hatayama/unity-cli-loop.git?path=/Packages/src",
+      "version": "https://github.com/hatayama/unity-cli-loop.git?path=/Packages/src#v3.3.0",
       "depth": 0,
       "source": "git",
       "dependencies": {
-        "com.unity.modules.physics": "1.0.0",
         "com.unity.ugui": "1.0.0",
-        "com.unity.nuget.newtonsoft-json": "3.2.1"
+        "com.unity.nuget.newtonsoft-json": "3.2.1",
+        "com.unity.nuget.mono-cecil": "1.11.6"
       },
-      "hash": "c8015140d3509e1291259ea791cab20c98f243fd"
+      "hash": "a0620640f4521cb72c82137af07da8bacd8fd818"
     },
     "jp.hadashikick.vcontainer": {
       "version": "https://github.com/hadashiA/VContainer.git?path=VContainer/Assets/VContainer#1.18.0",
