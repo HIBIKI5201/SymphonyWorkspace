@@ -114,3 +114,47 @@ Unity Editor上で以下を確認する（自動検証の対象外、人によ�
 
 - `package.json` の `version`: パッチを1つ上げる
 - `CHANGELOG.md`: `### Fix` 見出しへ本件を追記
+
+## 実施レポート
+
+実施日: 2026-09-06 / バージョン: 6.14.3 / PR: [#218](https://github.com/HIBIKI5201/SymphonyFramework/pull/218)
+
+### 実装した内容
+
+設計どおり4ファイルを変更した。
+
+- `SelectorFilterUtility.cs`: `ResolveDisplayIndex(string[] candidates, string currentValue)` を追加（純粋関数）
+- `SceneNameSelectorDrawer.cs` / `TagSelectorDrawer.cs`: `Array.IndexOf` による直接補正を `ResolveDisplayIndex` 呼び出しへ置き換え、`EditorGUI.BeginChangeCheck()` / `EndChangeCheck()` でPopupを囲み、`EndChangeCheck()` が `true` の場合だけ `property.stringValue` を書き換えるよう変更した。未使用になった `using System;` も削除されている
+- `SelectorFilterUtilityTests.cs`: `ResolveDisplayIndex` のテスト3件（候補内・候補外・空配列）を追加
+
+実装はCodex CLIワーカー（`scripts/codex_runner.py`）へ委譲し、差分は自分で全件読んでレビューした。設計書からの逸脱、余分なファイル変更、`.meta` の新規追加はいずれも無かった。
+
+### 設計から変えた点
+
+無し。「候補外として判別できる表示」を見送る判断も含め、設計書どおりに実装された。
+
+### 検証結果
+
+`python scripts/verify_round.py --json` を自分で実行した実測値:
+
+- compile: 0 errors / 0 warnings
+- EditMode: 726 / 726 成功
+- PlayMode: 21 / 21 成功（2往復とも）
+- Enter Play Mode Options: Domain Reload / Scene Reload とも無効を維持（`verify_round.py` が実行後に復元）
+
+`python scripts/release_round.py preflight` は全項目OK（`docs`同期を含む）。
+
+### 未実施の確認
+
+「動作確認手順」1〜6はいずれもUnity Editorでの人による目視確認が必要で、今回のセッションでは実施していない。特に次の2点は自動テストではカバーしていない。
+
+- Inspectorを開いただけ（Popupを操作しない）で `property.stringValue` が変化しないこと
+- 候補外状態から別候補を明示的に選択すると保存値が更新されること
+
+`EditorGUI.BeginChangeCheck` / `EndChangeCheck` はUnity標準APIの既知の挙動として上記を満たす設計だが、実機での確認は次回に持ち越す。
+
+### 振り返り
+
+- Codexワーカーは設計書の指示どおりに実装し、差し戻しは無かった
+- ワーカーの実行環境（sandbox）はuLoopの名前付きパイプを拒否するため、Unity検証はワーカー側で完結せず、必ずステップ3を別途自分で実行する必要がある。これは既存の`worker.md`の注記どおりで、新たな仕組み化の提案は無し
+- 気づきは無し
