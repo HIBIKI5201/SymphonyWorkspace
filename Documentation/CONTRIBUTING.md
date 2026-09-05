@@ -50,7 +50,7 @@
 - **このリポジトリ単体ではコンパイルできません。** `dotnet build`、`msbuild`、`csc` は使わないでください。asmdefの参照解決はUnityが行うため、コンパイル可否の判断はUnity Editorに委ねます（→ §4）。
 - `Assets/SymphonyFrameWork/Cache/` はランタイム生成物（`SymphonyDebugLogger` のログ）です。`.gitignore` 済みで、編集も削除も自由ですが、コミットしません。
 - `.claude/` と `.agents/` はローカル専用領域です。**他の開発者やエージェントにも守らせたいルールは、必ずこのファイルなど追跡対象のドキュメントに書いてください。**
-- **ドキュメントの置き場所には基準があります。** 本体開発向けのドキュメント（このファイル、CodeGuidelines、DocumentationGuidelines、DesignPhilosophy）は**ワークスペース側の `Documentation/`** に置きます。パッケージ利用者向けの詳細文書は、Unity PackageのAsset Import対象外となる`Documentation~/`へ置きます。パッケージリポジトリのルートには、外部の規約で置き場所が決まっているものだけを置きます（`README.md`・`CHANGELOG.md`・`LICENSE.txt`はUPMの標準レイアウト、`AGENTS.md`はエージェントツールがルートから探索するため）。`AGENTS.md`は導線と常時ルールに限定し、API説明やコード例を複製しません。
+- **ドキュメントの置き場所には基準があります。** 本体開発向けのドキュメント（このファイル、CodeGuidelines、DocumentationGuidelines、DesignPhilosophy）は**ワークスペース側の `Documentation/`** に置きます。パッケージ利用者向けの詳細文書は、Unity PackageのAsset Import対象外となる`Documentation~/`へ置きます。パッケージリポジトリのルートには、外部の規約で置き場所が決まっているものだけを置きます（`README.md`・`CHANGELOG.md`・`LICENSE.md`・`Third Party Notices.md`はUPMの標準レイアウトで、UnityのPackage Validation Suiteがこの位置を検査します、`AGENTS.md`はエージェントツールがルートから探索するため）。`AGENTS.md`は導線と常時ルールに限定し、API説明やコード例を複製しません。
 
 ## 2. `.meta` ファイルの扱い（最優先事項）
 
