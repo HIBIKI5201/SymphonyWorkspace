@@ -158,3 +158,75 @@ CHANGELOGの見出しは `Add`（入口の文書）と `Change`（LICENSEのフ�
 - `Assets/SymphonyFrameWork/README.md` の `## ドキュメント` 節（LICENSEリンク、入口文書への導線）
 
 `AGENTS.md` のAPI早見表は**変更しない**。公開APIが変わらないため。
+
+---
+
+## 実施レポート
+
+実施日: 2026-09-05 / バージョン: 6.14.1（Fix）・6.14.2（Add・Change） / PR: [#216](https://github.com/HIBIKI5201/SymphonyFramework/pull/216)
+
+### 実装した内容
+
+| 設計 | 実現した場所 |
+| --- | --- |
+| 入口のMarkdownを置く | `Documentation~/index.md`。モジュール12件、全体5件、AIエージェント向け2件を表で並べた |
+| 索引の正本をMarkdownへ移す | `build_module_docs.py` の `render_index()` を削除し、`build()` から `rendered[INDEX_OUTPUT] = render_index(...)` の行を外した。`collect_documents()` は `Documentation~/*.md` を `Html/<stem>.html` へ写すため、**`index.md` は変更なしで `index.html` になる** |
+| `MODULE_ORDER` を検査へ転用 | `check_module_links()` を追加し、`check()` の先頭で呼ぶ。`preflight` の `[docs]` から届く |
+| `LICENSE.txt` → `LICENSE.md` | `git mv` を `.meta` にも行い、GUID `13026097c7a3f624fbb25f53037de6ba` を保持 |
+| `package.json` の説明文 | `description` を差し替え、`documentationUrl` を `unity` の直後へ追加 |
+| 参照の追随 | `README.md`（LICENSEリンク、索引への導線）、`Documentation/CONTRIBUTING.md` §2 |
+
+### 設計から変えた点
+
+**1. 検査の対象に `README.md` を足した。** 設計では `index.md` だけを見るつもりだったが、`README.md` も同じモジュール一覧を持っていることが着手後に分かった。**ただし README は機能紹介・文書一覧・モジュール一覧の3箇所から同じ文書へ張っており、出現順に意味が無い。** そのため README は件数（網羅）だけを見て、順序は `index.md` にだけ課している。
+
+**2. `.module-list` のCSSを削除した。** `render_index()` だけが出力していたクラスで、廃止と同時に死んだ。全20ページのインラインCSSに残り続けるため落とした。
+
+**3. Fix を独立した版へ切り出した。** 設計では 6.14.1 の1版で出すつもりだったが、着手後に**索引から Scene Block が抜けている**ことが判明した。`preflight` は `Fix` を他の見出しと同居させないため、6.14.1（Fix）と 6.14.2（Add・Change）の2版へ分けた。
+
+### 検証結果
+
+Unity Editor の無い環境で作業したため、コンパイルとテストは実行していない。
+
+| 検査 | 実測値 |
+| --- | --- |
+| `build_module_docs.py --check` | `OK: 20件の生成物が正本と同期しています` |
+| `release_round.py preflight` | 全項目OK。`[changelog]` 255件、`[bom]` 1件、`[meta]` 0件、`[docs]` 同期、`[question]` 未回答なし |
+| `generate_meta.py --check` | `OK: .meta の欠落はありません（460件を走査）` |
+| `LICENSE.md` のGUID | リネーム前後で `13026097c7a3f624fbb25f53037de6ba` と一致 |
+| `package.json` | `json.load` で読めることを確認 |
+
+**追加した検査は4つの失敗状態で実測した。** 「たぶん落ちる」で済ませていない。
+
+| 状態 | 結果 |
+| --- | --- |
+| `index.md` から Pause Manager のリンクを消す | 期待と実際の一覧を並べて失敗 |
+| `index.md` の Debug と Utility を入れ替える | 同上 |
+| `README.md` から SceneBlock と Debug のリンクを落とす | `SceneBlock、Debug` を挙げて失敗 |
+| `MODULE_ORDER` に無い `ProbeModule.md` を置く | `MODULE_ORDER` への追加を促して失敗 |
+
+いずれも確認後に元へ戻し、`--check` が `OK` へ復帰することを確認した。
+
+### 実装中に見つけた欠陥
+
+**索引から Scene Block が抜けていた。** `MODULE_ORDER` は11件で、`Modules/` には12件ある。`render_index()` は `for stem in MODULE_ORDER if stem in by_stem` と書いており、**定数側に無いモジュールは黙って落ちる。** 文書は 6.6.0（2026-08-30）から存在していたが、索引からは辿れなかった。この Round で追加した検査が最初に捕まえた指摘である。
+
+### 未実施の確認
+
+Unity が要るもの。**依頼者の一括検証で確認する。**
+
+- `Window > SymphonyFrameWork > Documentation` が新しい `index.html` を開くこと
+- Package Manager での `description` の表示と、`Documentation` リンクの遷移先
+- `LICENSE.md` が再インポートされ、GUIDが保たれること（`.meta` を書き換えていないため変わらないはずだが、Unityを通していない）
+- **`documentationUrl`（`https://hibiki5201.github.io/SymphonyFramework/`）が実際に開けること。** 作業コンテナからは `hibiki5201.github.io` への接続がプロキシに拒否されるため、こちらでは確認できない。Pagesの配信ワークフローが2026-08-19に1回成功していることまでは確認した
+- GitHub Pages のトップページが新しい `index.html` に入れ替わること。**配信は `main` への push でのみ走る**ため、`develop` から `main` へマージするまで反映されない
+
+### 振り返り
+
+| 気づき | 扱い |
+| --- | --- |
+| **「一覧を生成する定数」と「一覧の実体」がずれても、生成物は静かに出来上がる。** `for x in ORDER if x in available` の形は、欠落を落とすのではなく無かったことにする | この Round で検査を追加して解消した。**同じ形が他にもないかは見ていない。** `Documentation/CodeGuidelines.md` へ「定数の一覧で絞り込むとき、絞り落とした要素を報告するか」を足す候補 |
+| Issueの前提が外部規約と食い違っていた。**規約の実装（Package Validation Suite）を読むまでは、どちらが正しいか決められなかった** | `design-doc.md` の「アクセス手段の成立を検証する」は自リポジトリのコードを想定している。**外部規約が絡む場合は「規約の実装か、公式が出している実物を確認する」**を足す候補 |
+| リモートで `gh` が無いため `commit --pr` と `finalize` が毎回落ちる。今回もPR作成で例外停止した | 既知（`remote.md` §5に記載済み）。**ただし `release_round.py` 側が `gh` の不在を検知して案内する形にできる。** 例外のスタックトレースを読ませる必要はない |
+
+**提案にとどめる。** スキルとドキュメントへの反映は、承認をもらってから行う。
