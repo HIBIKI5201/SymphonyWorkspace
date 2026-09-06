@@ -297,6 +297,57 @@ private static async Task<bool> WaitShared(Task<bool> inFlight, CancellationToke
 
 **`LoadBlock_SameAssetTwice_ReturnsTrueWithoutReload`と`LoadBlock_SceneLoadFails_ReturnsFalseAndKeepsHeldScenes`（既存）はそのまま通ることを確認する。** 前者は`Complete`状態の即成功パス、後者は「ロード失敗後に`UnloadBlock`で片付ける」という既存契約で、どちらも変えていない。
 
+## 実施レポート
+
+実施日: 2026-09-06 / バージョン: 6.14.4 / PR: [#219](https://github.com/HIBIKI5201/SymphonyFramework/pull/219)
+
+### 実装した内容
+
+設計どおり`SceneBlockService.cs`を変更した。`LoadBlock`/`UnloadBlock`は「今まさに逆方向が実行中か」（`_pendingLoads`/`_pendingUnloads`辞書の有無）で拒否・共有を判定し、同方向の実行中は`WaitShared`で`Task`を共有、完了済みでなければ`RunLoad`/`RunUnload`が同じEntityで（未完了分だけ）再試行する。`ExecuteUnload`は`_loader.UnloadScenesAsync`を`try/finally`で囲み、`finally`で`RestoreHolderForStillLoadedScenes`を呼んで、まだロードされたままのシーンへ保持を戻す。`_registry.Remove`は`isAllUnloaded`が`true`のときだけ呼ぶ。
+
+`SceneBlockLoader.cs`のXMLドキュメント（`LoadAsync`/`UnloadAsync`の`<exception cref="InvalidOperationException">`）と、`Documentation~/Modules/SceneBlock.md`の該当箇所（実装時の注意）を新しい契約に合わせて更新した。`Tests/Editor/SceneBlockServiceTests.cs`へ設計書記載の11テストケースをすべて追加し、`FakeBlockSceneLoader`へ`HoldLoadOn`/`HoldUnloadOn`/`UnloadFailOnScene`を追加した。
+
+実装はCodex CLIワーカーへ委譲した。差分は自分で全件読んでレビューし、11テストすべてを手でトレースして期待どおりの経路をたどることを確認した。
+
+### 設計から変えた点
+
+**実装前の照合（ステップ1→2の間）で、ワーカーが2回、設計の見落としを指摘して実装を中断した。** いずれもファイルを変更せず報告のみで止まり、設計書を訂正してから再開している。
+
+1. 逆方向の拒否を`entity.State`で判定すると、失敗して停止したLoad/Unloadの後始末を、逆方向のAPI（既存契約が想定する「Load失敗後は`UnloadAsync`で片付ける」、および今回追加する「Unload失敗後は`LoadAsync`で再開できる」）まで塞いでしまうと判明。判定を`_pendingLoads`/`_pendingUnloads`（実際に実行中のTaskがあるか）へ変更した。
+2. 上記の訂正を反映する過程で、`UnloadBlock`が実処理の前に保持（Holder）を解放していることが原因の別の破損を発見。Unloadが失敗・キャンセルすると保持者が消えたまま残り、Load側で再開すると「ブロック外でロードされたシーン」と誤認して`MarkExternallyHeld`し、以後そのシーンが二度とアンロードできなくなる。`RestoreHolderForStillLoadedScenes`（実際にまだロードされているシーンだけへ保持を戻す）を`finally`で呼ぶよう設計へ追加した。
+
+いずれも設計書自身（このファイル）を先に訂正し、訂正済みの設計へ従って実装を再開している。**設計書の「### 1. Load」「### 2. Unload」節の疑似コードとテスト一覧は、この訂正を反映した最終版である。**
+
+このほか、実装完了後のレビューで見つけた差分（設計書には無かった）:
+
+- `LoadBlock_WhileLoading_SecondCallerCancelToken_ThrowsOperationCanceled_FirstContinues`（ワーカー実装）が`Assert.ThrowsAsync<OperationCanceledException>`を使っていたが、実際にawaitで投げられるのは`TaskCanceledException`（`OperationCanceledException`のサブクラス）で、NUnitの`Assert.ThrowsAsync<T>`は完全一致のみを許容するため失敗した。既存テスト（`LoadBlock_Canceled_DoesNotUnloadLoadedScenes`）と同じ`Throws.InstanceOf<T>()`パターンへ書き換えて解消した。テスト側のみの不具合で、実装（`SceneBlockService`）は正しく動作している。
+
+### 検証結果
+
+`python scripts/verify_round.py --json` を自分で実行した実測値（テスト修正後の最終実行）:
+
+- compile: 0 errors / 0 warnings
+- EditMode: 737 / 737 成功
+- PlayMode: 21 / 21 成功（2往復とも）
+- Enter Play Mode Options: Domain Reload / Scene Reload とも無効を維持（`verify_round.py`が実行後に復元）
+
+`python scripts/release_round.py preflight`は全項目OK（`docs`同期を含む）。
+
+**検証中に本Roundと無関係な問題へ2件対応した。** (1) `Assets/Samples/Symphony Framework/`配下に、バージョン違いの重複サンプル（`6.14.2`と`6.14.3`、内容は同一）がUnity Package Managerの自動再インポートにより存在し、`CS0111`（メンバー重複定義）でプロジェクト全体のコンパイルを止めていたため、古い`6.14.2`（未追跡ファイル）を削除した。この副作用でUnity Editorが削除済みシーンへの参照を持ったままになり一時的にコンパイルが止まったが、Editor側の状態を確認・解消させて復旧した。(2) 上記1件は本Roundの変更（`Assets/SymphonyFrameWork/`配下）とは無関係で、コミットにも含めていない。
+
+### 未実施の確認
+
+「動作確認手順」1〜3はUnity Editorでの人による目視確認が必要で、今回のセッションでは実施していない。
+
+- Play Modeで同じブロックへの二重ロード要求が例外なく両方完了すること
+- Symphony Administrator の Scene Block パネルで、状態表示がロード中に二重に増えないこと
+- 既存のScene Block Sampleで通常のロード→アンロードが従来どおり動作すること（回帰確認）
+
+### 振り返り
+
+- **実装前の設計照合が2回とも実際にバグを防いだ。** どちらも「机上では正しく見えるが、実際のコード・既存テスト・既存契約と突き合わせると破綻する」種類の見落としで、`design-doc.md`が求める「書いた時点でコードを見て確かめる」を、ワーカー側の実装前照合が担保した形になった。次回以降も、非同期の状態遷移や「実行中/停止中」のような時間軸を持つ設計では、擬似コードの条件分岐を書いた時点で「この分岐は本当に意図した状態だけを捉えているか」を、既存テストの前提（今回なら「失敗後はUnloadで片付ける」という既存契約）と突き合わせる一手間を設計書のテンプレートへ明示的に加える価値があるかもしれない。ただし今回は`implement`スキルの既存手順（前提が崩れたら中断して報告）がそのまま機能したため、仕組みの変更は提案しない
+- テストの厳密型一致（`Assert.ThrowsAsync<T>`）は今回1回だけの見落としであり、傾向として繰り返してはいないため、仕組み化の提案はしない
+
 ## 動作確認手順
 
 Unity Editor上で以下を確認する（自動検証の対象外、人による確認）。
