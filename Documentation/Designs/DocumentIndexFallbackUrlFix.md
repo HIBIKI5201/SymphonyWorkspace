@@ -61,3 +61,35 @@ internal static string ResolveFallbackUrl(SymphonyDocumentPageEnum page)
 
 - `package.json` の `version`: パッチを1つ上げる
 - `CHANGELOG.md`: `### Fix` 見出しへ本件を追記
+
+## 実施レポート
+
+実施日: 2026-09-06 / バージョン: 6.14.5 / PR: [#220](https://github.com/HIBIKI5201/SymphonyFramework/pull/220)
+
+### 実装した内容
+
+設計どおり、`SymphonyDocumentPathResolver.ResolveFallbackUrl`の`Index`専用の特別扱い（5行）を削除した。`DOCUMENT_NAMES`辞書に既に`Index => "index"`が登録済みだったため、既存の汎用ロジックがそのまま`{REPOSITORY_URL}/blob/main/Documentation~/index.md`を返すようになった。`Tests/Editor/SymphonyDocumentPathResolverTests.cs`の`ResolveFallbackUrl_IndexPage_PointsToModulesDirectory`を`ResolveFallbackUrl_IndexPage_PointsToIndexMarkdownOnMain`へ改名し、新しい期待値へ書き換えた。
+
+実装はCodex CLIワーカーへ委譲した。差分は自分で確認し、設計書どおり2ファイルのみの変更であることを確認した。
+
+### 設計から変えた点
+
+無し。設計書どおりに実装された。
+
+### 検証結果
+
+`python scripts/verify_round.py --json` を自分で実行した実測値:
+
+- compile: 0 errors / 0 warnings
+- EditMode: 737 / 737 成功
+- PlayMode: 21 / 21 成功（2往復とも）
+
+`python scripts/release_round.py preflight`は全項目OK（`docs`同期を含む）。
+
+### 未実施の確認
+
+無し。Unity APIへ触れない純粋ロジックの変更で、自動テストのみで完結する。
+
+### 振り返り
+
+気づきは無し。
