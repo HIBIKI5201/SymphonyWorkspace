@@ -135,5 +135,5 @@ Domain Reload が無効なため、**Play Modeの開始・終了を2回繰り返
 - `Assets/SymphonyFrameWork.meta` を削除する。
 - submodule の変更を push せずに、親リポジトリの gitlink だけを更新する。
 - パッケージのファイルを親リポジトリ側で直接追跡・コミットする。
-- `dotnet build` / `msbuild` / `csc` を使う。コンパイル可否の判断は Unity（uLoop）に委ねます。
+- `dotnet build` / `msbuild` / `csc` を使う。コンパイル可否の判断は Unity（uLoop）に委ねます。**例外: `Source~/` のような、末尾が `~` でUnityのインポート対象外のフォルダに置かれた、Unity外で独立にビルドする配布物（Roslyn Source Generator DLLなど）に限り、その配布物自体のビルドはこの禁止事項の対象外とします。** Unityが管理するコード（`Assets/`配下のRuntime/Editorスクリプト）のコンパイル可否判定を代替する目的では使いません。ビルド成果物（DLL）を成果物としてリポジトリへ含める場合も、生成元のソースをUnityのコンパイル対象へ含めないでください。
 - ルートの `*.csproj` / `*.sln` / `Library/` / `Temp/` / `Build/` をコミットする。

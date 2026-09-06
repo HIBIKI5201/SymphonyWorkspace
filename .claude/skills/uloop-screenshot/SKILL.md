@@ -1,5 +1,6 @@
 ---
 name: uloop-screenshot
+toolName: screenshot
 description: "Capture Unity Editor windows or Game View rendering as PNG. Use for visual checks, debugging, documentation, or annotated UI element coordinates."
 ---
 
