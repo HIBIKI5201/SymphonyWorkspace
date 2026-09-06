@@ -96,6 +96,11 @@ SUMMARY_PLACEHOLDER = "<!-- 要約を書く -->"
 # 設計書の置き場と、実装フローのステップ7が追記する見出し。
 DESIGN_DOC_PREFIX = "Documentation/Designs/"
 DESIGN_REPORT_HEADING = "## 実施レポート"
+
+# 設計書へ残す「Issueへ質問したが、まだ決定を追記していない」印。
+# **質問をIssueへ投げたまま回答を書き戻さないと、Issueには疑問だけが残り続ける。**
+# 消してよいのはIssueへ決定を追記した後だけである（→ implementスキルのissue-dialogue.md）。
+DESIGN_OPEN_QUESTION_MARKER = "<!-- 未回答 -->"
 COMMENT_LINE_PATTERN = re.compile(r"^\s*(//|/\*|\*)")
 
 BOM = b"\xef\xbb\xbf"
@@ -267,6 +272,7 @@ def run_preflight(no_tests_reason: str | None = None) -> bool:
     failures.extend(check_test_assembly_constraints())
     failures.extend(check_enter_play_mode_options())
     failures.extend(check_docs_html_sync())
+    print_open_question_note(design_docs_with_open_questions())
 
     print("")
     if failures:
@@ -925,6 +931,42 @@ def run_finalize(args: argparse.Namespace) -> int:
     print(f"[push] OK: origin/{branch}")
     print_design_report_note(missing_reports)
     return 0
+
+
+def design_docs_with_open_questions() -> list[str]:
+    """Issueへ質問したまま決定を書き戻していない設計書を返す。
+
+    **`Documentation/Designs/` を全部見る。** この Round で触った設計書だけに絞ると、
+    別の設計書へぶら下がったままの質問を見落とす。質問はどの Round の間も未解決であり続ける。
+    """
+    designs_root = WORKSPACE_ROOT / DESIGN_DOC_PREFIX
+    if not designs_root.is_dir():
+        return []
+
+    pending: list[str] = []
+    for path in sorted(designs_root.glob("*.md")):
+        if DESIGN_OPEN_QUESTION_MARKER in path.read_text(encoding="utf-8-sig"):
+            pending.append(path.relative_to(WORKSPACE_ROOT).as_posix())
+
+    return pending
+
+
+def print_open_question_note(pending: list[str]) -> None:
+    """未回答の質問の残り具合を、次の手順とともに表示する。
+
+    **止めない。** 別の機能の設計書へ質問がぶら下がっていても、無関係な Round の
+    リリースを妨げる理由が無い。見落とさないために名指しするだけにとどめる。
+    """
+    if not pending:
+        print("[question] OK: 未回答の質問はありません")
+        return
+
+    print(
+        f"\n[question] 未回答: 次の設計書に `{DESIGN_OPEN_QUESTION_MARKER}` が残っています。"
+        "\n  " + "\n  ".join(pending)
+        + "\n  **Issueへ決定を追記してから印を消してください。**"
+        "\n  消し忘れると、Issueには疑問だけが残り、後から読む人が結論を追えません。"
+    )
 
 
 def design_docs_without_report(paths: list[str]) -> list[str]:

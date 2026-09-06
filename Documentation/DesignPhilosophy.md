@@ -544,6 +544,7 @@ Symphony Frameworkは他プロジェクトが依存するパッケージであ�
 - 公開エントリポイントの引数・戻り値として境界を越えるInfo、Value Object、Enum。
 - 回復方法の異なる失敗を通知する専用例外。
 - 利用側が自身のフィールドや型へ付けるInspector属性。
+- 利用側が作成し、フレームワークへ渡すAuthoring用`ScriptableObject`と、その`[Serializable]`な要素型。例: `SceneBlockAsset`、`SceneBlockEntry`。**動作調整値を保持するConfigとは区別します。** Configはフレームワークが所有して`internal`にしますが、Authoringアセットは利用側が`[CreateAssetMenu]`から作り、Inspectorで公開エントリポイントへ渡すため`public`にしなければ成立しません。値の書き込みはInspectorからだけにし、フィールドは`private` + `[SerializeField]`、外部へは読み取り専用プロパティだけを公開します。
 - サブシステムに依存しない汎用ユーティリティ。例: `SymphonyAwaitable`、`SymphonyStringUtil`。
 
 さらに、次の制約を適用します。

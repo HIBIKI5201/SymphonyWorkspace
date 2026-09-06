@@ -36,10 +36,13 @@ MERMAID_CLI_PACKAGE = "@mermaid-js/mermaid-cli@11"
 # そのため build() は「どの図が要るか」を集めるだけにし、実際の描画は write() で行う。
 REQUIRED_DIAGRAMS: dict[str, str] = {}
 
-# 各モジュール文書をindexへ並べる順。README・AGENTS.mdの導線と同じ順序にする。
+# 索引がモジュール文書を並べる順。README・AGENTS.mdの導線と同じ順序にする。
+# **索引そのものはMarkdownが正本であり、ここから生成しない。** この定数は
+# 「索引が全モジュール文書をこの順でリンクしているか」を検査するための期待値である。
 MODULE_ORDER = (
     "ServiceLocator",
     "SceneLoader",
+    "SceneBlock",
     "SaveDataSystem",
     "AudioManager",
     "PauseManager",
@@ -52,6 +55,9 @@ MODULE_ORDER = (
 )
 
 LINK_PATTERN = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+# モジュール文書へのリンクからファイル名だけを取り出す。`./Modules/X.md` と
+# `./Documentation~/Modules/X.md` の両方に当たる。
+MODULE_LINK_PATTERN = re.compile(r"\]\((?:[^)]*/)?Modules/([A-Za-z0-9_]+)\.md[^)]*\)")
 CODE_SPAN_PATTERN = re.compile(r"`([^`]+)`")
 BOLD_PATTERN = re.compile(r"\*\*(.+?)\*\*")
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
@@ -178,6 +184,18 @@ class DiagramError(DocumentError):
 
     `DocumentError`を継承するのは、呼び出し側（`release_round.py`）が
     ドキュメント生成の失敗を1か所で捕捉できるようにするため。
+    正本の行番号を持たないので、基底の初期化は通さない。
+    """
+
+    def __init__(self, message: str) -> None:
+        Exception.__init__(self, message)
+
+
+class IndexLinkError(DocumentError):
+    """索引がモジュール文書を漏れなく、決めた順でリンクしていない。
+
+    `DocumentError`を継承するのは、`DiagramError`と同じ理由である。呼び出し側
+    （`release_round.py`）がドキュメント生成の失敗を1か所で捕捉できるようにする。
     正本の行番号を持たないので、基底の初期化は通さない。
     """
 
@@ -627,41 +645,6 @@ def render_page(title: str, source_relative: str, navigation: str, body: str) ->
 """
 
 
-def render_index(documents: list[Document]) -> str:
-    by_stem = {document.source.stem: document for document in documents}
-
-    def item(document: Document, note: str = "") -> str:
-        href = os.path.relpath(document.output, HTML_ROOT).replace("\\", "/")
-        suffix = f" — {html.escape(note)}" if note else ""
-        return f'<li><a href="{href}">{html.escape(document.title)}</a>{suffix}</li>'
-
-    modules = "".join(
-        item(by_stem[stem]) for stem in MODULE_ORDER if stem in by_stem
-    )
-    guides = "".join(
-        item(by_stem[stem])
-        for stem in ("README", "EditorTools", "Architecture", "Deprecations", "AgentUsage", "AgentVerification", "CHANGELOG")
-        if stem in by_stem
-    )
-
-    body = (
-        "<h1>Symphony Framework Documentation</h1>"
-        "<p>モジュールごとの文書です。クイックスタート、実装時の注意、対応するEditor機能、"
-        "内部構造が1ファイルにまとまっています。</p>"
-        f'<h2 id="モジュール">モジュール</h2><ul class="module-list">{modules}</ul>'
-        f'<h2 id="全体">全体</h2><ul class="module-list">{guides}</ul>'
-        "<p>正本はMarkdownです。内容を直す場合は "
-        "<code>Assets/SymphonyFrameWork/Documentation~/</code> のMarkdownを編集し、"
-        "<code>python scripts/build_module_docs.py</code> で再生成してください。</p>"
-    )
-    return render_page(
-        title="Symphony Framework Documentation",
-        source_relative="Assets/SymphonyFrameWork/Documentation~/Modules/",
-        navigation="",
-        body=body,
-    )
-
-
 def build() -> dict[Path, str]:
     REQUIRED_DIAGRAMS.clear()
     documents = collect_documents()
@@ -674,39 +657,13 @@ def build() -> dict[Path, str]:
     for document in documents:
         rendered[document.output] = Renderer(document, registry).render_document()
 
-    # index.md がある場合、それは上の変換で既にINDEX_OUTPUTへ入っている。
-    # **組み立てで上書きすると正本の編集が消える。** 実際に、index.md 追加後も
-    # ここで無条件に上書きしていたため、再生成のたびに索引が旧レイアウトへ戻っていた。
-    if not INDEX_SOURCE.exists():
-        rendered[INDEX_OUTPUT.resolve()] = render_index(documents)
+    # **索引の欠落はここで止める。** 生成自体はリンクが漏れていても成功するため、
+    # 検査を後段へ回すと「作ったのに読まれない文書」が黙って増える。
+    problems = check_module_links()
+    if problems:
+        raise IndexLinkError("\n".join(problems))
 
-    verify_index_covers_modules(documents, rendered)
     return rendered
-
-
-def verify_index_covers_modules(documents: list[Document], rendered: dict[Path, str]) -> None:
-    """索引が全モジュール文書へリンクしているかを検証する。
-
-    索引を正本のMarkdownで書くと、モジュールを増やしたときにリンクの追加が漏れる。
-    **漏れても生成は成功するため、気づく手段がここ以外に無い。**
-    """
-    index_html = rendered.get(INDEX_OUTPUT.resolve())
-    if index_html is None:
-        return
-
-    missing = [
-        os.path.relpath(document.output, HTML_ROOT).replace("\\", "/")
-        for document in documents
-        if document.output.parent.name == "Modules"
-        and f'href="{os.path.relpath(document.output, HTML_ROOT)}"'.replace("\\", "/") not in index_html
-    ]
-
-    if missing:
-        raise DocumentError(
-            "索引がモジュール文書へリンクしていません: "
-            + ", ".join(missing)
-            + f"。{INDEX_SOURCE.relative_to(WORKSPACE_ROOT).as_posix()} へ追加してください。"
-        )
 
 
 def write(rendered: dict[Path, str]) -> int:
@@ -831,6 +788,72 @@ def apply_intrinsic_size(path: Path) -> None:
     )
 
 
+def check_module_links() -> list[str]:
+    """索引がモジュール文書を漏れなくリンクしているかを確認する。
+
+    **`Modules/` へ文書を足しても、索引へ書き忘れれば誰も辿り着けない。**
+    生成HTMLはファイル単位で作るためリンクが無くてもページ自体は出来てしまい、
+    「作ったのに読まれない文書」が黙って増える。実際に Scene Block の文書が
+    索引から抜けたまま残っていた（この検査を足した Round で判明した）。
+
+    `index.md` は順序まで見る。**`MODULE_ORDER` の順序は README と AGENTS.md の
+    導線に合わせたものであり、崩れても目視では気づけない。** そのため
+    `index.md` ではモジュール文書へのリンクを一覧の中だけに置く。本文から張ると
+    出現順が変わり、この検査に引っかかる。
+
+    `README.md` は件数だけを見る。機能紹介・文書一覧・モジュール一覧の3箇所から
+    同じ文書へ張っており、出現順に意味が無いためである。
+    """
+    problems: list[str] = []
+    expected = list(MODULE_ORDER)
+    available = sorted(path.stem for path in MODULES_ROOT.glob("*.md"))
+
+    unordered = [stem for stem in available if stem not in expected]
+    if unordered:
+        problems.append(
+            "MODULE_ORDERに無いモジュール文書があります: "
+            + "、".join(unordered)
+            + "。scripts/build_module_docs.py のMODULE_ORDERへ並び順を足してください。"
+        )
+
+    missing_source = [stem for stem in expected if stem not in available]
+    if missing_source:
+        problems.append(
+            "MODULE_ORDERにあるモジュール文書が存在しません: " + "、".join(missing_source)
+        )
+
+    if unordered or missing_source:
+        return problems
+
+    index_path = INDEX_SOURCE
+    index_relative = index_path.relative_to(WORKSPACE_ROOT).as_posix()
+    if not index_path.exists():
+        problems.append(f"索引がありません: {index_relative}")
+    else:
+        linked = list(dict.fromkeys(
+            MODULE_LINK_PATTERN.findall(index_path.read_text(encoding="utf-8"))
+        ))
+        if linked != expected:
+            problems.append(
+                f"{index_relative} のモジュール一覧がMODULE_ORDERと一致しません。"
+                f"\n    期待: {'、'.join(expected)}"
+                f"\n    実際: {'、'.join(linked) or '（リンクなし）'}"
+            )
+
+    readme_path = PACKAGE_ROOT / "README.md"
+    readme_linked = set(
+        MODULE_LINK_PATTERN.findall(readme_path.read_text(encoding="utf-8"))
+    )
+    readme_missing = [stem for stem in expected if stem not in readme_linked]
+    if readme_missing:
+        problems.append(
+            f"{readme_path.relative_to(WORKSPACE_ROOT).as_posix()} から"
+            "リンクされていないモジュール文書があります: " + "、".join(readme_missing)
+        )
+
+    return problems
+
+
 def check() -> list[str]:
     """生成物が正本と一致しているかを検証し、問題を文字列で返す。"""
     rendered = build()
@@ -866,7 +889,11 @@ def run_check() -> int:
         print("ドキュメントHTMLが正本と同期していません:", file=sys.stderr)
         for problem in problems:
             print(f"- {problem}", file=sys.stderr)
-        print("python scripts/build_module_docs.py を実行してください。", file=sys.stderr)
+        print(
+            "生成物の不一致は python scripts/build_module_docs.py で解消します。"
+            "索引のリンクと並び順の指摘は、Markdown側を直してください。",
+            file=sys.stderr,
+        )
         return 1
 
     print(f"OK: {len(build())}件の生成物が正本と同期しています")

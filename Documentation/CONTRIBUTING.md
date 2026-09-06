@@ -50,7 +50,7 @@
 - **このリポジトリ単体ではコンパイルできません。** `dotnet build`、`msbuild`、`csc` は使わないでください。asmdefの参照解決はUnityが行うため、コンパイル可否の判断はUnity Editorに委ねます（→ §4）。
 - `Assets/SymphonyFrameWork/Cache/` はランタイム生成物（`SymphonyDebugLogger` のログ）です。`.gitignore` 済みで、編集も削除も自由ですが、コミットしません。
 - `.claude/` と `.agents/` はローカル専用領域です。**他の開発者やエージェントにも守らせたいルールは、必ずこのファイルなど追跡対象のドキュメントに書いてください。**
-- **ドキュメントの置き場所には基準があります。** 本体開発向けのドキュメント（このファイル、CodeGuidelines、DocumentationGuidelines、DesignPhilosophy）は**ワークスペース側の `Documentation/`** に置きます。パッケージ利用者向けの詳細文書は、Unity PackageのAsset Import対象外となる`Documentation~/`へ置きます。パッケージリポジトリのルートには、外部の規約で置き場所が決まっているものだけを置きます（`README.md`・`CHANGELOG.md`・`LICENSE.txt`はUPMの標準レイアウト、`AGENTS.md`はエージェントツールがルートから探索するため）。`AGENTS.md`は導線と常時ルールに限定し、API説明やコード例を複製しません。
+- **ドキュメントの置き場所には基準があります。** 本体開発向けのドキュメント（このファイル、CodeGuidelines、DocumentationGuidelines、DesignPhilosophy）は**ワークスペース側の `Documentation/`** に置きます。パッケージ利用者向けの詳細文書は、Unity PackageのAsset Import対象外となる`Documentation~/`へ置きます。パッケージリポジトリのルートには、外部の規約で置き場所が決まっているものだけを置きます（`README.md`・`CHANGELOG.md`・`LICENSE.md`・`Third Party Notices.md`はUPMの標準レイアウトで、UnityのPackage Validation Suiteがこの位置を検査します、`AGENTS.md`はエージェントツールがルートから探索するため）。`AGENTS.md`は導線と常時ルールに限定し、API説明やコード例を複製しません。
 
 ## 2. `.meta` ファイルの扱い（最優先事項）
 
@@ -59,6 +59,23 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 例外は、`Assets/`の外にあるファイル（このワークスペースの`Documentation/`など）と、Unity PackageでAsset Import対象外となる`Documentation~/`です。それ以外の`Assets/`配下へ追加したファイルには、すべて`.meta`が必要です。
 
 - **`.meta` を手書きしない。** GUIDを自分で生成しないでください。新規ファイルを追加したら、Unity Editorに一度フォーカスを当てて生成させます。エージェントが新規ファイルを作った場合は、`.meta` が生成されたことを確認してからコミットしてください（→ §4）。
+- **Unity Editorが無い実行環境では、新規ファイルの `.meta` を `scripts/generate_meta.py` で生成してかまいません。** `release_round.py preflight` が `.meta` の欠落で必ず止まるため、この場合だけ例外を認めます。
+
+  ```bash
+  python scripts/generate_meta.py --check   # 欠落を一覧するだけ
+  python scripts/generate_meta.py           # 生成する
+  ```
+
+  **手で `.meta` を書かず、必ずこのスクリプトを使ってください。** 手書きでは次の3つが担保されません。
+
+  - **認めるのは新規ファイルに限る。** 既存アセットのGUIDは参照とシリアライズ済みデータが繋がっているため、決して作り直さない。スクリプトは履歴に `.meta` があるパスを拒否し、`git checkout` での復元を促します
+  - 生成後に全 `.meta` を走査し、**GUIDが重複していないことを確認する**
+  - 拡張子ごとの importer ブロック（`.cs` は `MonoImporter`、`.asset` は `NativeFormatImporter`、フォルダは `folderAsset: yes`）を使い分ける
+
+  そのうえで、次の2つは人が行います。
+
+  - **スクリプトで生成した事実を、PR説明とコミットの報告へ明記する**
+  - 後で Unity で開いたときに再生成や差分が出ないことを、依頼者の確認項目として提示する（→ §4「依頼者に確認してもらうこと」）
 - **既存の `.meta` の中身（特に `guid`）を編集しない。**
 - **移動・リネームは `.meta` と必ずセットで行う。** `git mv` を使い、`.cs` だけを動かして `.meta` を置き去りにしないこと。GUIDを維持すれば利用者側の参照は切れません（実例: CHANGELOG 2.2.1 の `Runtime/Obsolete/` への集約）。
 - **削除も対で行う。** 片方だけ残った `.meta` はUnityが警告を出します。
@@ -75,6 +92,12 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 ## 4. 検証の方法
 
 このワークスペースには **uLoopMCP**（`io.github.hatayama.uloopmcp`）が導入されており、`.agents/skills/` の `uloop-*` スキルから **Unity Editorのコンパイル・Play Mode・ログ取得をエージェント自身が実行できます**。パッケージ単体を別プロジェクトへ導入した場合はこの手段がないため、そちらの前提で書かれた手順とは異なります。
+
+### Unity Editor が無い実行環境
+
+**リモートコンテナ（Claude Code on the web など）には Unity Editor が無く、下記の検証手順が成立しません。** `python scripts/verify_round.py` が `exit 3` を返したらその環境です。**Unity をコンテナへ導入することはできません**（配布ホストへの接続がプロキシに拒否されます）。
+
+この場合も検証を飛ばさず、代替の機械検査（`release_round.py preflight`、`generate_meta.py --check`、`build_module_docs.py --check`、`audit_scan.py`、差分の通読）へ差し替えます。**実行できなかった項目は「未実施」として設計書の実施レポートへ残し、依頼者の一括検証へ引き渡します。** 手順は [.agents/skills/implement/references/remote.md](../.agents/skills/implement/references/remote.md) にあります。
 
 ### 標準の検証手順
 
@@ -127,7 +150,8 @@ uLoopで確認できない範囲は依頼者へ依頼します。変更を報告
 
 - 実機・スタンドアロンビルドでの動作
 - 表示や操作感など、ログでは判断できない品質
-- 新規ファイルの `.meta` が生成されたか（Unity Editorにフォーカスを当てる必要があります）
+- 新規ファイルの `.meta` が生成されたか（Unity Editorにフォーカスを当てる必要があります）。**`generate_meta.py` で生成した場合は、Unityが再生成や差分を出さないこと**
+- Unity Editor が無い環境で進めた変更の、コンパイル・EditMode/PlayModeテスト・Editor画面の目視（→ 上記「Unity Editor が無い実行環境」）
 
 ## 5. ブランチとコミット
 
@@ -228,7 +252,8 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 
 ### バージョンとCHANGELOG
 
-- `package.json` の `version`、CHANGELOG の見出し、**README の「現在のバージョン」** は同時に更新します。READMEはこの3か所目で、更新漏れが最も起きやすい箇所です。SemVerの判断基準は [DesignPhilosophy.md `### バージョニング`](./DesignPhilosophy.md) を参照してください（破壊的変更=メジャー / 後方互換な追加=マイナー / 実装のみの修正=パッチ）。
+- **版は4か所を同時に更新します。** `package.json` の `version`、`Assets/SymphonyFrameWork/Core/SymphonyConstant.cs` の `VERSION`、CHANGELOG の見出し、**README の「現在のバージョン」**。SemVerの判断基準は [DesignPhilosophy.md `### バージョニング`](./DesignPhilosophy.md) を参照してください（破壊的変更=メジャー / 後方互換な追加=マイナー / 実装のみの修正=パッチ）。
+- **`SymphonyConstant.VERSION` は設計書の「この Round で触るバージョン関連ファイル」から落ちやすい箇所です。** `release_round.py preflight` の `[version]` が `package.json` との一致を検査するため事故にはなりませんが、設計を書く時点で4か所すべてを列挙してください。READMEは4か所目で、こちらは検査が無いぶん漏れが残りやすい箇所です。
 - CHANGELOG の形式:
 
 ```markdown
