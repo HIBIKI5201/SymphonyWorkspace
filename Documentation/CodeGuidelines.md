@@ -59,6 +59,7 @@ SymphonyFrameWork
 │  ├─ Audio
 │  ├─ Pause
 │  ├─ SaveData
+│  ├─ SceneBlock
 │  ├─ SceneLoad
 │  └─ ServiceLocate
 └─ Utility

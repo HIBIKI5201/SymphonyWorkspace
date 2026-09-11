@@ -16,12 +16,12 @@ MonoBehaviour:
     m_Name: Toggle Debug HUD
     m_Type: 1
     m_ExpectedControlType: 
-    m_Id: 68414fc3-ee81-45cd-9d6b-a123162e633e
+    m_Id: c31800de-0b1c-4ef5-b639-4a36118a5109
     m_Processors: 
     m_Interactions: 
     m_SingletonActionBindings:
     - m_Name: ButtonWithTwoModifiers
-      m_Id: 9adf6c0e-2be2-4945-819f-460cd4597e70
+      m_Id: 2a71fd13-5a73-4bf9-90a0-7f1301415c9d
       m_Path: ButtonWithTwoModifiers
       m_Interactions: 
       m_Processors: 
@@ -29,7 +29,7 @@ MonoBehaviour:
       m_Action: Toggle Debug HUD
       m_Flags: 4
     - m_Name: Modifier1
-      m_Id: 94ec46a8-5cef-4970-83a0-948f1fcb12e6
+      m_Id: 8b73292a-2952-498c-9437-b31b1109f13b
       m_Path: <Keyboard>/shift
       m_Interactions: 
       m_Processors: 
@@ -37,7 +37,7 @@ MonoBehaviour:
       m_Action: Toggle Debug HUD
       m_Flags: 8
     - m_Name: Modifier2
-      m_Id: 39a3a961-d009-46cd-8af9-6844ad905033
+      m_Id: d3d8b687-e5a9-4500-8e42-9d26356ce297
       m_Path: <Keyboard>/d
       m_Interactions: 
       m_Processors: 
@@ -45,7 +45,7 @@ MonoBehaviour:
       m_Action: Toggle Debug HUD
       m_Flags: 8
     - m_Name: Button
-      m_Id: 4b3542ae-5f7c-4909-8034-588e0f9f1454
+      m_Id: 670b5a37-d29d-4843-809a-ed2fbcd4e51b
       m_Path: <Keyboard>/p
       m_Interactions: 
       m_Processors: 
