@@ -52,6 +52,7 @@ MODULE_ORDER = (
     "AutoEnumGenerator",
     "AssetStoreToolsPackager",
     "ProjectStructureTools",
+    "BuildValidation",
 )
 
 LINK_PATTERN = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
