@@ -1,0 +1,63 @@
+name: Verify Without Unity
+
+# Unity Editor を使わずに回せる検査を、push と Pull Request ごとに実行する。
+# 検査の中身は release_round.py preflight と .agents/skills/implement/references/remote.md の
+# 「代替の検査」と同じもので、ここではそれを人が実行し忘れても止まるようにしているだけである。
+# コンパイル・テスト・Play Mode の確認は Unity が要るため対象外（scripts/verify_round.py）。
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with submodule
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 新規ファイルの .meta が揃っているか。欠けていると利用側で GUID が振り直される。
+      - name: Check .meta files
+        run: python scripts/generate_meta.py --check
+
+      # Documentation~/Html/ が Markdown の正本と一致しているか。
+      # 図の SVG が揃っていれば Node は要らない。
+      - name: Check generated documentation
+        run: python scripts/build_module_docs.py --check
+
+      # .claude/skills/ のロケーターが .agents/skills/ の正本と同期しているか。
+      - name: Check skill locators
+        run: python scripts/sync_agent_skill_locators.py --check
+
+      # 同名の型が増えていないか。Unity のコンパイラが無いと CS0101 に気づけない。
+      # ジェネリック引数違いと partial は同名で出るため、既知のものは除外リストで扱う。
+      - name: Check duplicate type names
+        working-directory: Assets/SymphonyFrameWork
+        run: |
+          duplicates=$(git grep -hoE \
+            "^\s*(public|internal)\s+(sealed\s+|static\s+|abstract\s+|partial\s+)*(class|struct|interface|enum)\s+[A-Za-z0-9_]+" \
+            -- 'Runtime/*.cs' 'Editor/*.cs' 'Core/*.cs' \
+            | sed -E 's/.*(class|struct|interface|enum)\s+//' | sort | uniq -d)
+          allowed=$(grep -vE '^\s*(#|$)' ../../.github/duplicate-type-allowlist.txt || true)
+          unexpected=$(comm -23 <(printf '%s\n' "$duplicates" | sed '/^$/d' | sort -u) \
+                                <(printf '%s\n' "$allowed" | sort -u))
+          if [ -n "$unexpected" ]; then
+            echo "::error::同名の型が複数定義されています（名前空間とジェネリック引数を確認してください）:"
+            printf '%s\n' "$unexpected"
+            exit 1
+          fi
+          echo "同名の型の追加はありません。"

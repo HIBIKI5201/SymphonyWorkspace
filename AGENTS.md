@@ -126,7 +126,7 @@ Domain Reload が無効なため、**Play Modeの開始・終了を2回繰り返
 
 **Claude Code on the web などのリモートコンテナには Unity Editor が無く、uLoopMCP も使えません。** `python scripts/verify_round.py` が `exit 3` を返したらその環境です。**Unity をコンテナへ導入することはできません**（配布ホストへの接続がプロキシに拒否されます）。
 
-この場合もフローは飛ばさず、**上記の検証だけを代替の機械検査へ差し替えます。** 代替の検査、`.meta` のスクリプト生成（`scripts/generate_meta.py`）、未実施項目の残し方、git 固有の落とし穴は [.agents/skills/implement/references/remote.md](./.agents/skills/implement/references/remote.md) にまとめてあります。
+この場合もフローは飛ばさず、**上記の検証だけを代替の機械検査へ差し替えます。** 代替の検査のうち `.meta` の欠落、生成HTMLの同期、Skillロケーターの同期、同名型の重複は、`main` への push と PR ごとに GitHub Actions（`.github/workflows/verify-without-unity.yml`）でも実行されます。意図した同名型（ジェネリック引数違いなど）は `.github/duplicate-type-allowlist.txt` へ足してください。 代替の検査、`.meta` のスクリプト生成（`scripts/generate_meta.py`）、未実施項目の残し方、git 固有の落とし穴は [.agents/skills/implement/references/remote.md](./.agents/skills/implement/references/remote.md) にまとめてあります。
 
 ## 7. やってはいけないこと
 

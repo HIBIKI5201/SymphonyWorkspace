@@ -1,0 +1,5 @@
+# verify-without-unity.yml の「Check duplicate type names」で、同名でも意図どおりの型名。
+# 1行1名。名前空間とジェネリック引数を確認してから足すこと。
+
+# IInjectable<T0> ... のジェネリック引数違いの多重定義（ServiceLocate）
+IInjectable
