@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
-SUBMODULE_ROOT = WORKSPACE_ROOT / "Assets" / "SymphonyFrameWork"
+SUBMODULE_ROOT = WORKSPACE_ROOT / "Assets" / "SymphonyFramework"
 
 
 def strip_comments(source: str) -> str:

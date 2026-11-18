@@ -25,7 +25,7 @@ Codex CLI ワーカーの呼び出し方、プロンプトのテンプレート�
 - **プロンプトを stdin で渡す** — 長文の日本語プロンプトでもコマンドライン長と文字化けの影響を受けない
 - **実行ファイルの解決** — `CODEX_BIN` → PATH → `config.toml` → 同梱バイナリの最新、の順で探す
 
-プロンプトはファイルへ書いてから渡す。作業ルート（`--cd`）は**ワークスペースのルート**にする。Codex が `Documentation/` の規約と `Assets/SymphonyFrameWork/` のソースの両方を読めるようにするため。
+プロンプトはファイルへ書いてから渡す。作業ルート（`--cd`）は**ワークスペースのルート**にする。Codex が `Documentation/` の規約と `Assets/SymphonyFramework/` のソースの両方を読めるようにするため。
 
 ```bash
 python scripts/codex_runner.py --prompt-file <プロンプトファイル> --cd . --last-message <保存先>
@@ -110,7 +110,7 @@ Documentation/Designs/<機能名>.md の設計に従って実装してくださ�
 - Documentation/CONTRIBUTING.md の「2. .metaファイルの扱い」と「3. 文字コードと改行」
 
 制約:
-- 変更してよいのは Assets/SymphonyFrameWork/ 配下だけ。それ以外のファイルは触らない。
+- 変更してよいのは Assets/SymphonyFramework/ 配下だけ。それ以外のファイルは触らない。
 - .cs は UTF-8 BOM付きで保存する。
 - .meta は生成しない。手書きもしない。新規ファイルの .meta は後で Unity Editor に生成させる。
 - package.json と CHANGELOG.md は変更しない。バージョン更新は別ステップで行う。

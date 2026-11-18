@@ -18,7 +18,7 @@ from pathlib import Path
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
-PACKAGE_ROOT = WORKSPACE_ROOT / "Assets" / "SymphonyFrameWork"
+PACKAGE_ROOT = WORKSPACE_ROOT / "Assets" / "SymphonyFramework"
 DOCUMENTATION_ROOT = PACKAGE_ROOT / "Documentation~"
 MODULES_ROOT = DOCUMENTATION_ROOT / "Modules"
 HTML_ROOT = DOCUMENTATION_ROOT / "Html"
@@ -905,7 +905,7 @@ def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
     parser = argparse.ArgumentParser(
-        description="Assets/SymphonyFrameWork/ のMarkdownから Documentation~/Html/ を生成する。"
+        description="Assets/SymphonyFramework/ のMarkdownから Documentation~/Html/ を生成する。"
     )
     parser.add_argument(
         "--check",

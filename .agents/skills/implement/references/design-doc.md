@@ -46,14 +46,14 @@
 **テストの実装は必須である。** EditMode と PlayMode のどちらへ、どのパスへ置くかを書く。
 書かない場合は、`--no-tests-reason` へ渡す理由をここへ書く（モーダルダイアログを伴う、Unity のホストライフサイクルに強く依存する、Editor の GUI 操作を伴う等）。
 **「書きにくい」は理由にならない。** 書きにくい形になっていること自体が設計の指摘であり、ロジックを Unity API へ触れない型へ切り出してテスト対象にする。
-テストは**パッケージ内の `Assets/SymphonyFrameWork/Tests/`** へ置く（EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`）。
+テストは**パッケージ内の `Assets/SymphonyFramework/Tests/`** へ置く（EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`）。
 `InternalsVisibleTo` によりテストアセンブリから `internal` な内部実装も検証できるため、
 Entity・Service・Registry など公開されない型も単体テストの対象にする。
 
 **テストのメソッド名は既存のテストの命名に合わせる。** 現在は英語の `対象_条件_期待` 形式
 （`Constructor_ExposesValues`、`Normalize_NullLists_BecomeEmptyLists` など）。設計書のテスト一覧にも
 その形式で書く。設計書だけ日本語名で書くと、実装時に必ず書き直すことになる。
-着手時に `Assets/SymphonyFrameWork/Tests/` の既存ファイルを1つ開いて確認する。
+着手時に `Assets/SymphonyFramework/Tests/` の既存ファイルを1つ開いて確認する。
 
 **何を検証するかだけでなく、どう書くかを1行で書く。** 検証内容だけを書くと、実現不可能な要件に気づけない。
 過去に「PlayModeテストで Play Mode の開始・終了を2回繰り返す」と書いたが、PlayModeテストは

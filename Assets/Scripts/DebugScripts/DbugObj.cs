@@ -1,10 +1,10 @@
-﻿using SymphonyFrameWork;
-using SymphonyFrameWork.Attribute;
-using SymphonyFrameWork.Debugger;
-using SymphonyFrameWork.Debugger.HUD;
-using SymphonyFrameWork.System.SaveSystem;
-using SymphonyFrameWork.System.SceneLoad;
-using SymphonyFrameWork.System.ServiceLocate;
+﻿using SymphonyFramework;
+using SymphonyFramework.Attribute;
+using SymphonyFramework.Debugger;
+using SymphonyFramework.Debugger.HUD;
+using SymphonyFramework.System.SaveSystem;
+using SymphonyFramework.System.SceneLoad;
+using SymphonyFramework.System.ServiceLocate;
 using System;
 using TestNameSpace;
 using UnityEngine;

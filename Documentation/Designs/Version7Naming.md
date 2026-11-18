@@ -1,6 +1,6 @@
 # 7.0.0 命名の全面整理
 
-> **状態: 設計中（Round 1 の合意待ち）。**
+> **状態: Round 1 実装済み（Unity での検証は R6 でまとめて行う）。**
 > 親Issue: #227。子Issue: #226（ルート名前空間）、#225（サービス名の音楽用語化）、#232（シーン管理の入口の整理）、#233（Service Locator の入口の整理）。
 
 ## 目的
@@ -202,14 +202,58 @@ PC のワークスペース（`C:\Sinfonia Studio\SymphonyFrameworkWorkspace`）
 
 `package.json` の `version`、`Core/SymphonyConstant.cs` の `VERSION`、`CHANGELOG.md` の見出し、`README.md` の「現在のバージョン」、生成HTML の `README.html` と `CHANGELOG.html`。
 
-## 決めてほしいこと
+## 決定事項（2026-11-18、依頼者の回答）
 
-1. **2.x 以前の旧ローダー名のまま保存された `SaveDataConfig`** は、R1 から解決できなくなります。どうしますか？
-   - ⭐ a. 切り捨てる。6.x の間にプロジェクトを一度開いて保存していれば、新しいクラス名で保存されているため
-   - b. 旧クラス名用の転送クラスを残して両方を救う
-2. **R1〜R5 の版をどうしますか？**
-   - ⭐ a. `7.0.0-pre.1`、`pre.2` のように Round ごとに刻む。`develop` を追う利用者に、途中の版だと分かる
-   - b. R6 まで 6.15.2 のままにし、CHANGELOG は `[Unreleased]` に書きためる
-3. **検証はどこで行いますか？**
-   - ⭐ a. Round ごとに PC のワークスペースで `verify_round.py` を回す（名前の変更は壊れた場所を Round 単位で切り分けたいため）
-   - b. R6 でまとめて回す
+1. **2.x 以前の旧ローダー名のまま保存された `SaveDataConfig` は切り捨てる。** 6.x の間に一度開いて保存していれば、新しいクラス名で保存されているため
+2. **R1〜R5 はマイナーを上げる（R1 = 6.16.0、R2 = 6.17.0 …）。** R6 で 7.0.0 にする
+3. **Unity での検証は R6 でまとめて行う。** R1〜R5 はリモートの代替検査（`remote.md`）だけで進め、未実施の確認を下の「未実施リスト」へ積み上げる
+
+## 実施レポート（Round 1）
+
+実施日: 2026-11-18 / バージョン: 6.16.0 / PR: （作成後に追記）
+
+### 実装した内容
+
+submodule 側は3コミットに分けた。
+
+1. `96b4783` 置換だけ: 405ファイルの `SymphonyFrameWork` → `SymphonyFramework` と、asmdef 5件の改名（`.meta` は一緒に改名して GUID を保った）。`CHANGELOG.md` と生成HTMLの CHANGELOG は過去の記録なので除外。**置換を逆に適用すると親コミットと一致することを機械的に確認した**
+2. `701e5a7` 置換以外:
+   - `Editor/Configs/RootFolderCaseMigration.cs`（新規、`internal static`）。`SymphonyEditorOrchestrator` の初期化で `PackageInitializer` より前に呼ぶ
+   - セーブローダー2型の `[MovedFrom]` を旧名前空間・旧アセンブリへ向け直した
+   - Asset Store Tools Package Pipeline の手順4型へ `[MovedFrom]` を追加（下の「設計から変えた点」）
+   - `Tests/Editor/RootFolderCaseMigrationTests.cs`（新規、11ケース）
+   - 置換で触れた2ファイルへ UTF-8 BOM を付けた（preflight の指摘）
+3. `3f3fd6b` 文書: 版を 6.16.0 へ、CHANGELOG、`EditorTools.md` の「設定アセットの自動生成」へ移行処理の説明を追加、生成HTMLを再生成
+
+ワークスペース側:
+
+- submodule のパスを `Assets/SymphonyFramework` へ、`Assets/SymphonyFrameWork.meta` を `Assets/SymphonyFramework.meta` へ改名（GUID 維持）。**`.gitmodules` の submodule 名（`[submodule "Assets/SymphonyFrameWork"]`）は変えていない。** 名前を変えると各クローンの `.git/modules/` の場所も変わり、既存クローンの更新手順が増えるため
+- `scripts/*.py`、`.github/workflows/verify-without-unity.yml`、`.agents/skills/**`、`.claude/skills/**`、`AGENTS.md`、`Documentation/*.md`（`Designs/`・`Reports/`・`Audit/` を除く）、`Assets/Editor/Scripts/*.cs`、`Assets/Scripts/DebugScripts/*.cs`、`SymphonyFrameworkWorkspace.slnx` の表記を置換
+
+### 設計から変えた点
+
+- **Asset Store Tools Package Pipeline の手順（`AssetStoreToolsCombinePackageStrategy` / `CreateZipStrategy` / `SinglePackageStrategy` / `UsedDependenciesStrategy`）にも `[MovedFrom]` を付けた。** 設計では `[SerializeReference]` で保存される型を `SaveDataConfig` のローダーだけと見ていたが、ワークスペースの `Assets/Editor/SymphonyFrameWork/Configs/AssetStoreToolsPackagePipeline*.asset` に `asm: SymphonyFrameWork.Editor` が保存されていた。利用側（SymphonyKillChord など）のパイプラインアセットも同じ形なので、付けないと手順が消える
+- **ワークスペースの `Assets/Resources/SymphonyFrameWork/`、`Assets/Scripts/SymphonyFrameWork/`、`Assets/Editor/SymphonyFrameWork/` は改名しなかった。** 設計では手で改名する予定だったが、PC で Unity を開いたときに移行処理に移させれば、**移行処理そのものの実地検証になる。** 移った結果を R6 の検証でコミットする
+- `.unity` / `.asset` / `ProjectSettings` の `m_EditorClassIdentifier` は置換しなかった。Unity が保存時に書き直す表示用の値で、型の解決には GUID を使うため
+
+### 検証結果（リモートの代替検査）
+
+- `release_round.py preflight`: tests OK（ソース218件・テスト107件の変更）、version OK（6.16.0）、meta OK、layer OK、asmdef OK、docs OK、question OK。**NG 2件はどちらもこの Round の変更ではない**: submodule のブランチ名がこのセッションの指定（`claude/project-thread-lzbam6`）で命名規則外、ワークスペースの Enter Play Mode Options が `Options=1`（`main` の時点でそうなっている）
+- `generate_meta.py --check`: OK（483件）。**`RootFolderCaseMigration.cs.meta` と `RootFolderCaseMigrationTests.cs.meta` はスクリプトで生成した**
+- `build_module_docs.py --check`: OK（21件）
+- `sync_agent_skill_locators.py --check`: OK
+- 同名型の検査: `IInjectable`（ジェネリック引数違い、既知）だけ
+
+### 未実施リスト（R6 の検証で確認する）
+
+- [ ] コンパイル エラー0・警告0、EditMode・PlayMode テスト全数成功、Play Mode 2往復
+- [ ] **アセンブリ名が変わったあとも、設定アセットが `m_Script` の GUID で読めて値が保たれること**（`SceneLoadConfigRename.md` の障害の再発がないこと）
+- [ ] PC のワークスペースを開いたとき、`Assets/Resources`・`Assets/Scripts`・`Assets/Editor`・`UserSettings` の `SymphonyFrameWork` が `SymphonyFramework` へ移り、GUID と設定値が保たれること。移った結果をコミットする
+- [ ] `SaveDataConfig` のローダーと、パイプラインアセットの手順が解決されること（`[MovedFrom]`）
+- [ ] `InitializeOnLoad` の中で `AssetDatabase.MoveAsset` が期待どおり動くこと
+- [ ] 生成した `.meta` 2件を Unity が再生成・差分にしないこと
+- [ ] **PC の既存クローンで、submodule のパス変更（大文字小文字だけ）を取り込めること。** Windows では一時名を経由しないと反映されない可能性がある
+
+### 振り返り
+
+- `[SerializeReference]` の型の洗い出しを、設計の時点で Runtime の `SaveDataConfig` だけに絞っていた。**ワークスペースのアセットに `asm:` で検索をかけていれば、設計の時点で見つかった。** 次の Round（型名と名前空間がさらに変わる）では、着手前に `git grep -n "asm: Symphony"` をワークスペースと利用側で実行して対象を確定する。implement スキルの `rounds.md` への追記を提案する

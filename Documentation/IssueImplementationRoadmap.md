@@ -145,7 +145,7 @@ Round 113-1 完了。PR [#198](https://github.com/HIBIKI5201/SymphonyFramework/p
 2. 承認が得られない場合、`dotnet`を使わない代替（例: 既存CI環境で事前ビルドしたDLLを別途取得する運用、または本Roundを見送りリフレクション実装を維持する判断）を設計書へ追記してから再提示する。
 3. 実装後は設計書どおりEditModeテスト2件、`verify_round.py`、`release_round.py preflight`（本Roundはバージョン更新なしのため`--no-tests-reason`は不要な想定だが、preflightのバージョンチェックが空更新をどう扱うか要確認）を通す。
 
-2026-08-28（自律実行2回目）: ユーザー不在のスケジュール実行のため、上記1の承認判断（AGENTS.md §7の禁止事項の例外解釈）を代行せず、実装（`codex_runner.py`呼び出し・`dotnet build`実行）には着手しなかった。代わりに設計書へ「代替案（承認が得られない場合）」節を追加し、A. CI外部ビルド／B. 本Round見送り／C. AGENTS.md §7の明文改定 の3案を比較した（[RoslynSourceGeneratorPrototype.md](Designs/RoslynSourceGeneratorPrototype.md)参照）。Generator関連ファイル（`Assets/SymphonyFrameWork/Generators/`等）はまだ一切作成していないことを確認済み。
+2026-08-28（自律実行2回目）: ユーザー不在のスケジュール実行のため、上記1の承認判断（AGENTS.md §7の禁止事項の例外解釈）を代行せず、実装（`codex_runner.py`呼び出し・`dotnet build`実行）には着手しなかった。代わりに設計書へ「代替案（承認が得られない場合）」節を追加し、A. CI外部ビルド／B. 本Round見送り／C. AGENTS.md §7の明文改定 の3案を比較した（[RoslynSourceGeneratorPrototype.md](Designs/RoslynSourceGeneratorPrototype.md)参照）。Generator関連ファイル（`Assets/SymphonyFramework/Generators/`等）はまだ一切作成していないことを確認済み。
 
 次回引き継ぐ作業（更新）: 人が確認できるタイミングで、AGENTS.md §7の解釈または上記A/B/Cのいずれかを選択してから、Round 129-1の実装（ワーカー呼び出し）へ進む。それまで自律実行はこのRoundをスキップし、他の独立したRound（存在すれば）を優先するか、同じ確認待ち状態を再報告する。
 
@@ -165,7 +165,7 @@ Round 113-1 完了。PR [#198](https://github.com/HIBIKI5201/SymphonyFramework/p
 1. Unity Editorで`Window > Unity CLI Loop > Server`を手動起動し、`npx uloop-cli@2.2.0 get-logs`が接続できることを確認する（または`McpServerController`の自動復元が動かない原因を別途調査する）。
 2. サーバーへ接続できたら、`python scripts/verify_round.py`（またはuloopツール個別呼び出し）でコンパイル・EditModeテストを確認する。
 3. 検証が通れば`release_round.py preflight` → `bump`（6.4.0 → 6.4.1）→ `commit`を実行し、この節を実施レポートへ差し替える。
-4. 実装済みファイル（`Assets/SymphonyFrameWork/Runtime/Service/SceneBlock/Internal/Domain/`配下5件、`Assets/SymphonyFrameWork/Tests/Editor/SceneBlock*Tests.cs`3件）とワークスペース側`Documentation/CodeGuidelines.md`の変更は、submoduleの`feature/110-scene-block-dag-planner`ブランチの作業ツリーに未コミットのまま残っている。破棄せず、そのまま次回のセッションから継続する。
+4. 実装済みファイル（`Assets/SymphonyFramework/Runtime/Service/SceneBlock/Internal/Domain/`配下5件、`Assets/SymphonyFramework/Tests/Editor/SceneBlock*Tests.cs`3件）とワークスペース側`Documentation/CodeGuidelines.md`の変更は、submoduleの`feature/110-scene-block-dag-planner`ブランチの作業ツリーに未コミットのまま残っている。破棄せず、そのまま次回のセッションから継続する。
 
 2026-08-28（自律実行3回目、別セッション）: 引き続き検証未完了。今回は「起動タイミングの問題」という仮説をさらに切り分けた。
 

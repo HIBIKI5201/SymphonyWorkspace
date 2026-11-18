@@ -32,7 +32,7 @@ python scripts/audit_scan.py --format markdown --out Documentation/Audit/_raw/sc
 | `--out <path>` | 出力先。省略時は標準出力 |
 | `--category <name>` | その分類だけを出力。複数指定可。観点ごとに読むときに使う |
 
-対象は `Assets/SymphonyFrameWork/` の `Runtime` / `Core` / `Editor`。`Tests` と `Samples` は含まない。
+対象は `Assets/SymphonyFramework/` の `Runtime` / `Core` / `Editor`。`Tests` と `Samples` は含まない。
 
 ### 既知の誤検出と限界
 
@@ -97,9 +97,9 @@ var analysisParams = new AnalysisParams
     Categories = new[] { IssueCategory.Code },
     AssemblyNames = new[]
     {
-        "SymphonyFrameWork",
-        "SymphonyFrameWork.Core",
-        "SymphonyFrameWork.Editor",
+        "SymphonyFramework",
+        "SymphonyFramework.Core",
+        "SymphonyFramework.Editor",
     },
     // Player は AssemblyBuilder の完了を Thread.Sleep で待つ。メインスレッドから呼ぶと固まる。
     CompilationMode = CompilationMode.Editor,
@@ -111,7 +111,7 @@ report.Save(outputPath);
 // AssemblyNames を指定しても依存アセンブリの指摘が混ざるため、パスで絞り込む。
 var issues = report.FindByCategory(IssueCategory.Code)
     .Where(issue => issue.RelativePath != null
-        && issue.RelativePath.StartsWith("Assets/SymphonyFrameWork/"))
+        && issue.RelativePath.StartsWith("Assets/SymphonyFramework/"))
     .ToArray();
 
 return $"saved={outputPath} total={report.NumTotalIssues} framework={issues.Length}";

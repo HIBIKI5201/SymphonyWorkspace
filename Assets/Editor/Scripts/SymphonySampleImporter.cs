@@ -25,7 +25,7 @@ using UnityEngine;
 /// </remarks>
 public sealed class SymphonySampleImporter : EditorWindow
 {
-    private const string FRAMEWORK_PATH = "Assets/SymphonyFrameWork";
+    private const string FRAMEWORK_PATH = "Assets/SymphonyFramework";
     private const string PACKAGE_JSON_PATH = FRAMEWORK_PATH + "/package.json";
     private const string SAMPLES_ROOT = FRAMEWORK_PATH + "/Samples~";
     private const string DESTINATION_ROOT = "Assets/Samples/Symphony Framework";

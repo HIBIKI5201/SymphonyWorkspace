@@ -57,7 +57,7 @@ python scripts/comment_only_diff.py         # コメントだけの差分を除�
 コンパイルできない状態になった。
 
 ```bash
-git -C Assets/SymphonyFrameWork grep -hoE \
+git -C Assets/SymphonyFramework grep -hoE \
   "^\s*(public|internal)\s+(sealed\s+|static\s+|abstract\s+|partial\s+)*(class|struct|interface|enum)\s+[A-Za-z0-9_]+" \
   -- 'Runtime/*.cs' 'Editor/*.cs' 'Core/*.cs' \
   | sed -E 's/.*(class|struct|interface|enum)\s+//' | sort | uniq -d
@@ -142,8 +142,8 @@ Unity で開くまで妥当性が分からず、壊れていても気づけな�
 `pathspec 'develop' did not match` で失敗し、`finalize` が途中で止まる。**
 
 ```bash
-git -C Assets/SymphonyFrameWork config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
-git -C Assets/SymphonyFrameWork fetch origin
+git -C Assets/SymphonyFramework config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+git -C Assets/SymphonyFramework fetch origin
 ```
 
 **セッションの最初に1回実行しておく。** 失敗してから直すと、finalize が中途半端な
@@ -169,13 +169,13 @@ PRの作成とマージは `mcp__github__create_pull_request` と `mcp__github__
 
 ```bash
 # 1. gitlink が develop から到達可能であることを先に確かめる（ここを飛ばさない）
-git -C Assets/SymphonyFrameWork merge-base --is-ancestor <sha> origin/develop
+git -C Assets/SymphonyFramework merge-base --is-ancestor <sha> origin/develop
 # 2. submodule を develop へ揃える
-git -C Assets/SymphonyFrameWork checkout develop
-git -C Assets/SymphonyFrameWork merge --ff-only origin/develop
-git -C Assets/SymphonyFrameWork branch -d <作業ブランチ>
+git -C Assets/SymphonyFramework checkout develop
+git -C Assets/SymphonyFramework merge --ff-only origin/develop
+git -C Assets/SymphonyFramework branch -d <作業ブランチ>
 # 3. 親は gitlink とパスを明示して add する。`git add -A` しない
-git add -- Assets/SymphonyFrameWork <その他のパス>
+git add -- Assets/SymphonyFramework <その他のパス>
 git commit
 git push -u origin <親のブランチ>
 ```

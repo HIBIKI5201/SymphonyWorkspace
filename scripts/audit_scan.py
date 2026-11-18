@@ -22,7 +22,7 @@ from pathlib import Path
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
-PACKAGE_ROOT = WORKSPACE_ROOT / "Assets" / "SymphonyFrameWork"
+PACKAGE_ROOT = WORKSPACE_ROOT / "Assets" / "SymphonyFramework"
 
 # Directories that ship to users. Rules are strictest here.
 SHIPPED_RUNTIME_DIRS = ("Runtime", "Core")
@@ -77,7 +77,7 @@ def load_sources(dirs: tuple[str, ...]) -> list[SourceFile]:
 
 
 def in_dirs(source: SourceFile, dirs: tuple[str, ...]) -> bool:
-    prefix = "Assets/SymphonyFrameWork/"
+    prefix = "Assets/SymphonyFramework/"
     if not source.rel.startswith(prefix):
         return False
     return source.rel[len(prefix):].split("/", 1)[0] in dirs
@@ -577,7 +577,7 @@ def check_deprecations_reverse(sources: list[SourceFile]) -> list[Finding]:
     return [
         Finding(
             "B_deprecation_stale",
-            "Assets/SymphonyFrameWork/Documentation~/Deprecations.md",
+            "Assets/SymphonyFramework/Documentation~/Deprecations.md",
             line,
             f"{symbol} — コードに [Obsolete] が無い。削除済みなら `## 削除済み` へ移す",
         )
@@ -603,7 +603,7 @@ def check_line_endings() -> list[Finding]:
         return [
             Finding(
                 "B_line_ending_uncheckable",
-                "Assets/SymphonyFrameWork",
+                "Assets/SymphonyFramework",
                 1,
                 f"git ls-files --eol を実行できなかった: {error}",
             )
@@ -620,7 +620,7 @@ def check_line_endings() -> list[Finding]:
             findings.append(
                 Finding(
                     "B_line_ending",
-                    f"Assets/SymphonyFrameWork/{parts[1].strip()}",
+                    f"Assets/SymphonyFramework/{parts[1].strip()}",
                     1,
                     f"リポジトリ側が {index_eol}。CONTRIBUTING §3 はLF格納を定めている",
                 )
@@ -791,7 +791,7 @@ def render_markdown(findings: list[Finding], sources: list[SourceFile]) -> str:
     out.append("# 機械走査の結果（audit_scan.py）")
     out.append("")
     out.append(
-        f"対象: `Assets/SymphonyFrameWork/` の {', '.join(SHIPPED_DIRS)} "
+        f"対象: `Assets/SymphonyFramework/` の {', '.join(SHIPPED_DIRS)} "
         f"— {len(sources)}ファイル / {total_lines}行"
     )
     out.append("")

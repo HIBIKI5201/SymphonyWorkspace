@@ -23,7 +23,7 @@
 
     python scripts/generate_meta.py --check     # 欠落を一覧するだけ。生成しない
     python scripts/generate_meta.py             # 生成する
-    python scripts/generate_meta.py --root Assets/SymphonyFrameWork
+    python scripts/generate_meta.py --root Assets/SymphonyFramework
 
 Exit codes
 ----------
@@ -42,7 +42,7 @@ from collections import defaultdict
 from pathlib import Path
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_ROOT = "Assets/SymphonyFrameWork"
+DEFAULT_ROOT = "Assets/SymphonyFramework"
 
 # Unity が Asset Import の対象にしないもの。`.meta` は不要で、作ると逆に汚れる。
 # 先頭が `.`、末尾が `~`、`cvs`（大小無視）、`.tmp` は Unity 自身の除外規則である。

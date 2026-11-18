@@ -30,8 +30,8 @@
 | `Runtime/Service/<Subsystem>/` | サブシステムの公開エントリポイント、公開Component、公開Strategy、Info、Value Object、Enum | 利用側が参照する型だけを直下へ置く |
 | `*/Internal/` | 各フォルダのDomain、Application、Adaptor、View、Infrastructure、Compositionの内部実装 | `internal`なEntity、Service、Registry、Query、Dto、ViewModel、Unity API実装を置く。名前空間には`Internal`を含めない（→ `## 名前空間`） |
 | `Runtime/Obsolete/` | 代替APIへ移行済みの `[Obsolete]` シム | 移行期間のみ存在させ、メジャー更新で削除する |
-| `Editor/` | Inspector、設定画面、Generatorなど | `SymphonyFrameWork.Editor` asmdefに含める |
-| `Samples~/` | 利用例 | 製品コードから依存しない。**末尾のチルダによりUnityのインポート対象外**で、`SymphonyFrameWork` アセンブリへ入らない。Package Managerがインポート時に利用側の`Assets/`へコピーする |
+| `Editor/` | Inspector、設定画面、Generatorなど | `SymphonyFramework.Editor` asmdefに含める |
+| `Samples~/` | 利用例 | 製品コードから依存しない。**末尾のチルダによりUnityのインポート対象外**で、`SymphonyFramework` アセンブリへ入らない。Package Managerがインポート時に利用側の`Assets/`へコピーする |
 
 - RuntimeコードからEditor APIを参照しない。Editor専用の`MenuItem`、設定、Inspector処理は`Editor/`側の型へ分離する。`#if UNITY_EDITOR`で囲んでもRuntimeファイルへ`UnityEditor`参照を置く例外は作らない。
 - **`Core`はRuntimeとEditorの両方から使われる共有アセンブリであり、Editor APIを使うこと自体は許容する。** ただし置き場所と参照方向を守る。Editor APIを使う型は`Core/Editor/`へ置き、`#if UNITY_EDITOR`で囲む。その型をRuntimeから参照してはならない。Runtimeが必要とする値は、Editor側のCompositionからRuntimeへ注入する。
@@ -39,14 +39,14 @@
 - asmdef間の参照は必要な方向にだけ追加し、循環参照を作らない。
 - **公開エントリポイントが大きくなった場合は、型を分けずに `partial` でファイルだけを分割する。** 型を分けると利用側の呼び出しが変わり、破壊的変更になります。分割の単位は関心事ごとで、ファイル名は `<型名>.<関心事>.cs` とします（例: `SymphonyAwaitable.WhenAll.cs`）。**`partial` を使ってよいのはこの目的に限ります。** 内部実装（`*/Internal/`）は型ごと分割できるため、`partial` ではなく型の分割で対処します。
 - パッケージ導入とAssets直置きの両方に対応するパスには、`EditorSymphonyConstant.FRAMEWORK_PATH` を使用する。
-- `Assets/SymphonyFrameWork` や `Packages/symphonyframework` を機能コードへ直接埋め込まない。
+- `Assets/SymphonyFramework` や `Packages/symphonyframework` を機能コードへ直接埋め込まない。
 
 ## 名前空間
 
-ルート名前空間は`SymphonyFrameWork`とし、サブシステムに合わせて次の名前空間を使用します。Adaptor、Application、View、Infrastructureなどの概念レイヤー名は名前空間へ含めず、型名と`Internal/`フォルダで責務と公開範囲を表します。
+ルート名前空間は`SymphonyFramework`とし、サブシステムに合わせて次の名前空間を使用します。Adaptor、Application、View、Infrastructureなどの概念レイヤー名は名前空間へ含めず、型名と`Internal/`フォルダで責務と公開範囲を表します。
 
 ```text
-SymphonyFrameWork
+SymphonyFramework
 ├─ Attribute
 ├─ Configs
 ├─ Core
@@ -65,15 +65,15 @@ SymphonyFrameWork
 └─ Utility
 ```
 
-- 消費者向けの公開エントリポイントと公開Componentは、属するサブシステムの名前空間へ置く。例: `SaveStore`は`SymphonyFrameWork.System.SaveData`、`SceneLoader`は`SymphonyFrameWork.System.SceneLoad`、`ServiceLocator`と`ServiceInjector`は`SymphonyFrameWork.System.ServiceLocate`。
-- Runtimeの`SymphonyOrchestrator`は`SymphonyFrameWork.Orchestrator`、Editorの`SymphonyEditorOrchestrator`は`SymphonyFrameWork.Editor`へ置く。Editor asmdefからRuntime asmdefへの一方向参照を維持する。
-- 特定サブシステムの専用例外は、その公開エントリポイントと同じ名前空間へ置く。複数サブシステムで共通する例外は`SymphonyFrameWork.Exception`へ置く。
+- 消費者向けの公開エントリポイントと公開Componentは、属するサブシステムの名前空間へ置く。例: `SaveStore`は`SymphonyFramework.System.SaveData`、`SceneLoader`は`SymphonyFramework.System.SceneLoad`、`ServiceLocator`と`ServiceInjector`は`SymphonyFramework.System.ServiceLocate`。
+- Runtimeの`SymphonyOrchestrator`は`SymphonyFramework.Orchestrator`、Editorの`SymphonyEditorOrchestrator`は`SymphonyFramework.Editor`へ置く。Editor asmdefからRuntime asmdefへの一方向参照を維持する。
+- 特定サブシステムの専用例外は、その公開エントリポイントと同じ名前空間へ置く。複数サブシステムで共通する例外は`SymphonyFramework.Exception`へ置く。
 - 公開型と内部実装の区別は、名前空間ではなくフォルダで表す。Adaptorの公開エントリポイントとInfo、公開Strategyはサブシステム直下、Domain、Application、Adaptor Query／Dto、View、Infrastructureの内部実装は同じフォルダの`Internal/`配下へ置く。
-- Sampleは`SymphonyFrameWork.Samples.<SampleName>`とする。
+- Sampleは`SymphonyFramework.Samples.<SampleName>`とする。
 - ファイルの配置と名前空間を一致させる。
 - 名前空間はディレクトリ構成を反映する。並び順を示す数字など、コード上の責務を表さないディレクトリ名は除外する。
-- **`Runtime/Service/` だけは、フォルダ名と名前空間（`SymphonyFrameWork.System.*`）が一致しません。** Issue #106 でフォルダ名を `System` から `Service` へ変えた際、名前空間を揃えなかったためです。`SymphonyFrameWork.System.SaveData` などは利用側のすべての `using` に現れるため、変更するとメジャー更新の破壊的変更になります。**意図的に残している乖離であり、新しいサブシステムも `SymphonyFrameWork.System.<名前>` へ置いてください。**揃えるなら、それ自体を独立したメジャー更新のRoundとして扱います。
-- `internal`な型は、所属するフォルダ直下の`Internal/`へ置く。`Internal`と概念レイヤー名は名前空間には含めない。例: `Runtime/Service/SceneLoader/Internal/Application/SceneLoadService.cs`の名前空間は`SymphonyFrameWork.System.SceneLoad`。
+- **`Runtime/Service/` だけは、フォルダ名と名前空間（`SymphonyFramework.System.*`）が一致しません。** Issue #106 でフォルダ名を `System` から `Service` へ変えた際、名前空間を揃えなかったためです。`SymphonyFramework.System.SaveData` などは利用側のすべての `using` に現れるため、変更するとメジャー更新の破壊的変更になります。**意図的に残している乖離であり、新しいサブシステムも `SymphonyFramework.System.<名前>` へ置いてください。**揃えるなら、それ自体を独立したメジャー更新のRoundとして扱います。
+- `internal`な型は、所属するフォルダ直下の`Internal/`へ置く。`Internal`と概念レイヤー名は名前空間には含めない。例: `Runtime/Service/SceneLoader/Internal/Application/SceneLoadService.cs`の名前空間は`SymphonyFramework.System.SceneLoad`。
   - 横断的で最小限の内部ヘルパーは`Core/Internal/`へ置く。
   - Domain Entityは`Runtime/Service/<Subsystem>/Internal/Domain/`へ置く。
   - ApplicationのServiceとRegistryは`Runtime/Service/<Subsystem>/Internal/Application/`、AdaptorのQueryとDtoは`Internal/Adaptor/`へ置く。
@@ -499,7 +499,7 @@ public string InitialSceneName => _initialSceneName;
 - アセット変更には、必要に応じて `Undo.RecordObject`、`EditorUtility.SetDirty`、`AssetDatabase.SaveAssets` を使用する。
 - `AssetDatabase.Refresh` をループ内や頻繁に呼び出さない。
 - ファイル生成前に出力先と内容を検証し、既存ファイルを上書きする条件を明確にする。
-- 設定の保存先は、個人設定を`UserSettings/SymphonyFrameWork/`、プロジェクト共有設定を`ProjectSettings/Packages/`配下として使い分ける。パスは`EditorSymphonyConstant.USER_SETTING_FILE_PATH`と`PROJCET_SETTING_FILE_PATH`にあり、`ScriptableSingleton<T>`の`[FilePath]`で指定する。実装例は`SymphonyUserSettingConfig`（個人）と`AutoEnumGeneratorConfig`（共有）。**`EditorPrefs`は使用しない。**
+- 設定の保存先は、個人設定を`UserSettings/SymphonyFramework/`、プロジェクト共有設定を`ProjectSettings/Packages/`配下として使い分ける。パスは`EditorSymphonyConstant.USER_SETTING_FILE_PATH`と`PROJCET_SETTING_FILE_PATH`にあり、`ScriptableSingleton<T>`の`[FilePath]`で指定する。実装例は`SymphonyUserSettingConfig`（個人）と`AutoEnumGeneratorConfig`（共有）。**`EditorPrefs`は使用しない。**
 - UI Toolkitのイベントは、Windowの無効化時に解除または破棄できる構造にする。
 - **Window自身が所有する `VisualElement` への購読は、匿名ラムダで書いてよい。** `Button.clicked += () => ...` のような購読は、Windowが閉じられれば `VisualElement` ごと破棄されるため、デリゲートがWindowより長生きしません。「解除できない匿名callbackを登録しない」の対象は、Windowより長生きする購読先（`EditorApplication.update`、static event、Runtime側のReactiveProperty）です。**購読先の寿命で判断します。**
 - Package環境とAssets環境の双方で、UXML、USS、設定アセットのパスを確認する。

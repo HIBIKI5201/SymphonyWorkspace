@@ -1,5 +1,5 @@
 ﻿using System;
-using SymphonyFrameWork.System.ServiceLocate;
+using SymphonyFramework.System.ServiceLocate;
 using UnityEngine;
 
 namespace BLINDED_AM_ME

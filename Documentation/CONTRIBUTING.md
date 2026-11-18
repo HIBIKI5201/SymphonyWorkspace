@@ -1,8 +1,8 @@
 # CONTRIBUTING.md — Symphony Framework 本体開発ガイド
 
-このファイルは、**`Assets/SymphonyFrameWork/` にある Symphony Framework パッケージ本体のソースを変更する**人およびAIエージェント向けの作業手順です。
+このファイルは、**`Assets/SymphonyFramework/` にある Symphony Framework パッケージ本体のソースを変更する**人およびAIエージェント向けの作業手順です。
 
-パッケージを**利用する側**のコード（このワークスペースの `Assets/Scripts/` など）を書く場合は、このファイルではなく [Assets/SymphonyFrameWork/AGENTS.md](../Assets/SymphonyFrameWork/AGENTS.md) を読んでください。ワークスペース全体の構成は [AGENTS.md](../AGENTS.md) にあります。
+パッケージを**利用する側**のコード（このワークスペースの `Assets/Scripts/` など）を書く場合は、このファイルではなく [Assets/SymphonyFramework/AGENTS.md](../Assets/SymphonyFramework/AGENTS.md) を読んでください。ワークスペース全体の構成は [AGENTS.md](../AGENTS.md) にあります。
 
 ## 0. 最初に読むもの
 
@@ -13,11 +13,11 @@
 | [DocumentationGuidelines.md](./DocumentationGuidelines.md) | Markdown文書を書く前に。文書の役割分担、節の順序、分量、AIに書かせるときの手順 |
 | [DesignPhilosophy.md](./DesignPhilosophy.md) | 型・クラス・名前空間を**新設**する前、または公開範囲を判断する前。全部を通読せず該当する節（`## クラス設計`、`## 公開APIとバージョニング` など）を参照する |
 | [../AGENTS.md](../AGENTS.md) | ワークスペースの構成、環境設定、自動生成物の区別を知りたいとき |
-| [../Assets/SymphonyFrameWork/AGENTS.md](../Assets/SymphonyFrameWork/AGENTS.md) | 利用者向け文書の導線や、全作業で常時守る制約を変更するとき |
-| [../Assets/SymphonyFrameWork/Documentation~/AgentUsage.md](../Assets/SymphonyFrameWork/Documentation~/AgentUsage.md) | 公開型のnamespaceや入口が変わり、AI向けAPI索引を更新するとき |
-| [../Assets/SymphonyFrameWork/Documentation~/EditorTools.md](../Assets/SymphonyFrameWork/Documentation~/EditorTools.md) | Editor機能を追加・変更するとき。**記載の無いモジュールを見つけたら追記する** |
-| [../Assets/SymphonyFrameWork/Documentation~/Deprecations.md](../Assets/SymphonyFrameWork/Documentation~/Deprecations.md) | `[Obsolete]` を付ける・外すとき。今どのAPIが非推奨で残っているかを知りたいとき |
-| [../Assets/SymphonyFrameWork/CHANGELOG.md](../Assets/SymphonyFrameWork/CHANGELOG.md) | 直近の変更の経緯を知りたいとき。記述の粒度の参考にもする |
+| [../Assets/SymphonyFramework/AGENTS.md](../Assets/SymphonyFramework/AGENTS.md) | 利用者向け文書の導線や、全作業で常時守る制約を変更するとき |
+| [../Assets/SymphonyFramework/Documentation~/AgentUsage.md](../Assets/SymphonyFramework/Documentation~/AgentUsage.md) | 公開型のnamespaceや入口が変わり、AI向けAPI索引を更新するとき |
+| [../Assets/SymphonyFramework/Documentation~/EditorTools.md](../Assets/SymphonyFramework/Documentation~/EditorTools.md) | Editor機能を追加・変更するとき。**記載の無いモジュールを見つけたら追記する** |
+| [../Assets/SymphonyFramework/Documentation~/Deprecations.md](../Assets/SymphonyFramework/Documentation~/Deprecations.md) | `[Obsolete]` を付ける・外すとき。今どのAPIが非推奨で残っているかを知りたいとき |
+| [../Assets/SymphonyFramework/CHANGELOG.md](../Assets/SymphonyFramework/CHANGELOG.md) | 直近の変更の経緯を知りたいとき。記述の粒度の参考にもする |
 | [../.agents/skills/implement/SKILL.md](../.agents/skills/implement/SKILL.md) | 機能を**追加・変更**するとき。設計書からコミットまでの実装フロー |
 
 既存コードの修正だけであれば、このファイルと CodeGuidelines.md で足ります。
@@ -39,16 +39,16 @@
 | | ワークスペース（親） | パッケージ（submodule） |
 | --- | --- | --- |
 | リポジトリ | `HIBIKI5201/SymphonyWorkspace` | `HIBIKI5201/SymphonyFramework` |
-| ルート | このリポジトリのルート | `Assets/SymphonyFrameWork/` |
+| ルート | このリポジトリのルート | `Assets/SymphonyFramework/` |
 | 役割 | 開発環境。Unityプロジェクト、検証用シーン、本ドキュメント | 配布物。UPMパッケージ本体 |
 | 既定ブランチ | `main` | `develop` |
 
-- **パッケージのソース変更は、必ず submodule 側（`Assets/SymphonyFrameWork/`）でコミットします。** 親リポジトリはパッケージのファイルを追跡せず、submodule のコミットハッシュ（gitlink）だけを記録します。
-- コマンドラインからは `git -C "Assets/SymphonyFrameWork" ...` のように対象を明示すると取り違えを防げます。
+- **パッケージのソース変更は、必ず submodule 側（`Assets/SymphonyFramework/`）でコミットします。** 親リポジトリはパッケージのファイルを追跡せず、submodule のコミットハッシュ（gitlink）だけを記録します。
+- コマンドラインからは `git -C "Assets/SymphonyFramework" ...` のように対象を明示すると取り違えを防げます。
 - クローンは `git clone --recurse-submodules` で行います。忘れた場合は `git submodule update --init --recursive` を実行してください。
-- `Assets/SymphonyFrameWork.meta` は submodule の**外側**にあり、親リポジトリが管理します。削除すると利用側プロジェクトのGUID参照が壊れるため、絶対に削除しないでください。
+- `Assets/SymphonyFramework.meta` は submodule の**外側**にあり、親リポジトリが管理します。削除すると利用側プロジェクトのGUID参照が壊れるため、絶対に削除しないでください。
 - **このリポジトリ単体ではコンパイルできません。** `dotnet build`、`msbuild`、`csc` は使わないでください。asmdefの参照解決はUnityが行うため、コンパイル可否の判断はUnity Editorに委ねます（→ §4）。
-- `Assets/SymphonyFrameWork/Cache/` はランタイム生成物（`SymphonyDebugLogger` のログ）です。`.gitignore` 済みで、編集も削除も自由ですが、コミットしません。
+- `Assets/SymphonyFramework/Cache/` はランタイム生成物（`SymphonyDebugLogger` のログ）です。`.gitignore` 済みで、編集も削除も自由ですが、コミットしません。
 - `.claude/` と `.agents/` はローカル専用領域です。**他の開発者やエージェントにも守らせたいルールは、必ずこのファイルなど追跡対象のドキュメントに書いてください。**
 - **ドキュメントの置き場所には基準があります。** 本体開発向けのドキュメント（このファイル、CodeGuidelines、DocumentationGuidelines、DesignPhilosophy）は**ワークスペース側の `Documentation/`** に置きます。パッケージ利用者向けの詳細文書は、Unity PackageのAsset Import対象外となる`Documentation~/`へ置きます。パッケージリポジトリのルートには、外部の規約で置き場所が決まっているものだけを置きます（`README.md`・`CHANGELOG.md`・`LICENSE.md`・`Third Party Notices.md`はUPMの標準レイアウトで、UnityのPackage Validation Suiteがこの位置を検査します、`AGENTS.md`はエージェントツールがルートから探索するため）。`AGENTS.md`は導線と常時ルールに限定し、API説明やコード例を複製しません。
 
@@ -80,7 +80,7 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 - **移動・リネームは `.meta` と必ずセットで行う。** `git mv` を使い、`.cs` だけを動かして `.meta` を置き去りにしないこと。GUIDを維持すれば利用者側の参照は切れません（実例: CHANGELOG 2.2.1 の `Runtime/Obsolete/` への集約）。
 - **削除も対で行う。** 片方だけ残った `.meta` はUnityが警告を出します。
 - コミット前に `git status` で、追加・削除・移動したファイルと `.meta` の数が対応しているか確認してください。
-- `Assets/SymphonyFrameWork/` 配下のアセットは `SymphonyAssetProtector` が移動を自動で差し戻します。意図して動かす場合は `Project Settings > SymphonyFrameWork` の `Asset Protection Mode` を `Warning` または `Disabled` にしてから `git mv` してください。
+- `Assets/SymphonyFramework/` 配下のアセットは `SymphonyAssetProtector` が移動を自動で差し戻します。意図して動かす場合は `Project Settings > SymphonyFramework` の `Asset Protection Mode` を `Warning` または `Disabled` にしてから `git mv` してください。
 
 ## 3. 文字コードと改行
 
@@ -124,7 +124,7 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 
 ### 自動テストについて
 
-テストは**パッケージ内の `Assets/SymphonyFrameWork/Tests/`** にあります。EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`。
+テストは**パッケージ内の `Assets/SymphonyFramework/Tests/`** にあります。EditMode は `Tests/Editor/`、PlayMode は `Tests/Runtime/`。
 
 - 両方の asmdef に `"defineConstraints": ["UNITY_INCLUDE_TESTS"]` を付けており、利用者のビルドには含まれません
 - `Runtime/AssemblyInfo.cs` と `Core/AssemblyInfo.cs` がテストアセンブリへ `InternalsVisibleTo` を与えているため、**`internal` な内部実装も単体テストできます**
@@ -140,7 +140,7 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 
 ### サンプルによる確認
 
-各機能には `Assets/SymphonyFrameWork/Samples~/Runtime/*Sample/` に動作確認用のシーンとスクリプトがあります。サンプルは公開APIの利用例であり、`internal` APIへ依存させないでください。
+各機能には `Assets/SymphonyFramework/Samples~/Runtime/*Sample/` に動作確認用のシーンとスクリプトがあります。サンプルは公開APIの利用例であり、`internal` APIへ依存させないでください。
 
 **`Samples~` は末尾のチルダによりUnityのインポート対象外です。**利用側では出荷物に含まれず、Package Managerからインポートしたときだけ `Assets/Samples/` へコピーされます。**その代わり、このワークスペースではサンプルシーンをProjectビューから開けません。**サンプルをPlayして確認する場合は、対象の `Samples~/Runtime/<名前>/` を `Assets/` 配下の作業用フォルダへコピーしてから開き、確認後に削除してください。コピーしたものをコミットしないでください。
 
@@ -187,7 +187,7 @@ python scripts/release_round.py finalize --paths Documentation/Designs/Foo.md
 
 パッケージを変更した場合、**submodule と親リポジトリの2段階でコミット**します。
 
-1. submodule（`Assets/SymphonyFrameWork/`）で `develop` から `feature/<機能名>` を切り、変更をコミットする。`main` へ直接コミットしません。
+1. submodule（`Assets/SymphonyFramework/`）で `develop` から `feature/<機能名>` を切り、変更をコミットする。`main` へ直接コミットしません。
 2. submodule の変更を push する。**push しないまま親の gitlink だけを更新すると、他の開発者が解決できない参照になります。**
 3. `finalize` でPRを `develop` へマージし、submoduleを `develop` へ揃えて作業ブランチを削除する。
 4. 親リポジトリで、更新された gitlink をコミットしてpushする。
@@ -238,7 +238,7 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 
 | 変更の種類 | 同時に更新するもの |
 | --- | --- |
-| 公開API（`public`/`protected`）の追加・変更・削除 | XMLドキュメント、**`Documentation~/Modules/<モジュール>.md`**、`Assets/SymphonyFrameWork/CHANGELOG.md`、`Assets/SymphonyFrameWork/package.json` の `version`、該当する Sample。索引が変わる場合は `README.md`、アセンブリ・初期化・公開型の関係が変わる場合は`Documentation~/Architecture.md` |
+| 公開API（`public`/`protected`）の追加・変更・削除 | XMLドキュメント、**`Documentation~/Modules/<モジュール>.md`**、`Assets/SymphonyFramework/CHANGELOG.md`、`Assets/SymphonyFramework/package.json` の `version`、該当する Sample。索引が変わる場合は `README.md`、アセンブリ・初期化・公開型の関係が変わる場合は`Documentation~/Architecture.md` |
 | 公開挙動の変更（シグネチャは同じだが結果が変わる） | CHANGELOG.md、`version`、必要なら `Documentation~/Modules/<モジュール>.md` の「仕組みの要点」、「機能一覧」、クイックスタート、「うまくいかないとき」、「守ること」 |
 | 設定アセット（Config）の項目の追加・変更 | `Documentation~/Modules/<モジュール>.md` の「Editor機能」、README の初期設定、CHANGELOG.md |
 | Editor機能（ウィンドウ、メニュー、Project Settings、生成物）の追加・変更 | 対応する `Documentation~/Modules/<モジュール>.md`。横断的な機能（Symphony Administrator、アセット保護、Editorの初期化）は `Documentation~/EditorTools.md`。CHANGELOG.md。索引が変わる場合は `Documentation~/EditorTools.md` の `## 一覧` と README |
@@ -252,7 +252,7 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 
 ### バージョンとCHANGELOG
 
-- **版は4か所を同時に更新します。** `package.json` の `version`、`Assets/SymphonyFrameWork/Core/SymphonyConstant.cs` の `VERSION`、CHANGELOG の見出し、**README の「現在のバージョン」**。SemVerの判断基準は [DesignPhilosophy.md `### バージョニング`](./DesignPhilosophy.md) を参照してください（破壊的変更=メジャー / 後方互換な追加=マイナー / 実装のみの修正=パッチ）。
+- **版は4か所を同時に更新します。** `package.json` の `version`、`Assets/SymphonyFramework/Core/SymphonyConstant.cs` の `VERSION`、CHANGELOG の見出し、**README の「現在のバージョン」**。SemVerの判断基準は [DesignPhilosophy.md `### バージョニング`](./DesignPhilosophy.md) を参照してください（破壊的変更=メジャー / 後方互換な追加=マイナー / 実装のみの修正=パッチ）。
 - **`SymphonyConstant.VERSION` は設計書の「この Round で触るバージョン関連ファイル」から落ちやすい箇所です。** `release_round.py preflight` の `[version]` が `package.json` との一致を検査するため事故にはなりませんが、設計を書く時点で4か所すべてを列挙してください。READMEは4か所目で、こちらは検査が無いぶん漏れが残りやすい箇所です。
 - CHANGELOG の形式:
 
@@ -274,7 +274,7 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 
 ### 利用者向けドキュメントとHTML生成物
 
-**正本はMarkdownです。** `Assets/SymphonyFrameWork/Documentation~/Html/` 配下のHTMLは `scripts/build_module_docs.py` の生成物で、Editorから「ドキュメントを開く」操作をしたときにブラウザが読む先です。手で編集しないでください。
+**正本はMarkdownです。** `Assets/SymphonyFramework/Documentation~/Html/` 配下のHTMLは `scripts/build_module_docs.py` の生成物で、Editorから「ドキュメントを開く」操作をしたときにブラウザが読む先です。手で編集しないでください。
 
 ```bash
 python scripts/build_module_docs.py
@@ -307,7 +307,7 @@ python scripts/build_module_docs.py
 ## 8. やってはいけないこと
 
 - `.meta` を手書きする、GUIDを書き換える、`.meta` と実ファイルを別々に動かす。
-- `Assets/SymphonyFrameWork.meta`（親リポジトリの管理物）を削除する。
+- `Assets/SymphonyFramework.meta`（親リポジトリの管理物）を削除する。
 - submodule の変更を push せずに、親リポジトリの gitlink だけを更新する。
 - パッケージのファイルを親リポジトリ側で直接追跡・コミットしようとする。
 - `Cache/`、`Library/`、`.csproj`、`.sln`、親ワークスペースの生成物をコミットする。

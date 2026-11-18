@@ -1,6 +1,6 @@
 # モジュールの内部構造
 
-この文書は、フレームワーク本体を開発する人向けに、各モジュールの内部のクラス構成をまとめたものです。利用者向けのモジュール文書（`Assets/SymphonyFrameWork/Documentation~/Modules/`）には、使うための情報だけを載せ、内部構造はここへ置きます。
+この文書は、フレームワーク本体を開発する人向けに、各モジュールの内部のクラス構成をまとめたものです。利用者向けのモジュール文書（`Assets/SymphonyFramework/Documentation~/Modules/`）には、使うための情報だけを載せ、内部構造はここへ置きます。
 
 - 置き場所を分けた経緯は [Designs/UserFacingModuleDocuments.md](./Designs/UserFacingModuleDocuments.md) にあります。
 - 層の考え方は [DesignPhilosophy.md](./DesignPhilosophy.md) にあります。
@@ -12,20 +12,20 @@
 
 ```mermaid
 flowchart LR
-    Consumer["利用側アセンブリ"] --> Runtime["SymphonyFrameWork"]
-    Consumer -. "自動生成enumを使う場合" .-> Enum["SymphonyFrameWork.Enum"]
-    Editor["SymphonyFrameWork.Editor"] --> Runtime
-    Editor --> Core["SymphonyFrameWork.Core"]
+    Consumer["利用側アセンブリ"] --> Runtime["SymphonyFramework"]
+    Consumer -. "自動生成enumを使う場合" .-> Enum["SymphonyFramework.Enum"]
+    Editor["SymphonyFramework.Editor"] --> Runtime
+    Editor --> Core["SymphonyFramework.Core"]
     Runtime --> Core
     Runtime --> Addressables["Unity.Addressables"]
     Runtime --> ResourceManager["Unity.ResourceManager"]
     Runtime --> Enum
 ```
 
-- `SymphonyFrameWork`: Runtime API、Component、設定型、Utilityを含むメインアセンブリ。
-- `SymphonyFrameWork.Core`: RuntimeとEditorが共有する定数・基盤。利用側が通常直接参照する必要はない。
-- `SymphonyFrameWork.Editor`: Editor専用の設定画面、管理ウィンドウ、Drawer、Generator。Playerビルドには含まれない。
-- `SymphonyFrameWork.Enum`: 利用プロジェクトのScene、Tag、Layer、Audio Groupから生成されるアセンブリ。利用する場合だけ消費者側asmdefから参照する。
+- `SymphonyFramework`: Runtime API、Component、設定型、Utilityを含むメインアセンブリ。
+- `SymphonyFramework.Core`: RuntimeとEditorが共有する定数・基盤。利用側が通常直接参照する必要はない。
+- `SymphonyFramework.Editor`: Editor専用の設定画面、管理ウィンドウ、Drawer、Generator。Playerビルドには含まれない。
+- `SymphonyFramework.Enum`: 利用プロジェクトのScene、Tag、Layer、Audio Groupから生成されるアセンブリ。利用する場合だけ消費者側asmdefから参照する。
 
 参照方向は`Editor → Runtime → Core`です。RuntimeまたはCoreからEditorへ逆参照しません。
 

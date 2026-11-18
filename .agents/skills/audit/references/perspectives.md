@@ -135,7 +135,7 @@ grep では取れないのでここはツールに任せる。
 ゲーム側の7レイヤー構成は当てはまらないので、**アセンブリ境界と `Internal/` の使い分け**へ置き換える。
 
 ```text
-SymphonyFrameWork.Editor ──> SymphonyFrameWork ──> SymphonyFrameWork.Core
+SymphonyFramework.Editor ──> SymphonyFramework ──> SymphonyFramework.Core
 ```
 
 - Runtime / Core から `UnityEditor` / `EditorPrefs` / `AssetDatabase` への参照。
@@ -255,7 +255,7 @@ ViewModel / Component / DTO / Loader / Factory / Config / Initializer / Debugger
 
 **検出**: `scan` の `B_obsolete` / `B_obsolete_undocumented` / `B_deprecation_stale`
 
-`Assets/SymphonyFrameWork/Documentation~/Deprecations.md` が正本。
+`Assets/SymphonyFramework/Documentation~/Deprecations.md` が正本。
 `AGENTS.md` §0.1 が「記載漏れはバグ」と規定している。
 
 **検査は双方向に行う。片方向だけでは片方の不整合しか拾えない。**
@@ -276,7 +276,7 @@ ViewModel / Component / DTO / Loader / Factory / Config / Initializer / Debugger
 
 **検出**: 読解
 
-`Assets/SymphonyFrameWork/Documentation~/EditorTools.md` が正本。
+`Assets/SymphonyFramework/Documentation~/EditorTools.md` が正本。
 
 - `Editor/` 配下の各ディレクトリに対応する節があるか
 - メニューパス、Project Settings の位置が実装と一致しているか。
@@ -302,9 +302,9 @@ ViewModel / Component / DTO / Loader / Factory / Config / Initializer / Debugger
 
 **検出**: 読解
 
-- `EnumGenerator` / `AutoEnumGenerator` の生成物（`Assets/Scripts/SymphonyFrameWork/*Enum.cs`）が
+- `EnumGenerator` / `AutoEnumGenerator` の生成物（`Assets/Scripts/SymphonyFramework/*Enum.cs`）が
   手編集されていないか
-- `SymphonyConfigManager.AllConfigCheck()` が生成する `Assets/Resources/SymphonyFrameWork/*.asset` の
+- `SymphonyConfigManager.AllConfigCheck()` が生成する `Assets/Resources/SymphonyFramework/*.asset` の
   型が `internal` に保たれているか
 - **生成コードの再生成で壊れる依存が無いか**（生成物の中身に依存した実装）
 
@@ -342,7 +342,7 @@ ViewModel / Component / DTO / Loader / Factory / Config / Initializer / Debugger
 
 ### B9 コード内 `TODO` の棚卸し
 
-**検出**: `rg -n "TODO|FIXME|HACK" Assets/SymphonyFrameWork -g '*.cs'`
+**検出**: `rg -n "TODO|FIXME|HACK" Assets/SymphonyFramework -g '*.cs'`
 
 `TODO` は「後で直す」という意思表示だが、**書いた時点で追随先が決まっておらず、検出手段も無ければ棚卸しされずに残り続ける。** 監査のたびに全件を出し、次のどれかへ分類する。
 

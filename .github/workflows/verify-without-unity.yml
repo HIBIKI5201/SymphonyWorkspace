@@ -46,7 +46,7 @@ jobs:
       # 同名の型が増えていないか。Unity のコンパイラが無いと CS0101 に気づけない。
       # ジェネリック引数違いと partial は同名で出るため、既知のものは除外リストで扱う。
       - name: Check duplicate type names
-        working-directory: Assets/SymphonyFrameWork
+        working-directory: Assets/SymphonyFramework
         run: |
           duplicates=$(git grep -hoE \
             "^\s*(public|internal)\s+(sealed\s+|static\s+|abstract\s+|partial\s+)*(class|struct|interface|enum)\s+[A-Za-z0-9_]+" \

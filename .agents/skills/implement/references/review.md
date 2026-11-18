@@ -10,13 +10,13 @@
 
 **検証はファイル変更を止めてから実行する。** コンパイルやテストの実行中にファイルを書き換えると、Unity が途中の状態をリコンパイルし、結果が実装の欠陥なのか編集との競合なのか切り分けられなくなる。テストの追加・修正も同じで、書き終えてから実行する。**結果が前回と食い違ったら、まず自分が実行中に何か書いていなかったかを疑い、変更を止めて再実行してから調査に入る。**
 
-1. **差分レビュー** — `git -C "Assets/SymphonyFrameWork" status` と `git -C "Assets/SymphonyFrameWork" diff` で全変更を確認する。設計書に無い変更、範囲外のファイル、`public` の増加を特に見る。
+1. **差分レビュー** — `git -C "Assets/SymphonyFramework" status` と `git -C "Assets/SymphonyFramework" diff` で全変更を確認する。設計書に無い変更、範囲外のファイル、`public` の増加を特に見る。
 2. **規約チェック** — `Documentation/CodeGuidelines.md` の `## レビュー用チェックリスト` を通す。名前空間とフォルダの一致、`Internal/` の使い分け、XMLドキュメント、CancellationToken の伝播、登録と解除の対。
 
    目視だけに頼らず、**機械的に検索できる違反は検索する**。特に次の3つは過去に見落としが起きている。
 
    ```
-   rg -n "UnityEditor|EditorPrefs" Assets/SymphonyFrameWork/Runtime Assets/SymphonyFrameWork/Core -g '*.cs'
+   rg -n "UnityEditor|EditorPrefs" Assets/SymphonyFramework/Runtime Assets/SymphonyFramework/Core -g '*.cs'
    ```
 
    - Runtime／Core から `UnityEditor` への参照（`#if UNITY_EDITOR` で囲んであっても違反）
@@ -25,7 +25,7 @@
    **この Round で追加・変更した `.cs` に UTF-8 BOM が付いているか。**
 
    ```bash
-   cd "Assets/SymphonyFrameWork" && { git diff --name-only --diff-filter=d origin/develop -- '*.cs'; git ls-files -o --exclude-standard -- '*.cs'; } | sort -u | while read -r f; do
+   cd "Assets/SymphonyFramework" && { git diff --name-only --diff-filter=d origin/develop -- '*.cs'; git ls-files -o --exclude-standard -- '*.cs'; } | sort -u | while read -r f; do
      [ "$(head -c 3 "$f" | od -An -tx1 | tr -d ' \n')" != "efbbbf" ] && echo "BOM無し: $f"
    done
    ```
