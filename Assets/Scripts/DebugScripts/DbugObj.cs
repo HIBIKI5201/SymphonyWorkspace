@@ -3,7 +3,7 @@ using SymphonyFramework.Attribute;
 using SymphonyFramework.Debugger;
 using SymphonyFramework.Debugger.HUD;
 using SymphonyFramework.System.SaveSystem;
-using SymphonyFramework.System.SceneLoad;
+using SymphonyFramework.Scenes;
 using SymphonyFramework.Services;
 using System;
 using TestNameSpace;
@@ -46,24 +46,24 @@ public class DbugObj : MonoBehaviour, IGameObject, IInjectable<MeshRenderer>
 
     private async void SceneLoad()
     {
-        await SceneLoader.LoadSceneAsync("Scene2");
+        await Attacca.LoadAsync("Scene2");
         Debug.Log("Scene2 loaded");
 
         await Awaitable.WaitForSecondsAsync(3);
 
-        await SceneLoader.LoadSceneAsync("Scene3");
+        await Attacca.LoadAsync("Scene3");
         Debug.Log("Scene3 loaded");
 
         await Awaitable.WaitForSecondsAsync(3);
 
-        await SceneLoader.UnloadSceneAsync("Scene2");
-        await SceneLoader.UnloadSceneAsync("Scene3");
+        await Attacca.UnloadAsync("Scene2");
+        await Attacca.UnloadAsync("Scene3");
         Debug.Log("Scene2 and Scene3 unloaded");
 
         await Awaitable.WaitForSecondsAsync(3);
 
-        await SceneLoader.LoadSceneAsync("Scene2", priority: 10);
-        await SceneLoader.LoadSceneAsync("Scene3", priority: -5);
+        await Attacca.LoadAsync("Scene2", priority: 10);
+        await Attacca.LoadAsync("Scene3", priority: -5);
     }
 
     [Serializable]

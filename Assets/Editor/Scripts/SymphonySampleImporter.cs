@@ -139,7 +139,7 @@ public sealed class SymphonySampleImporter : EditorWindow
     ///     取り込み済みサンプルのシーンをBuild Settingsへ追加する。
     /// </summary>
     /// <remarks>
-    ///     **取り込みとは別の操作にしている。** Scene Loader と Scene Block のサンプルは
+    ///     **取り込みとは別の操作にしている。** Attacca と Suite のサンプルは
     ///     シーンが登録されていないと動かないが、Build Settings の変更は `SceneListEnum` の
     ///     再生成を伴うため、コピーの副作用にしない。
     /// </remarks>

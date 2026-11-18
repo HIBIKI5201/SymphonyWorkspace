@@ -1,5 +1,6 @@
-using SymphonyFramework.System.SceneLoad;
+using System;
 using System.Linq;
+using SymphonyFramework.Scenes;
 using UnityEngine;
 
 namespace TestNameSpace
@@ -13,10 +14,10 @@ namespace TestNameSpace
         {
             return;
             string[] scenes = _sceneListEnums.Select(s => s.ToString()).ToArray();
-            bool succeeded = await SceneLoader.LoadScenesAsync(scenes, loadingProgress =>
+            bool succeeded = await Attacca.LoadAsync(scenes, new Progress<float>(loadingProgress =>
             {
                 Debug.Log($"Loading Progress: {loadingProgress * 100}%");
-            });
+            }));
 
             if (succeeded)
             {

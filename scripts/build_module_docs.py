@@ -41,8 +41,8 @@ REQUIRED_DIAGRAMS: dict[str, str] = {}
 # 「索引が全モジュール文書をこの順でリンクしているか」を検査するための期待値である。
 MODULE_ORDER = (
     "Partitura",
-    "SceneLoader",
-    "SceneBlock",
+    "Attacca",
+    "Suite",
     "SaveDataSystem",
     "AudioManager",
     "PauseManager",

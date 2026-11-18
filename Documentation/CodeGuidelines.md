@@ -55,25 +55,24 @@ SymphonyFramework
 ├─ Exception
 ├─ Interface
 ├─ Orchestrator
+├─ Scenes
+├─ Services
 ├─ System
 │  ├─ Audio
 │  ├─ Pause
-│  ├─ SaveData
-│  ├─ SceneBlock
-│  ├─ SceneLoad
-│  └─ ServiceLocate
+│  └─ SaveData
 └─ Utility
 ```
 
-- 消費者向けの公開エントリポイントと公開Componentは、属するサブシステムの名前空間へ置く。例: `SaveStore`は`SymphonyFramework.System.SaveData`、`SceneLoader`は`SymphonyFramework.System.SceneLoad`、`Partitura`と`Partitura`は`SymphonyFramework.Services`。
+- 消費者向けの公開エントリポイントと公開Componentは、属するサブシステムの名前空間へ置く。例: `SaveStore`は`SymphonyFramework.System.SaveData`、`Attacca`と`Suite`は`SymphonyFramework.Scenes`、`Partitura`は`SymphonyFramework.Services`。
 - Runtimeの`SymphonyOrchestrator`は`SymphonyFramework.Orchestrator`、Editorの`SymphonyEditorOrchestrator`は`SymphonyFramework.Editor`へ置く。Editor asmdefからRuntime asmdefへの一方向参照を維持する。
 - 特定サブシステムの専用例外は、その公開エントリポイントと同じ名前空間へ置く。複数サブシステムで共通する例外は`SymphonyFramework.Exception`へ置く。
 - 公開型と内部実装の区別は、名前空間ではなくフォルダで表す。Adaptorの公開エントリポイントとInfo、公開Strategyはサブシステム直下、Domain、Application、Adaptor Query／Dto、View、Infrastructureの内部実装は同じフォルダの`Internal/`配下へ置く。
 - Sampleは`SymphonyFramework.Samples.<SampleName>`とする。
 - ファイルの配置と名前空間を一致させる。
 - 名前空間はディレクトリ構成を反映する。並び順を示す数字など、コード上の責務を表さないディレクトリ名は除外する。
-- **`Runtime/Service/` だけは、フォルダ名と名前空間（`SymphonyFramework.System.*`）が一致しません。** Issue #106 でフォルダ名を `System` から `Service` へ変えた際、名前空間を揃えなかったためです。`SymphonyFramework.System.SaveData` などは利用側のすべての `using` に現れるため、変更するとメジャー更新の破壊的変更になります。**意図的に残している乖離であり、新しいサブシステムも `SymphonyFramework.System.<名前>` へ置いてください。**揃えるなら、それ自体を独立したメジャー更新のRoundとして扱います。
-- `internal`な型は、所属するフォルダ直下の`Internal/`へ置く。`Internal`と概念レイヤー名は名前空間には含めない。例: `Runtime/Service/SceneLoader/Internal/Application/SceneLoadService.cs`の名前空間は`SymphonyFramework.System.SceneLoad`。
+- **`Runtime/Service/` の残り（Audio、Pause、SaveSystem）だけは、フォルダ名と名前空間（`SymphonyFramework.System.*`）が一致しません。** Issue #106 でフォルダ名を `System` から `Service` へ変えた際、名前空間を揃えなかったためです。7.0.0 の命名整理（#227）で、Partitura は `Runtime/Services/`（`SymphonyFramework.Services`）、Attacca と Suite は `Runtime/Scenes/`（`SymphonyFramework.Scenes`）へ揃えました。残りも同じ整理の中で移します。**新しいサブシステムは、フォルダと名前空間を一致させて置いてください。**
+- `internal`な型は、所属するフォルダ直下の`Internal/`へ置く。`Internal`と概念レイヤー名は名前空間には含めない。例: `Runtime/Scenes/Attacca/Internal/Application/SceneLoadService.cs`の名前空間は`SymphonyFramework.Scenes`。
   - 横断的で最小限の内部ヘルパーは`Core/Internal/`へ置く。
   - Domain Entityは`Runtime/Service/<Subsystem>/Internal/Domain/`へ置く。
   - ApplicationのServiceとRegistryは`Runtime/Service/<Subsystem>/Internal/Application/`、AdaptorのQueryとDtoは`Internal/Adaptor/`へ置く。
@@ -147,7 +146,7 @@ Scene scene = SceneManager.GetSceneByName(sceneName);
 | class、struct | PascalCase | `SceneLoadInfo` |
 | enum | PascalCase + `Enum` | `SceneLoadStateEnum` |
 | interface | `I` + PascalCase | `IInitializeAsync` |
-| 公開操作クラス | 利用側が認識するサービス名をそのまま使う | `SceneLoader`、`SaveStore`、`AudioPlayer`、`PauseController` |
+| 公開操作クラス | 利用側が認識するサービス名をそのまま使う | `Attacca`、`SaveStore`、`AudioPlayer`、`PauseController` |
 | ホストライフサイクルを統括するComposition Root | 対象 + `Orchestrator` | `SymphonyOrchestrator`、`SymphonyEditorOrchestrator` |
 | Applicationの処理クラス | 対象 + `Service` | `SceneLoadService` |
 | 利用側が継承するApplicationの抽象拡張点 | 対象 + `Strategy` | `SaveDataLoaderStrategy`、`PlayerPrefsSaveDataLoaderStrategy` |
@@ -311,7 +310,7 @@ public sealed class SceneLoadService
 /// <param name="sceneName"> Build Settingsに登録されたシーン名。 </param>
 /// <param name="token"> 処理を中断するためのトークン。 </param>
 /// <returns> ロードに成功した場合はtrue。 </returns>
-public static Awaitable<bool> LoadSceneAsync(
+public static Awaitable<bool> LoadAsync(
     string sceneName,
     CancellationToken token = default)
 {
@@ -435,7 +434,7 @@ public string InitialSceneName => _initialSceneName;
 
 ### フレームワーク機能の利用
 
-- シーン管理には、特別な理由がない限り`SceneManager`を直接呼ばず`SceneLoader`を使用する。
+- シーン管理には、特別な理由がない限り`SceneManager`を直接呼ばず`Attacca`か`Suite`を使用する。
 - 共有インスタンスの登録と取得には`Partitura`を使用し、所有者と解除タイミングを明確にする。
 - セーブ対象は`SaveDataContent`を継承し、`SaveStore`を通して操作する。
 - ポーズに追従する待機やTweenには、`PauseController`または`SymphonyTween`の対応APIを使用する。

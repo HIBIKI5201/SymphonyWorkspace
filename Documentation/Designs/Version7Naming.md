@@ -22,7 +22,7 @@
 | **R2** | `ServiceLocator` + `ServiceInjector` → `Partitura`。取得・解除の入口の整理 | #225（Partitura）、#233 | 入れない（R6） |
 | **R3** | `SceneLoader` → `Attacca`、`SceneBlockLoader` → `Suite`。ロード入口の統合、ブロックが持つシーンの保護 | #225（Attacca・Suite）、#232 | 入れない（R6） |
 | **R4** | `SaveStore` → `Manuscript`、`AudioManager` → `Sonority` | #225 | 入れない（R6） |
-| **R5** | `PauseManager` → `Fermata`。6.12.0 で非推奨にした旧ポーズAPIと、`Deprecations.md` で「次のメジャー更新」としていた旧APIの削除 | #225、Deprecations.md | 入れない（R6） |
+| **R5** | `PauseManager` → `Fermata`。6.12.0 で非推奨にした旧ポーズAPIと、`Deprecations.md` で「次のメジャー更新」としていた旧APIの削除。自動生成の `SymphonyFramework.PauseCategory` を `SymphonyFramework.Enum` へ統合（依頼者の提案、2026-11-18） | #225、Deprecations.md | 入れない（R6） |
 | **R6** | 互換レイヤー: 旧名前空間・旧Facade名の `[Obsolete]` 転送クラス、6.x の名前を指す `[MovedFrom]`、移行ガイド、`Deprecations.md`、版を 7.0.0 へ。#227 の「リリース前のチェック」 | #227 | ここでまとめて入れる |
 
 ### 互換レイヤーを最後の Round へまとめる理由
@@ -394,7 +394,7 @@ submodule 側は2コミット。
 
 # Round 3: `SceneLoader` → `Attacca`、`SceneBlockLoader` → `Suite`、シーン管理の入口の整理（#225、#232）
 
-> **状態: 設計中。下の「依頼者に決めてもらうこと」の回答待ち。** 版は 6.18.0。
+> **状態: 実装済み（回答は下の「決定事項」）。** 版は 6.18.0。
 
 ## 目的
 
@@ -460,3 +460,70 @@ submodule 側は2コミット。
 - 追加: `Suite` が保持中のシーンを `Attacca.UnloadAsync` に渡すと拒否され、`Suite` の状態が `Loaded` のまま残ること（Service 層を fake の判定で検証する）
 - 追加: `Suite.UnloadAsync` は自分の保持を解いたシーンをアンロードできること
 - `SuiteAsset` の改名後もシリアライズ名で値を読めること（`[FormerlySerializedAs]` を付けた場合、`CustomAttributeData` で値を確かめる）
+
+## 決定事項（2026-11-18、依頼者の回答）
+
+1. a: 進捗は `IProgress<float>` にそろえる
+2. **b**: Suite が保持中のシーンを `Attacca.UnloadAsync` に渡すと、警告をログへ出して `false` を返す（例外にしない）
+3. **b**: `RegisterAfterSceneLoad` は削除せず `WhenLoaded(string, Action)` として残す
+4. a: `IInitializeAsync` は `Task` のまま
+5. **b**: 起動時のシーン一覧で Suite を指定できるようにする（R3 で追加）
+
+## 実施レポート（Round 3）
+
+実施日: 2026-11-18 / バージョン: 6.18.0 / PR: （R2 の #235 がマージされた後に作る）
+
+### 実装した内容
+
+submodule 側は2コミット（R2 のブランチの上に積んでいる）。
+
+1. `46a79b0` コード
+   - `Runtime/Service/SceneLoader/` → `Runtime/Scenes/Attacca/`、`Runtime/Service/SceneBlock/` → `Runtime/Scenes/Suite/`（`.meta` は `git mv`）。名前空間は `SymphonyFramework.Scenes`
+   - 公開型と Editor の改名（`AttaccaWindow`、`SuiteWindow`、`SuiteAssetDrawer`、各 `.uxml`）。内部の `SceneLoad*` と `ISceneLoader`、`UnitySceneLoader` は名前を変えていない（Facade 名から派生した名前ではないため）
+   - `Attacca` の Load/Unload を単体・配列の overload へまとめ、進捗を `IProgress<float>` に統一。旧 `Action<float>` の変換（`WrapProgress`）は R6 の互換層で使うため internal で残した
+   - 保持中シーンの保護: `Attacca.SetSuiteHoldQuery(Func<string, bool>)` を Orchestrator が `Suite.IsSceneHeld` で呼ぶ。複数指定は全件を先に確かめ、1件でも保持中なら何もしない
+   - 起動時の Suite: `SceneLoadConfig._initializeSuiteList`（Inspector にリスト）を追加。`SceneLoadService.InitializeAfterSceneLoad` に「残すシーン名」と「追加ロード」を渡せるようにし、順序は「初期シーン → Suite → 残りの整理」。どちらかが失敗したら整理しない。Suite 側は `Suite.LoadInitialAsync`（例外はログへ出して `false`）と `Suite.CollectSceneNames`
+   - `SuiteAsset._suiteName` に `[FormerlySerializedAs("_blockName")]`。サンプルのアセットは旧名のまま残し、移行の経路を通す
+   - テスト: 新規 `AttaccaTests`（保持中シーンの単体・複数アンロードが `false`、リセットで判定が外れる）。`SceneLoadServiceTests` に起動時 Suite の4ケース（順序、Suite だけ、Suite の失敗で整理しない、リセット無効）。`SuiteTests` に `CollectSceneNames` と `LoadInitialAsync` の3ケース。`SuiteAssetTests` に `FormerlySerializedAs` の検査。`RuntimeFolderLayoutTests` に置き場の検査
+2. `ad23c09` 文書: 6.18.0、CHANGELOG（名前の対応表）、`Modules/Attacca.md`（旧 `SceneLoader.md`、起動時処理の節を追加）、`Modules/Suite.md`（旧 `SceneBlock.md`）、各文書のリンク、生成HTML、`package.json` のサンプル名
+
+ワークスペース側: `Assets/Scripts/DebugScripts/` の2ファイル、`Assets/Editor/Scripts/SymphonySampleImporter.cs` のコメント、`Documentation/` の規約文書（CodeGuidelines、DesignPhilosophy、DocumentationGuidelines、ModuleInternals）、`scripts/build_module_docs.py` のモジュール順。
+
+### 設計から変えた点
+
+- 回答に合わせ、質問2 は例外ではなく警告と `false`、質問3 は `WhenLoaded` を残し、質問5 は R3 で実装した
+- R2 の置換で残っていた誤り（ModuleInternals の `Partitura ..> Partitura`、重複した `class Partitura`、旧メソッド名、CodeGuidelines の「`Partitura`と`Partitura`」）を直した
+- CodeGuidelines の「`Runtime/Service/` はフォルダと名前空間が一致しない」の節を、7.0.0 で順に揃えている現状へ書き換えた
+
+### 検証結果（リモートの代替検査）
+
+- `release_round.py preflight`: 既知の NG 2件（ブランチ名、Enter Play Mode Options）以外は OK
+- `generate_meta.py --check`、`build_module_docs.py --check`、`sync_agent_skill_locators.py --check`: OK
+- 同名型の検査: 追加なし。公開型のテスト網羅の検査を手元で再現し、未テストの公開型が増えていないこと（`Attacca` は一覧から外した）を確認
+- 旧名の残り: パッケージの `.cs` / `.uxml` に `SceneLoader`、`SceneBlock*`、`LoadSceneAsync` などの公開名が残っていないことを grep で確認（内部の `ISceneLoader` のメソッド名は除く）
+
+### 未実施リスト（R6 の検証へ追加）
+
+- コンパイルと全テスト。特に `AttaccaTests`（EditMode で `Attacca.Initialize` を呼ぶ）、`SuiteTests.LoadInitialAsync_EmptySuite_LogsAndReturnsFalse`（`LogAssert.Expect` の一致）、Orchestrator の `Func<Task<bool>>` の組み立て
+- Play Mode: `SceneLoadConfig` に Suite を入れて起動し、初期シーン → Suite → 整理の順になること。Suite のシーンが整理で残ること
+- Play Mode: Suite が保持中のシーンを `Attacca.UnloadAsync` に渡して警告と `false` になり、Suite の状態が変わらないこと
+- 既存の `SceneBlockAsset` アセット（サンプル）が `SuiteAsset` として開け、`Suite Name` に旧 `Block Name` の値が入っていること
+- Symphony Administrator の Attacca / Suite パネル、`SceneLoadConfig` の Inspector に Suite のリストが出ること
+- サンプル `AttaccaSample` / `SuiteSample` を取り込んで動くこと
+
+### 振り返り
+
+- 改名スクリプトがファイル名の部分一致で `ISceneLoader.cs` / `UnitySceneLoader.cs` まで `IAttacca` / `UnityAttacca` へ変えた。**型名の改名は単語境界つきの完全一致に限る**べきだった。R4 の `SaveStore` / `AudioManager` でも同じ形（`*SaveStore*`）が起きうるので、スクリプト側で境界を固定する
+- `using` の重複（同じ名前空間を2回、自分の名前空間を `using`）が置換後に8ファイルで出た。名前空間を統合する Round では、置換後に重複 `using` を機械的に検出する手順を足す
+- R2 の文書置換の誤りを R3 で見つけた。置換後に「同じ名前が2回並ぶ」パターン（`X と X`、`X ..> X`）を grep する検査を、R4 から置換手順に加える
+
+---
+
+# Round 5 の追加: `PauseCategory` を `SymphonyFramework.Enum` へ統合する（依頼者の提案、2026-11-18）
+
+R5 の設計時に詳しく書く。今の見通しだけを残す。
+
+- 自動生成の asmdef `SymphonyFramework.PauseCategory` をやめ、Pause のカテゴリー用インターフェースも `SymphonyFramework.Enum` へ生成する
+- 今は `SymphonyFramework.asmdef` が Enum asmdef を参照しているが、Runtime / Core に生成 enum の利用は無い（grep で確認済み）。この参照を外し、`SymphonyFramework.Enum` から `SymphonyFramework` を参照する向きにする（PauseCategory のインターフェースが Runtime の型を使うため）
+- 利用側の既存の `PauseCategory` フォルダと asmdef は、Editor の起動時に Enum 側へ移す（R1 の生成物フォルダ移行と同じ仕組み）。**利用側の asmdef 参照が変わるため破壊的変更**
+
