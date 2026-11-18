@@ -239,7 +239,7 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 | 変更の種類 | 同時に更新するもの |
 | --- | --- |
 | 公開API（`public`/`protected`）の追加・変更・削除 | XMLドキュメント、**`Documentation~/Modules/<モジュール>.md`**、`Assets/SymphonyFrameWork/CHANGELOG.md`、`Assets/SymphonyFrameWork/package.json` の `version`、該当する Sample。索引が変わる場合は `README.md`、アセンブリ・初期化・公開型の関係が変わる場合は`Documentation~/Architecture.md` |
-| 公開挙動の変更（シグネチャは同じだが結果が変わる） | CHANGELOG.md、`version`、必要なら `Documentation~/Modules/<モジュール>.md` のクイックスタートと「実装時の注意」 |
+| 公開挙動の変更（シグネチャは同じだが結果が変わる） | CHANGELOG.md、`version`、必要なら `Documentation~/Modules/<モジュール>.md` のクイックスタート、「うまくいかないとき」、「守ること」 |
 | 設定アセット（Config）の項目の追加・変更 | `Documentation~/Modules/<モジュール>.md` の「Editor機能」、README の初期設定、CHANGELOG.md |
 | Editor機能（ウィンドウ、メニュー、Project Settings、生成物）の追加・変更 | 対応する `Documentation~/Modules/<モジュール>.md`。横断的な機能（Symphony Administrator、アセット保護、Editorの初期化）は `Documentation~/EditorTools.md`。CHANGELOG.md。索引が変わる場合は `Documentation~/EditorTools.md` の `## 一覧` と README |
 | 利用者向けドキュメント（`README.md`、`Documentation~/**/*.md`）の変更 | 書き方は [DocumentationGuidelines.md](./DocumentationGuidelines.md) に従う。**`python scripts/build_module_docs.py` を実行して `Documentation~/Html/` を再生成し、生成物も同じコミットへ含める。** 忘れると `release_round.py preflight` が落ちる |
@@ -248,7 +248,7 @@ Issue が無い機能追加・変更では、`feature/<短い機能名>` を使�
 | 非推奨化 | `[Obsolete("代替APIの案内", error: false)]`、**`Documentation~/Deprecations.md` への行追加（削除予定が未定なら「未定」と書く）**、CHANGELOG の `### Deprecated`（移行方法を明記）、READMEまたはSampleの旧API利用箇所 |
 | 非推奨APIの削除 | `Documentation~/Deprecations.md` の行を `## 削除済み` へ移す、CHANGELOG の `### Breaking`（移行方法を明記）、`package.json` の `version`（メジャー更新） |
 | 本体開発の手順・規約の変更 | ワークスペース側の `Documentation/`（このファイル、CodeGuidelines、DocumentationGuidelines、DesignPhilosophy）と `AGENTS.md` |
-| 内部実装（`internal`/`private`）のみの変更 | 原則不要。ただし**更新不要と判断した理由**をPR説明かコミットメッセージに書く |
+| 内部実装（`internal`/`private`）のみの変更 | 構成が変わるなら `Documentation/ModuleInternals.md`。それ以外は原則不要で、**更新不要と判断した理由**をPR説明かコミットメッセージに書く |
 
 ### バージョンとCHANGELOG
 
