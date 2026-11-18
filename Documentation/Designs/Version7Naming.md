@@ -389,3 +389,74 @@ submodule 側は2コミット。
 - R1 の一括置換スクリプトを、旧メソッド名の対応表つきで作り直した。`ServiceLocator.X` の形だけを置換し、null を返す `GetInstance` は印（`GETNULL_REVIEW`）へ置き換えて呼び出し箇所を1件ずつ判断した。**意味が変わる改名は、機械置換で別の名前へ寄せず、印を残して手で決める**形が効いた
 - 置換の対象に `.unity` を含めてしまい、戻した。R1 と同じ判断（表示用の値は Unity に任せる）を毎回思い出す必要があるので、置換対象の拡張子をスクリプト側で固定するとよい
 - R6 で入れる転送クラスと衝突するテスト（旧名前空間に型が無いことを確かめるもの）を一度足して、取り下げた。R6 の互換層の設計で、旧名が「解決できる」ことを確かめるテストへ切り替える
+
+---
+
+# Round 3: `SceneLoader` → `Attacca`、`SceneBlockLoader` → `Suite`、シーン管理の入口の整理（#225、#232）
+
+> **状態: 設計中。下の「依頼者に決めてもらうこと」の回答待ち。** 版は 6.18.0。
+
+## 目的
+
+- `SceneLoader` を `Attacca`、`SceneBlockLoader` を `Suite` へ改名し、どちらも名前空間 `SymphonyFramework.Scenes` へ置く（フォルダは `Runtime/Scenes/Attacca/` と `Runtime/Scenes/Suite/`）（#225）
+- ロードの入口を1系統の形にそろえ、ブロックが持つシーンを `Attacca` から落とせてしまう所有権の衝突をなくす（#232）
+
+## 公開API（6.17.0 → 6.18.0）
+
+### Attacca
+
+| 6.17.0 | 6.18.0 | 備考 |
+| --- | --- | --- |
+| `SceneLoader` | `Attacca` | |
+| `GetExistScene` / `IsExist` | `TryGetScene` / `IsLoaded` | |
+| `LoadSceneAsync(string, Action<float>, mode, priority, token)` | `LoadAsync(string, IProgress<float>, mode, priority, token)` | 質問1 |
+| `LoadSceneAsync(SceneLoadRequest, IProgress<float>, mode, token)` | `LoadAsync(SceneLoadRequest, IProgress<float>, mode, token)` | |
+| `LoadScenesAsync(string[], Action<float>, token)` | `LoadAsync(string[], IProgress<float>, token)` | 質問1 |
+| `LoadScenesAsync(SceneLoadRequest[], IProgress<float>, token)` | `LoadAsync(SceneLoadRequest[], IProgress<float>, token)` | |
+| `UnloadSceneAsync` / `UnloadScenesAsync`（`Action<float>`） | `UnloadAsync`（オーバーロード、`IProgress<float>`） | 質問1、質問2 |
+| `RegisterAfterSceneLoad` | 削除 | 質問3 |
+| `WaitForLoadSceneAsync` | `WaitForLoadAsync` | |
+| `TryGetState` / `GetSceneInfos` / `TryGetSceneInfo` / `SetActiveScene` / `RegisterLoadedScene` | そのまま | |
+| `SceneLoadInfo` / `SceneLoadRequest` / `SceneLoadStateEnum` / `SceneInitializationException` / `IInitializeAsync` | 名前はそのまま、名前空間だけ | 質問4 |
+
+複数シーン版に `mode` が無いのは今のままにする。`Single` で複数を読むと、先に読んだシーンを後のシーンが落とすため。
+
+### Suite
+
+| 6.17.0 | 6.18.0 |
+| --- | --- |
+| `SceneBlockLoader` | `Suite` |
+| `SceneBlockAsset` / `SceneBlockEntry` / `SceneBlockInfo` | `SuiteAsset` / `SuiteEntry` / `SuiteInfo` |
+| `SceneBlockLoadStateEnum` / `SceneBlockPlanException` | `SuiteLoadStateEnum` / `SuitePlanException` |
+| `TryGetBlockInfo` / `GetBlockInfos` | `TryGetInfo` / `GetInfos` |
+| `SceneBlockAsset.BlockName`、引数名 `blockName` | `SuiteAsset.SuiteName`、`suiteName` |
+| `LoadAsync` / `UnloadAsync` / `IsLoaded` | そのまま |
+
+`SuiteAsset` のシリアライズ名（`_blockName`、`_entries` など）は `[FormerlySerializedAs]` を付けて改名するか、そのまま残す。利用側のアセットの値を失わないため。クラスの改名は `.meta` の GUID で引き継がれる。
+
+### 所有権の衝突（質問2 が a の場合）
+
+`Suite` が保持しているシーンを `Attacca.UnloadAsync` に渡すと `InvalidOperationException` を投げ、何もアンロードしない。`Suite` は `Attacca` を使う側なので、`Attacca` から `Suite` を参照すると依存が逆向きになる。**`Attacca` の内部に「保持中か」を問い合わせる判定（`Func<string, bool>`）の差し込み口を置き、Orchestrator が組み立て時に `Suite` の判定を渡す。** `Suite` 自身のアンロードはこの判定を通らない内部経路を使う。
+
+### 関連して変わる名前
+
+`SymphonyMcpTools.GetSceneLoaderJson` などの MCP ツール、Symphony Administrator のパネル名、`SymphonyDocumentPageEnum`、モジュール文書（`SceneLoader.md` → `Attacca.md`、`SceneBlock.md` → `Suite.md`）、サンプル。R2 と同じく、旧 Facade 名から派生した名前を新しい名前へそろえる。
+
+## 依頼者に決めてもらうこと
+
+1. **進捗の型**: ⭐a. `IProgress<float>` にそろえる（`Suite` と Request 版がすでにこれ。.NET 標準） / b. `Action<float>` にそろえる
+2. **`Suite` が持っているシーンを `Attacca.UnloadAsync` で落とそうとしたとき**: ⭐a. `InvalidOperationException` で拒否する / b. 警告を出して false を返す / c. アンロードして `Suite` 側の状態を更新する
+3. **ロード完了を待つ方法**: ⭐a. `WaitForLoadAsync`（await）だけ残し、`RegisterAfterSceneLoad` は削除する / b. `WhenLoaded(Action)` としても残す（Partitura の `WhenRegistered` と同じ形）
+4. **`IInitializeAsync`**: ⭐a. `Task` のまま。複数の呼び出し元が同じ初期化を待つため（`Awaitable` は1回しか await できない） / b. `Awaitable` にする
+5. **起動時のシーン一覧で `Suite` を指定できるようにするか**: ⭐a. 7.0.0 ではやらず、別Issueにする（機能追加で、改名とは別に検証したい） / b. R3 で追加する
+
+## 利用側（SymphonyKillChord）への影響の目安
+
+使用数: `GetExistScene` 11、`RegisterLoadedScene` 7、`LoadSceneAsync` 6、`UnloadSceneAsync` 5、`SetActiveScene` 2。`SceneBlockLoader` と `IInitializeAsync` は 0。**`LoadSceneAsync` と `UnloadSceneAsync` は進捗を `Action<float>` で渡しているため、質問1 が a なら書き換えが要る。** R6 の互換層の旧 `SceneLoader` は `Action<float>` を受けて変換するので、7.0.0 へ上げた時点では警告だけで動く。
+
+## テスト
+
+- 既存テストを新しい名前へ置き換える
+- 追加: `Suite` が保持中のシーンを `Attacca.UnloadAsync` に渡すと拒否され、`Suite` の状態が `Loaded` のまま残ること（Service 層を fake の判定で検証する）
+- 追加: `Suite.UnloadAsync` は自分の保持を解いたシーンをアンロードできること
+- `SuiteAsset` の改名後もシリアライズ名で値を読めること（`[FormerlySerializedAs]` を付けた場合、`CustomAttributeData` で値を確かめる）
