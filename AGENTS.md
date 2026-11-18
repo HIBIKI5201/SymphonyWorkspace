@@ -13,6 +13,7 @@
 | パッケージ本体のソースを修正する（小さな修正、上記フローに乗らないもの） | [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md)。コードを書く前に [Documentation/CodeGuidelines.md](./Documentation/CodeGuidelines.md)、型や名前空間を新設する前に [Documentation/DesignPhilosophy.md](./Documentation/DesignPhilosophy.md) |
 | パッケージを**使う**コードをホスト側（`Assets/Scripts/` など）に書く | [Assets/SymphonyFrameWork/AGENTS.md](./Assets/SymphonyFrameWork/AGENTS.md)。使うモジュールの文書は [Documentation~/Modules/](./Assets/SymphonyFrameWork/Documentation~/Modules/) に1モジュール1ファイルであり、機能一覧は [README.md](./Assets/SymphonyFrameWork/README.md) |
 | Markdown文書（`README.md`、`Documentation~/`、`AGENTS.md`、`Documentation/`）を書く | [Documentation/DocumentationGuidelines.md](./Documentation/DocumentationGuidelines.md)。文書ごとの役割、節の順序、冒頭に置かないもの、分量、AIに書かせるときの手順 |
+| パッケージ本体の内部構造（モジュールのクラス構成、層ごとの型の役割）を調べる | [Documentation/ModuleInternals.md](./Documentation/ModuleInternals.md)。利用者向けのモジュール文書には内部構造を載せない |
 | 利用者向けドキュメント（`README.md`、`Documentation~/**/*.md`）を変更する | 上記に加えて、変更後に `python scripts/build_module_docs.py` を実行し、`Documentation~/Html/` の生成物を同じコミットへ含める。詳細は [Documentation/CONTRIBUTING.md](./Documentation/CONTRIBUTING.md) の §6 |
 | このワークスペースを題材に**技術記事を書く** | 記事は別リポジトリ `HIBIKI5201/TechArticles` にあります（`HIBIKI5201/HIBIKI5201` の `Articles/`）。執筆手順はそちらの `.claude/skills/tech-article/SKILL.md`。**このワークスペースは題材の一次資料であり、記事のために変更しません** |
 | ホストプロジェクトの設定・シーン・アセットを触る | このファイル |
@@ -24,7 +25,7 @@
 
 | 正本 | 対象 |
 | --- | --- |
-| [Assets/SymphonyFrameWork/Documentation~/Modules/](./Assets/SymphonyFrameWork/Documentation~/Modules/) | モジュールごとの利用方法、実装時の注意、そのモジュールのEditor機能、内部構造 |
+| [Assets/SymphonyFrameWork/Documentation~/Modules/](./Assets/SymphonyFrameWork/Documentation~/Modules/) | モジュールごとの利用方法、失敗時の動き、守ること、そのモジュールのEditor機能（内部構造は `Documentation/ModuleInternals.md`） |
 | [Assets/SymphonyFrameWork/Documentation~/EditorTools.md](./Assets/SymphonyFrameWork/Documentation~/EditorTools.md) | Editor機能の索引と、単一モジュールに属さない横断的な仕組み（Symphony Administrator、アセット保護、設定アセットの自動生成、Editorの初期化） |
 | [Assets/SymphonyFrameWork/Documentation~/Deprecations.md](./Assets/SymphonyFrameWork/Documentation~/Deprecations.md) | 非推奨API（`[Obsolete]`）と、その削除予定 |
 
