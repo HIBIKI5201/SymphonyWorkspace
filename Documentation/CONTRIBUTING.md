@@ -108,7 +108,7 @@ Unityは全ファイル・全フォルダに `.meta` を対で持ちます。GUI
 5. `uloop-control-play-mode` + `uloop-get-logs` — ランタイム挙動を確認する
 6. `uloop-screenshot` — 表示に関わる変更の場合
 
-**このプロジェクトは Enter Play Mode Options が有効で、Domain Reload と Scene Reload の両方が無効です。** そのためstatic状態はPlay Mode終了時にリセットされません。**Play Modeの開始・終了を2回繰り返し、`ServiceLocator` などにゴースト参照が残らないことを確認する**のが定番のチェックです。各Facadeの `ResetRuntimeState()` はこのための仕組みです。
+**このプロジェクトは Enter Play Mode Options が有効で、Domain Reload と Scene Reload の両方が無効です。** そのためstatic状態はPlay Mode終了時にリセットされません。**Play Modeの開始・終了を2回繰り返し、`Partitura` などにゴースト参照が残らないことを確認する**のが定番のチェックです。各Facadeの `ResetRuntimeState()` はこのための仕組みです。
 
 ### 自動生成物の再生成
 

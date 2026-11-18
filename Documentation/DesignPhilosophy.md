@@ -98,8 +98,8 @@ Composition ──生成・注入・終了処理──> 各レイヤー
 
 Domainの値と規則を組み合わせ、サブシステムが提供する処理を実行します。Applicationの実行構造は、Command処理を担う`Service`と、状態を保持・検索する`Registry`で構成します。差し替え可能なアルゴリズムの契約としてStrategyをServiceへ注入できますが、読み取り変換を担うQueryは置きません。
 
-- `SceneLoadService`、`ServiceLocateService`のようなServiceは、入力検証、処理順、失敗時の復旧を担当する。
-- `SceneLoadRegistry`、`ServiceLocateRegistry`のようなRegistryは、Domain Entityの登録、検索、更新、無効化を担当する。
+- `SceneLoadService`、`PartituraService`のようなServiceは、入力検証、処理順、失敗時の復旧を担当する。
+- `SceneLoadRegistry`、`PartituraRegistry`のようなRegistryは、Domain Entityの登録、検索、更新、無効化を担当する。
 - RegistryとEntityからInfoやDtoを生成せず、読み取り結果の変換はAdaptorのQueryへ委ねる。
 - Unity API、ファイル、PlayerPrefs、Addressablesを直接呼ばない。必要な操作は契約として定義し、Infrastructureから注入する。
 - 表示、GameObjectの所有、Unityコールバックを担当しない。
@@ -109,13 +109,13 @@ Domainの値と規則を組み合わせ、サブシステムが提供する処�
 
 利用側プロジェクトへ公開する唯一の操作面です。サービス名をそのまま型名にした静的な**公開エントリポイント**、InspectorやUnityライフサイクルを公開契約として受ける`Component`、読み取り結果を変換する`Query`が属します。
 
-- `SceneLoader`、`AudioPlayer`、`PauseController`、`ServiceLocator`、`SaveStore`は、利用側がサブシステムを操作する入口になる。
-- `ServiceInjector`のような補助エントリポイントは、主エントリポイントと機能が重複せず、責務を分ける理由が明確な場合だけ設ける。
-- `ServiceLocateComponent`のような公開Componentは、Unityコールバックを受けて登録・解除などの処理をApplicationへ委譲する。
+- `SceneLoader`、`AudioPlayer`、`PauseController`、`Partitura`、`SaveStore`は、利用側がサブシステムを操作する入口になる。
+- 補助エントリポイントは、主エントリポイントと機能が重複せず、責務を分ける理由が明確な場合だけ設ける。7.0.0では、注入を担っていた`ServiceInjector`を、取得と同じ型を扱う`Partitura`へ統合した。
+- `ServiceComponent`のような公開Componentは、Unityコールバックを受けて登録・解除などの処理をApplicationへ委譲する。
 - CommandメソッドはApplicationのServiceを呼び、利用側向けの戻り値、例外、Try形式へ変換する。
 - QueryだけがRegistryとDomain Entityを読み取り、公開API向けInfoまたはViewModel向けDtoへ変換する。
 - 公開エントリポイントの管理状態照会メソッドはRegistryやEntityを直接読まず、Queryが返したInfoまたは公開payloadをそのまま返す。
-- `ServiceLocator.GetInstance<T>`や`SaveStore.Get<T>`のように、登録された公開payload自体の取得が契約であるQueryはpayloadを返せる。ただし、その登録を管理するEntityは返さない。
+- `Partitura.Get<T>`や`SaveStore.Get<T>`のように、登録された公開payload自体の取得が契約であるQueryはpayloadを返せる。ただし、その登録を管理するEntityは返さない。
 - 公開エントリポイントは累積する業務状態を保持しない。
 - 公開ComponentはUnityオブジェクトへの参照を保持できるが、サブシステムの規則を重複実装しない。
 - Domainの不変な値やQueryが生成したInfoを公開APIで受け渡してよい。
@@ -211,7 +211,7 @@ OrchestratorはComposition層に属し、UnityまたはEditorのホストライ�
 - 登録された公開payload自体を取得するQueryは、そのpayloadを返せるが、管理用Entityや内部コレクションを公開しない。
 - Compositionから注入されたService、Registryを保持しているかという初期化状態は持ってよい。
 - 累積状態とDomainの判断を持たない。
-- 例: `SceneLoader`、`ServiceLocator`、`SaveStore`、`AudioPlayer`、`PauseController`。
+- 例: `SceneLoader`、`Partitura`、`SaveStore`、`AudioPlayer`、`PauseController`。
 
 ### Service
 
@@ -224,7 +224,7 @@ ServiceはApplication層に属し、固定された処理順、入力検証、�
 - Unity API、表示状態、GameObjectの所有を持たない。
 - 状態の保存と検索をRegistryへ委譲する。
 - 具象型は原則として`internal`にする。
-- 例: `SceneLoadService`、`ServiceLocateService`、`SaveDataService`。
+- 例: `SceneLoadService`、`PartituraService`、`SaveDataService`。
 
 ### Strategy
 
@@ -249,7 +249,7 @@ QueryはAdaptor層に属し、RegistryとDomain Entityの読み取り結果を�
 - Queryは用途別のメソッドからInfoまたはDtoを返し、公開エントリポイントとViewModelを直接参照しない。
 - RegistryやEntityから値を抽出・派生するロジックはQueryへ置く。InfoとDtoは渡された値を保持する不変データに限定する。
 - DTOが複数のViewModelで共通にならない限り、対象ViewModelに対応する最小の形にする。
-- 例: `SceneLoadQuery`、`ServiceLocateQuery`、`SaveDataQuery`、`PauseQuery`。
+- 例: `SceneLoadQuery`、`PartituraQuery`、`SaveDataQuery`、`PauseQuery`。
 
 ### Registry
 
@@ -261,7 +261,7 @@ RegistryはApplication層に属し、キーに対応するEntityの所有と検�
 - I/Oを行わず、ロードや保存はServiceからLoaderへ依頼する。
 - Registry自身はEntity、Info、Dtoを公開APIへ返さない。利用側とView向けの読み取り変換はAdaptorのQueryへ委ねる。
 - staticな公開Registryを作らない。利用側の入口は公開エントリポイントにする。
-- 例: `SceneLoadRegistry`、`ServiceLocateRegistry`、`SaveDataEntryRegistry`。
+- 例: `SceneLoadRegistry`、`PartituraRegistry`、`SaveDataEntryRegistry`。
 
 ### Entity
 
@@ -301,7 +301,7 @@ ViewModelはView層に属し、RuntimeまたはEditorの表示に必要な状態
 - Composition Rootは現在のViewModelを取得する`internal`な読み取り専用accessorを提供する。Editor WindowはこのaccessorからPlay Modeごとに取得し、ViewModelを生成・置換しない。
 - 購読とApplicationへの接続を所有し、`Dispose`で必ず解除する。
 - Domain Reloadが無効でも、再初期化時に古い購読と値を残さない。
-- 例: `SceneLoadViewModel`、`ServiceLocateViewModel`、`SaveDataViewModel`。
+- 例: `SceneLoadViewModel`、`PartituraViewModel`、`SaveDataViewModel`。
 
 ### View専用エントリポイント
 
@@ -337,7 +337,7 @@ ComponentはUnityライフサイクルを受ける`MonoBehaviour`または表示
 - `Awake`、`OnEnable`、`OnDisable`、`OnDestroy`を同期点とし、処理をService、ViewModel、公開エントリポイントへ委譲する。
 - 購読、登録、CancellationTokenSourceの生成と解除を対にする。
 - UnityコールバックへApplicationの規則を書かない。
-- 例: `ServiceLocateComponent`、`ServiceHostComponent`。
+- 例: `ServiceComponent`、`ServiceHostComponent`。
 
 ### Value Object
 
@@ -356,7 +356,7 @@ Enumは、有限個の選択肢や状態を表す独立した型カテゴリで�
 
 - 型名は必ず`Enum`で終える。入れ子enumにも同じ規則を適用する。
 - 列挙値の追加・削除・数値変更がシリアライズ互換性へ影響する場合は、[バージョニング](#バージョニング)に従う。
-- 3.0.0で`LocateTypeEnum`、`SceneLoadStateEnum`、`SaveDataOperationEnum`、`LogKindEnum`、`InitializeTypeEnum`、`LoadTypeEnum`、`PackageModeEnum`へ統一済み。
+- 3.0.0で`LocateTypeEnum`（7.0.0で`ServiceLifetimeEnum`へ改名）、`SceneLoadStateEnum`、`SaveDataOperationEnum`、`LogKindEnum`、`InitializeTypeEnum`、`LoadTypeEnum`、`PackageModeEnum`へ統一済み。
 - 自動生成済みの`SceneListEnum`、`TagsEnum`、`LayersEnum`、`AudioGroupTypeEnum`は既に規則へ適合しているため変更しない。
 
 ### DTO
@@ -369,7 +369,7 @@ DtoはAdaptorのQueryが生成し、ViewModelへ渡す不変の更新データ�
 - 対応するViewModelが必要とするデータだけを含める。
 - 型名は対象 + `Dto`とし、`Data`だけで終わる曖昧な名前を付けない。
 - Infoが利用側へ公開するAdaptor契約であるのに対し、DtoはAdaptorからViewへの内部更新データとする。
-- 例: `SceneLoadDto`、`ServiceLocateDto`、`SaveDataDto`。
+- 例: `SceneLoadDto`、`PartituraDto`、`SaveDataDto`。
 
 ### Loader
 
@@ -395,7 +395,7 @@ Factoryは、依存解決や複数段階の生成規則を伴うオブジェク�
 ConfigはInfrastructure層に属し、利用側プロジェクトごとのカスタマイズ値を保持します。
 
 - DomainやApplicationから直接検索しない。Compositionが読み取り、必要な値だけを注入する。
-- Runtimeの`SymphonyConfigLocator`は既存ConfigをResourcesから検索する`internal`なInfrastructure型、`SymphonyEditorConfigLocator`はEditor用`ScriptableSingleton`を検索する`internal`なEditor型として名称を維持する。どちらもConfigを生成せず、自動初期化を開始しない。
+- Runtimeの`SymphonyConfigProvider`は既存ConfigをResourcesから検索する`internal`なInfrastructure型、`SymphonyEditorConfigProvider`はEditor用`ScriptableSingleton`を検索する`internal`なEditor型として名称を維持する。どちらもConfigを生成せず、自動初期化を開始しない。
 - 現行`SymphonyConfigManager.AllConfigCheck()`の責務はEditorの`SymphonyConfigInitializer`へ移す。この型は3つのRuntime Config（`SceneLoadConfig`、`AudioConfig`、`SaveDataConfig`）とEditor Configの存在保証・生成を担当する`internal`なCompositionモジュールとし、`SymphonyEditorOrchestrator`から明示的に実行する。
 - 動的な再読み込みが必要な場合は、Compositionが更新と再注入を統括する。
 - `ScriptableObject`のシリアライズ値は外部から変更させず、読み取り専用プロパティを公開する。
@@ -481,7 +481,7 @@ Shutdown ← 登録と購読を逆順に解除
 
 - ピュアC#クラスのモジュール内依存には、コンストラクタ注入を第一候補とする。
 - Inspector参照はAdaptor、View、CompositionなどUnity境界に限定する。
-- `ServiceLocator`はCompositionで公開済みのサービスを利用側が取得する入口にする。
+- `Partitura`はCompositionで公開済みのサービスを利用側が取得する入口にする。
 - DomainやApplicationの処理途中で公開エントリポイントを検索しない。
 - 取得には可能な限り`TryGetInstance<T>`を使用し、初期化失敗を明示的に処理する。
 - 登録した型と所有者を記録し、`Shutdown`または対応するUnityライフサイクルで登録解除する。
@@ -538,8 +538,8 @@ Symphony Frameworkは他プロジェクトが依存するパッケージであ�
 
 `public`にしてよい型は次に限定します。それ以外は`internal`にします。
 
-- Adaptor層の公開エントリポイント。例: `SceneLoader`、`ServiceLocator`、`SaveStore`、`AudioPlayer`、`PauseController`。
-- Unity上で利用側が配置または生成するAdaptor層のComponent。例: `ServiceLocateComponent`。
+- Adaptor層の公開エントリポイント。例: `SceneLoader`、`Partitura`、`SaveStore`、`AudioPlayer`、`PauseController`。
+- Unity上で利用側が配置または生成するAdaptor層のComponent。例: `ServiceComponent`。
 - 利用側が実装・継承する契約。例: ApplicationのStrategy、`SaveDataLoaderStrategy`、`PlayerPrefsSaveDataLoaderStrategy`、`SaveDataContent`、`IInitializeAsync`、`IPausable`。
 - 公開エントリポイントの引数・戻り値として境界を越えるInfo、Value Object、Enum。
 - 回復方法の異なる失敗を通知する専用例外。

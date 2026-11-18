@@ -56,7 +56,7 @@ Play ModeのDomain Reloadが無効でも状態を持ち越さないよう、開�
 
 ```mermaid
 classDiagram
-    class ServiceLocator {
+    class Partitura {
         <<static>>
         RegisterInstance()
         RegisterInstanceWithAutoDispose()
@@ -69,9 +69,9 @@ classDiagram
         <<readonly struct>>
         ServiceType
         Instance
-        LocateTypeEnum
+        ServiceLifetimeEnum
     }
-    class ServiceInjector {
+    class Partitura {
         <<static>>
         Inject()
         CreateInstance()
@@ -139,12 +139,12 @@ classDiagram
         Resume()
     }
 
-    ServiceInjector ..> ServiceLocator : 登録済み依存を取得
-    ServiceLocator --> ServiceRegistrationInfo : 登録状態のスナップショット
-    ServiceInjector --> IInjectable : 注入
+    Partitura ..> Partitura : 登録済み依存を取得
+    Partitura --> ServiceRegistrationInfo : 登録状態のスナップショット
+    Partitura --> IInjectable : 注入
     SceneLoader --> SceneLoadRequest : ロード対象と優先度
     SceneLoader --> SceneLoadInfo : 追跡状態のスナップショット
-    SceneLoader ..> ServiceInjector : ルートへ自動注入
+    SceneLoader ..> Partitura : ルートへ自動注入
     SceneLoader --> IInitializeAsync : 完了を待機
     SaveStore --> SaveDataContent : 型単位でキャッシュ
     SaveStore --> SaveDataLoaderStrategy : 永続化を委譲
@@ -160,7 +160,7 @@ flowchart TD
     Request["SceneLoader.LoadSceneAsync"] --> Load["シーンを非同期ロード"]
     Load --> Roots["ルートGameObjectを走査"]
     Roots --> Inject{"IInjectableを実装?"}
-    Inject -- Yes --> Resolve["ServiceLocatorから依存を解決して注入"]
+    Inject -- Yes --> Resolve["Partituraから依存を解決して注入"]
     Inject -- No --> Initialize
     Resolve --> Initialize{"IInitializeAsyncを実装?"}
     Initialize -- Yes --> Await["InitializeAsyncの完了を待機"]
@@ -178,22 +178,22 @@ Service LocateのRuntime内部では、登録Command、読み取り変換、表�
 
 ```mermaid
 flowchart LR
-    Locator["ServiceLocator"] -->|Command| Service["ServiceLocateService"]
-    Service --> Registry["ServiceLocateRegistry"]
+    Locator["Partitura"] -->|Command| Service["PartituraService"]
+    Service --> Registry["PartituraRegistry"]
     Registry --> Entity["ServiceRegistrationEntity"]
-    Locator -->|Query| Query["ServiceLocateQuery"]
+    Locator -->|Query| Query["PartituraQuery"]
     Query --> Registry
     Query --> Info["ServiceRegistrationInfo"]
-    Query --> Dto["ServiceLocateDto"]
-    Service -->|状態変更event| ViewModel["ServiceLocateViewModel"]
-    ViewModel -->|ReactiveProperty| Window["ServiceLocateWindow"]
+    Query --> Dto["PartituraDto"]
+    Service -->|状態変更event| ViewModel["PartituraViewModel"]
+    ViewModel -->|ReactiveProperty| Window["PartituraWindow"]
     Service --> HostContract["IServiceHost"]
     Host["ServiceHostComponent"] --> HostContract
     Host --> Unity["Component / Transform / Destroy"]
     Orchestrator["SymphonyOrchestrator"] -->|生成・注入| Host
 ```
 
-`ServiceLocateQuery`だけがRegistry／Entityを読み取り、利用側には`ServiceRegistrationInfo`、Viewには内部Dtoを返します。`ServiceLocateWindow`はViewModelを購読し、登録状態が変わったときだけ再描画します。
+`PartituraQuery`だけがRegistry／Entityを読み取り、利用側には`ServiceRegistrationInfo`、Viewには内部Dtoを返します。`PartituraWindow`はViewModelを購読し、登録状態が変わったときだけ再描画します。
 
 通常登録が型重複で失敗しても候補payloadを解放しません。`RegisterInstanceWithAutoDispose`を選んだ場合だけ、失敗した候補を`ServiceHostComponent`が`IDisposable`またはComponentとして解放します。RegistryとEntityはUnity APIを参照しません。
 

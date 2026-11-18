@@ -40,7 +40,7 @@ REQUIRED_DIAGRAMS: dict[str, str] = {}
 # **索引そのものはMarkdownが正本であり、ここから生成しない。** この定数は
 # 「索引が全モジュール文書をこの順でリンクしているか」を検査するための期待値である。
 MODULE_ORDER = (
-    "ServiceLocator",
+    "Partitura",
     "SceneLoader",
     "SceneBlock",
     "SaveDataSystem",

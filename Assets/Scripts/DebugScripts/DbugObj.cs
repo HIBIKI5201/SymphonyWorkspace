@@ -4,7 +4,7 @@ using SymphonyFramework.Debugger;
 using SymphonyFramework.Debugger.HUD;
 using SymphonyFramework.System.SaveSystem;
 using SymphonyFramework.System.SceneLoad;
-using SymphonyFramework.System.ServiceLocate;
+using SymphonyFramework.Services;
 using System;
 using TestNameSpace;
 using UnityEngine;
@@ -32,7 +32,7 @@ public class DbugObj : MonoBehaviour, IGameObject, IInjectable<MeshRenderer>
 
     public void Start()
     {
-        ServiceInjector.Inject(this);
+        Partitura.Inject(this);
 
         SymphonyDebugHUD.AddText(() => $"time pp: {Time.time}");
 

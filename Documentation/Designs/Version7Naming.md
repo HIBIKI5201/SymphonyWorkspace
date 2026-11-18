@@ -262,7 +262,7 @@ submodule 側は3コミットに分けた。
 
 # Round 2: `ServiceLocator` + `ServiceInjector` → `Partitura`、入口の整理（#225、#233）
 
-> **状態: 設計中。下の「依頼者に決めてもらうこと」の回答待ち。** 版は 6.17.0。
+> **状態: 実装済み（PR HIBIKI5201/SymphonyFramework#235）。Unity での検証は R6。** 版は 6.17.0。
 
 ## 目的
 
@@ -288,7 +288,7 @@ submodule 側は3コミットに分けた。
 | `GetRegistrationInfos` / `TryGetRegistrationInfo` | 名前そのまま | デバッグ用 |
 | `ServiceInjector.Inject` / `CreateInstance` | `Partitura.Inject` / `Partitura.CreateInstance` | `TryAutoInject` は internal のまま |
 | `ServiceLocateComponent` | `ServiceComponent` | |
-| `SymphonyLocateObject<T>`（`GetInstance` / `GetInstanceAsync` …） | `ServiceReference<T>`（`Get` / `GetAsync` / `TryGet`） | 質問4。`Get` は `Partitura.Get` と同じく必須取得 |
+| `SymphonyLocateObject<T>`（`GetInstance` / `GetInstanceAsync` …） | `PartituraReference<T>`（`Get` / `GetAsync` / `TryGet`） | 質問4。`Get` は `Partitura.Get` と同じく必須取得 |
 | `LocateTypeEnum.Singleton` / `.Locator` | `ServiceLifetimeEnum.Persistent` / `.Scene` | 質問5 |
 | `IInjectable<…>`、`ServiceNotRegisteredException`、`ServiceRegistrationInfo` | 名前そのまま、名前空間だけ `SymphonyFramework.Services` | |
 | `SymphonyConfigLocator`（public） | `internal` にして名前を `SymphonyConfigProvider` へ | 質問6 |
@@ -301,7 +301,7 @@ submodule 側は3コミットに分けた。
 | 無いかもしれないサービスを取る | `TryGet<T>(out T)` |
 | 登録されるまで待って取る | `GetAsync<T>()` / `TryGetAsync<T>()` |
 | 登録されたら処理する（コールバック） | `WhenRegistered<T>(Action<T>)` |
-| フィールドに持って何度も取る | `ServiceReference<T>` |
+| フィールドに持って何度も取る | `PartituraReference<T>` |
 | 依存を注入する | `IInjectable` の自動注入、`Inject`、`CreateInstance` |
 
 ## 依頼者に決めてもらうこと
@@ -309,7 +309,7 @@ submodule 側は3コミットに分けた。
 1. **取得APIの数**: ⭐a. `Get`＝必須（無ければ例外）、`TryGet`＝任意、`GetAsync`/`TryGetAsync`＝待つ。null を返す取得は無くす（6.x の `GetInstance` は R6 の互換層で従来どおり null を返す） / b. `Get`＝null を返す、`GetRequired`＝必須 として両方残す
 2. **インスタンスを渡すAPI**: ⭐a. `Unregister`・`Destroy`・`IsRegistered` の `(T instance)` をすべて同一参照の判定にそろえる / b. `Unregister(T)` 以外の `(T instance)` 版を削除する
 3. **`RegisterAfterLocate`**: ⭐a. `WhenRegistered<T>(Action<T>)` だけ残す（`Action` 版は `_ => …` で書ける） / b. 両方残す
-4. **`SymphonyLocateObject<T>`**: ⭐a. `ServiceReference<T>` として残す / b. 削除して `TryGet` に寄せる
+4. **`SymphonyLocateObject<T>`**: ⭐a. `ServiceReference<T>` として残す / b. 削除して `TryGet` に寄せる → **回答: a、ただし名前は `PartituraReference<T>`**（どの Facade の参照かが名前で分かるため）
 5. **`LocateTypeEnum` の値**: ⭐a. `Persistent`（Partitura の GameObject の子にして永続化）/ `Scene`（親子関係を変えない） / b. 値の名前は `Singleton` / `Locator` のまま
 6. **`SymphonyConfigLocator`**: ⭐a. `internal` にして `SymphonyConfigProvider` へ改名（SymphonyKillChord では未使用。Editor とテストは `InternalsVisibleTo` 済み） / b. public のまま改名だけ
 
@@ -319,7 +319,7 @@ R6 の互換層が入るまでは移行不可（R2 の版は配布しない）�
 
 ## ファイル構成
 
-- `Runtime/Service/ServiceLocator/` → `Runtime/Services/`（`Internal/` の各層も同じ名前空間 `SymphonyFramework.Services.Internal.*` へ）
+- `Runtime/Service/ServiceLocator/` → `Runtime/Services/`（`Internal/` の各層も同じ名前空間 `SymphonyFramework.Services` へ。6.x でも Internal は親と同じ名前空間だった）
 - `ServiceLocator.cs` + `ServiceInjector.cs` → `Partitura.cs`（partial で `Partitura.Registration.cs` / `Partitura.Injection.cs` に分けてもよい。1ファイルが400行を超える場合）
 - `.meta` の GUID は `git mv` で保つ。新規ファイルの `.meta` は `generate_meta.py`
 - テスト（14ファイル）・Samples（4）・Editor（デバッグウィンドウ、ログ設定）・Orchestrator の参照を置き換える
@@ -339,3 +339,53 @@ R6 まで入れない（全体方針）。`ServiceLocateComponent` は MonoBehav
 ## 動作確認
 
 Unity 検証は R6（決定事項3）。リモートでは R1 と同じ代替検査に加え、旧名（`ServiceLocator`、`GetInstance`、`LocateTypeEnum` など）がパッケージ内に残っていないことを grep で確かめる。
+
+## 決定事項（2026-11-18、依頼者の回答）
+
+1〜3、5、6 は ⭐a。4 は a で、名前を `PartituraReference<T>` にする。
+
+## 実施レポート（Round 2）
+
+実施日: 2026-11-18 / バージョン: 6.17.0 / PR: HIBIKI5201/SymphonyFramework#235
+
+### 実装した内容
+
+submodule 側は2コミット。
+
+1. `e8e634b` コード: フォルダ移動と改名（`.meta` は `git mv` で GUID を保った）、識別子の置換、API の変更、テスト
+   - `Partitura.cs`（旧 `ServiceLocator.cs`）と `Partitura.Injection.cs`（旧 `ServiceInjector.cs`）を `public static partial class Partitura` に
+   - 同一参照の判定を `IsSameRegisteredInstance` へまとめ、`Unregister(instance)`・`Destroy(instance)`・`IsRegistered(instance)` が共有する
+   - `Get<T>()` は旧 `GetRequiredInstance` の本体に、旧 `GetInstance` の取得ログを移した
+   - 内部型 `ServiceLocate*`（Dto、Query、Registry、Service、ViewModel、LogOption）と Editor の `ServiceLocateWindow` を `Partitura*` へ
+   - サンプルを `Samples~/Runtime/PartituraSample/` へ（`package.json` の samples も）
+   - 新規 `Tests/Editor/PartituraTests.cs`（9ケース: Get の必須取得、破棄済み Unity Object、Destroy/IsRegistered の同一参照、WhenRegistered の即時・後から、Persistent の親）。`RuntimeFolderLayoutTests` に置き場の検査を追加
+2. `890dca5` 文書: 6.17.0、CHANGELOG（名前の対応表）、`Modules/Partitura.md`（旧 `ServiceLocator.md`）へ「どの入口を使うか」の表、各文書のリンク、生成HTML
+
+ワークスペース側: `Assets/Scripts/DebugScripts/` の2ファイル、`AGENTS.md`、`Documentation/` の規約文書（CodeGuidelines、DesignPhilosophy、ModuleInternals、IssueImplementationRoadmap）、`scripts/build_module_docs.py` のモジュール順、`.github/duplicate-type-allowlist.txt` に `Partitura` を追加。
+
+### 設計から変えた点
+
+- `SymphonyLocateObject<T>` の新しい名前を `ServiceReference<T>` から `PartituraReference<T>` に変えた（依頼者の回答4）
+- 設計に無かった改名を足した: `ServiceRegistrationInfo.LocateType` → `Lifetime`、`SymphonyEditorConfigLocator` → `SymphonyEditorConfigProvider`（public のまま）、`SymphonyMcpTools.GetServiceLocatorJson` → `GetPartituraJson`（JSON の `effectiveLocateType` → `effectiveLifetime`）、`SymphonyDocumentPageEnum.ServiceLocator` → `Partitura`、ログ設定のプロパティ名。どれも旧 Facade 名から派生した名前で、#225 の規則（派生した型名は新しい名前へ揃える）に当たるため
+- `SymphonyUserSettingConfig` のシリアライズ名（`_isServiceLocator*LogEnabled`）は変えなかった。`UserSettings` に保存済みの値を読むため
+- 内部の `PartituraRegistry` / `PartituraService` の、引数なし `Action` の待機は残した。公開の入口は無くなったが、Registry のテストが呼び出し順を検証しているため。削除するかは R6 で判断する
+
+### 検証結果（リモートの代替検査）
+
+- `release_round.py preflight`: R1 と同じ既知の NG 2件（ブランチ名、Enter Play Mode Options）以外は OK（テスト29件の変更、BOM、`.meta`、レイヤー、asmdef、文書の同期）
+- `generate_meta.py --check`、`build_module_docs.py --check`、`sync_agent_skill_locators.py --check`: OK
+- 同名型の検査: `Partitura`（partial）を許可リストへ追加して OK
+- 旧名の残り: パッケージの `.cs` に `ServiceLocator`、`ServiceInjector`、`LocateTypeEnum`、`GetInstance` などの公開名が残っていないことを grep で確認（CHANGELOG の過去の版、`.unity` の `m_EditorClassIdentifier`、互換のためのシリアライズ名は除く）
+
+### 未実施リスト（R6 の検証へ追加）
+
+- コンパイル（エラー0・警告0）と全テスト。特に `PartituraTests`、partial に分けた `Partitura` の静的初期化、`Unregister<T>(T)` と `Unregister(Type)` などのオーバーロード解決
+- Symphony Administrator の Partitura パネル（UXML の `PartituraWindow` 要素）と Project Settings のログ設定の表示
+- `ServiceComponent` を置いた既存シーン（ワークスペースの `NewScene` / `Scene2`）で、登録方式の値が引き継がれること
+- サンプル `PartituraSample` を取り込んで動くこと
+
+### 振り返り
+
+- R1 の一括置換スクリプトを、旧メソッド名の対応表つきで作り直した。`ServiceLocator.X` の形だけを置換し、null を返す `GetInstance` は印（`GETNULL_REVIEW`）へ置き換えて呼び出し箇所を1件ずつ判断した。**意味が変わる改名は、機械置換で別の名前へ寄せず、印を残して手で決める**形が効いた
+- 置換の対象に `.unity` を含めてしまい、戻した。R1 と同じ判断（表示用の値は Unity に任せる）を毎回思い出す必要があるので、置換対象の拡張子をスクリプト側で固定するとよい
+- R6 で入れる転送クラスと衝突するテスト（旧名前空間に型が無いことを確かめるもの）を一度足して、取り下げた。R6 の互換層の設計で、旧名が「解決できる」ことを確かめるテストへ切り替える

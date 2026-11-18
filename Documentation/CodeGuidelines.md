@@ -65,7 +65,7 @@ SymphonyFramework
 └─ Utility
 ```
 
-- 消費者向けの公開エントリポイントと公開Componentは、属するサブシステムの名前空間へ置く。例: `SaveStore`は`SymphonyFramework.System.SaveData`、`SceneLoader`は`SymphonyFramework.System.SceneLoad`、`ServiceLocator`と`ServiceInjector`は`SymphonyFramework.System.ServiceLocate`。
+- 消費者向けの公開エントリポイントと公開Componentは、属するサブシステムの名前空間へ置く。例: `SaveStore`は`SymphonyFramework.System.SaveData`、`SceneLoader`は`SymphonyFramework.System.SceneLoad`、`Partitura`と`Partitura`は`SymphonyFramework.Services`。
 - Runtimeの`SymphonyOrchestrator`は`SymphonyFramework.Orchestrator`、Editorの`SymphonyEditorOrchestrator`は`SymphonyFramework.Editor`へ置く。Editor asmdefからRuntime asmdefへの一方向参照を維持する。
 - 特定サブシステムの専用例外は、その公開エントリポイントと同じ名前空間へ置く。複数サブシステムで共通する例外は`SymphonyFramework.Exception`へ置く。
 - 公開型と内部実装の区別は、名前空間ではなくフォルダで表す。Adaptorの公開エントリポイントとInfo、公開Strategyはサブシステム直下、Domain、Application、Adaptor Query／Dto、View、Infrastructureの内部実装は同じフォルダの`Internal/`配下へ置く。
@@ -158,7 +158,7 @@ Scene scene = SceneManager.GetSceneByName(sceneName);
 | 公開の管理状態Queryで返す不変スナップショット | 対象 + `Info` | `SceneLoadInfo` |
 | View層の表示状態クラス | 対象 + `ViewModel` | `SceneLoadViewModel` |
 | 値変更を通知するCoreクラス | 対象 + `ReactiveProperty` | `ReactiveProperty<T>` |
-| Unityライフサイクルを受けるクラス | 対象 + `Component` | `ServiceLocateComponent` |
+| Unityライフサイクルを受けるクラス | 対象 + `Component` | `ServiceComponent` |
 | Infrastructureの具象I/O・変換クラス | 対象 + `Loader` | `JsonUtilitySaveDataLoader` |
 | 複雑な生成クラス | 対象 + `Factory` | `ModuleFactory` |
 | 設定用ScriptableObject | 対象 + `Config` | `SceneLoadConfig` |
@@ -378,7 +378,7 @@ public static bool TryRegister(Type type, object instance)
 - 内部コレクションは直接公開せず、`IReadOnlyList<T>` など読み取り専用の型で返す。
 - AdaptorのQueryだけがRegistryまたはDomain Entityを読み取り、公開API向けInfoまたはViewModel向けDtoへ変換する。InfoとDtoはQueryから渡された値だけを保持し、抽出ロジックを重複させない。
 - 公開エントリポイントの管理状態照会メソッドは対応するQueryを呼んでInfoを返すだけにし、Registry／Entityを直接参照したり自分で変換したりしない。
-- `ServiceLocator.GetInstance<T>`や`SaveStore.Get<T>`のように登録された公開payload自体の取得が契約である場合もQueryを経由する。payloadは返せるが、それを管理するEntityや内部コレクションは返さない。
+- `Partitura.Get<T>`や`SaveStore.Get<T>`のように登録された公開payload自体の取得が契約である場合もQueryを経由する。payloadは返せるが、それを管理するEntityや内部コレクションは返さない。
 - ViewModelは初期化時とServiceの状態変更event受信時にAdaptorのQueryを呼び、専用Dtoを受け取る。Queryは公開エントリポイントとViewModelを参照しない。
 - 状態を変更するプロパティにpublic setterを設けない。`SetXxx`、`RecordXxx`、`ChangeXxx` など意図が分かるメソッドを公開する。
 - generic APIと `Type` を受け取るAPIを併設する場合は、検証と本処理を共通化する。
@@ -396,7 +396,7 @@ public static bool TryRegister(Type type, object instance)
 - データコンテナとして使用する `ScriptableObject` は、Inspectorだけから値を設定し、外部には読み取り専用プロパティを公開する。
 - 既存のシリアライズ済みフィールド名を変更する場合は、データ移行のため `[FormerlySerializedAs]` を使用する。
 - polymorphicな設定値には、必要に応じて `[SerializeReference]` と `[SubclassSelector]` を使用する。
-- `ScriptableObject`の設定値は、CompositionまたはInfrastructureのinternalな`SymphonyConfigLocator`を通して取得し、利用側やApplicationからLocatorを直接呼ばない。Configアセットの生成は`SymphonyEditorOrchestrator`から呼ばれる`PackageInitializer`が`SymphonyConfigManager.AllConfigCheck()`を通して行う。
+- `ScriptableObject`の設定値は、CompositionまたはInfrastructureのinternalな`SymphonyConfigProvider`を通して取得し、利用側やApplicationからLocatorを直接呼ばない。Configアセットの生成は`SymphonyEditorOrchestrator`から呼ばれる`PackageInitializer`が`SymphonyConfigManager.AllConfigCheck()`を通して行う。
 
 ```csharp
 [SerializeField, Tooltip("再生開始時にロードするシーン名。")]
@@ -411,7 +411,7 @@ public string InitialSceneName => _initialSceneName;
 - 自動初期化属性を持つメソッドとOrchestratorのstatic constructorは、同じOrchestratorの明示的な初期化メソッドを呼ぶ入口に限定する。
 - `MenuItem`、`SettingsProvider`、`CustomEditor`、`UxmlElement`などの発見用属性は使用できるが、そのcallbackからpackage-wideな初期化を開始しない。
 - `AssetPostprocessor`はUnityが発見して任意のタイミングで呼ぶhost callbackとして使用でき、自動初期化属性の禁止対象には含めない。ただし初期化、Asset生成、`AssetDatabase.Refresh`、購読を所有せず、変更種別を`SymphonyEditorOrchestrator`へ通知してcoalesceするだけにする。
-- `PackageInitializer`などのEditor初期化モジュールは自動初期化属性を持たず、`SymphonyEditorOrchestrator`から明示的に開始される。`SymphonyConfigLocator`と`SymphonyEditorConfigLocator`は検索専用Infrastructureとし、生成や初期化を開始しない。
+- `PackageInitializer`などのEditor初期化モジュールは自動初期化属性を持たず、`SymphonyEditorOrchestrator`から明示的に開始される。`SymphonyConfigProvider`と`SymphonyEditorConfigProvider`は検索専用Infrastructureとし、生成や初期化を開始しない。
 - Runtimeの`SymphonyDebugHUD`などに`MenuItem`や`UnityEditor`参照を置かない。メニュー入口はEditor専用型へ分離し、Runtimeの公開操作を呼ぶだけにする。
 - サブシステムは副作用を持つstatic constructor、static field initializer、独自の遅延初期化を使わず、Orchestratorから呼ばれる`Initialize`と`Shutdown`または`Dispose`を提供する。
 - Runtimeの各サブシステムから`SymphonyOrchestrator`を呼ばない。Orchestratorは汎用Factoryや`DontDestroyOnLoad` helperとして公開せず、必要なComponent、値、Infrastructure契約をBuild時に注入する。
@@ -436,7 +436,7 @@ public string InitialSceneName => _initialSceneName;
 ### フレームワーク機能の利用
 
 - シーン管理には、特別な理由がない限り`SceneManager`を直接呼ばず`SceneLoader`を使用する。
-- 共有インスタンスの登録と取得には`ServiceLocator`を使用し、所有者と解除タイミングを明確にする。
+- 共有インスタンスの登録と取得には`Partitura`を使用し、所有者と解除タイミングを明確にする。
 - セーブ対象は`SaveDataContent`を継承し、`SaveStore`を通して操作する。
 - ポーズに追従する待機やTweenには、`PauseController`または`SymphonyTween`の対応APIを使用する。
 - フレームワークが生成する設定アセットやenumを手作業で複製しない。
@@ -481,7 +481,7 @@ public string InitialSceneName => _initialSceneName;
 | 一時的なデバッグ | `SymphonyDebugLogger.LogDirectForEditor`（`[Conditional("UNITY_EDITOR")]`付き） | 残さない |
 
 - **情報レベル（`Debug.Log`）を `#if UNITY_EDITOR` の外へ置かない。** 文字列補間を伴う場合、出力の有無に関わらず文字列が構築されます。
-- 出力可否をProject Settingsから切り替える場合は、Runtime側に `internal` な設定値の入れ物を置き、Editorの初期化処理が注入します（→ `## ディレクトリとAssembly Definition`）。実装例は `ServiceLocateLogOption` と `ServiceLocator` です。
+- 出力可否をProject Settingsから切り替える場合は、Runtime側に `internal` な設定値の入れ物を置き、Editorの初期化処理が注入します（→ `## ディレクトリとAssembly Definition`）。実装例は `PartituraLogOption` と `Partitura` です。
 
 ## Editor拡張
 

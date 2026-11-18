@@ -71,7 +71,7 @@
 | `Assets/Scripts/SymphonyFramework/` | **自動生成** | `SceneListEnum` / `TagsEnum` / `LayersEnum` / `AudioGroupTypeEnum` と `SymphonyFramework.Enum.asmdef`。`EnumGenerator` / `AutoEnumGenerator` が生成する。**手で編集しない** |
 | `Assets/Scripts/SymphonyFramework/PauseCategory/` | **自動生成** | ポーズカテゴリーの interface と `SymphonyFramework.PauseCategory.asmdef`。`PauseCategoryGenerator` が `Project Settings > SymphonyFramework > Pause Category` の設定から生成する。**手で編集しない。** 設定から消してもファイルは自動削除されない |
 | `Assets/Resources/SymphonyFramework/` | **自動生成** | `SceneLoadConfig` / `AudioConfig` / `SaveDataConfig`。`SymphonyConfigManager.AllConfigCheck()` が `[InitializeOnLoad]` で生成する。型は `internal` なのでコードから参照できず、Inspector と Project Settings 経由でのみ設定する |
-| `Assets/Scripts/DebugScripts/` | 手書きの検証用スクラッチ | ServiceLocator等の動作確認用。テストではない |
+| `Assets/Scripts/DebugScripts/` | 手書きの検証用スクラッチ | Partitura等の動作確認用。テストではない |
 | `Assets/Level/Scenes/` | 動作確認用シーン | `NewScene` / `Scene2` / `Scene3` の3つだけがBuild Settingsに登録済み。**この登録順が `SceneListEnum` に反映される** |
 | `Assets/Arts/Shaders/` | Shader Graph + HLSL | `ToonShader` / `CharacterToonShader` / `OutLineShader` / `DashedLineShader`、`ToonLighting.hlsl` / `AdvancedOutline.hlsl` |
 | `Assets/Settings/` | URP設定 | `PC_*` / `Mobile_*` の RP Asset と Renderer |
