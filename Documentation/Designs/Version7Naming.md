@@ -210,7 +210,7 @@ PC のワークスペース（`C:\Sinfonia Studio\SymphonyFrameworkWorkspace`）
 
 ## 実施レポート（Round 1）
 
-実施日: 2026-11-18 / バージョン: 6.16.0 / PR: （作成後に追記）
+実施日: 2026-11-18 / バージョン: 6.16.0 / PR: HIBIKI5201/SymphonyFramework#234（develop へマージ済み）
 
 ### 実装した内容
 
