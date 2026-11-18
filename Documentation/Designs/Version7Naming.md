@@ -527,3 +527,65 @@ R5 の設計時に詳しく書く。今の見通しだけを残す。
 - 今は `SymphonyFramework.asmdef` が Enum asmdef を参照しているが、Runtime / Core に生成 enum の利用は無い（grep で確認済み）。この参照を外し、`SymphonyFramework.Enum` から `SymphonyFramework` を参照する向きにする（PauseCategory のインターフェースが Runtime の型を使うため）
 - 利用側の既存の `PauseCategory` フォルダと asmdef は、Editor の起動時に Enum 側へ移す（R1 の生成物フォルダ移行と同じ仕組み）。**利用側の asmdef 参照が変わるため破壊的変更**
 
+
+---
+
+# Round 4: `SaveStore` → `Manuscript`、`AudioManager` → `Sonority`（#225）
+
+> **状態: 設計中。下の「依頼者に決めてもらうこと」の回答待ち。** 版は 6.19.0。
+
+## 目的
+
+- `SaveStore` を `Manuscript`（名前空間 `SymphonyFramework.SaveData`、フォルダ `Runtime/SaveData/`）、`AudioManager` を `Sonority`（名前空間 `SymphonyFramework.Audio`、フォルダ `Runtime/Audio/`）へ改名する（#225 の表どおり）
+- `SymphonyFramework.System` から2つのサブシステムを外す。R5 で Pause を移すと `System` 名前空間は無くなる
+
+## 公開API（6.18.0 → 6.19.0）
+
+### Manuscript
+
+| 6.18.0 | 6.19.0 | 備考 |
+| --- | --- | --- |
+| `SaveStore` | `Manuscript` | |
+| `Exists` / `Get` / `IsLoaded` / `LoadAsync` / `SaveAsync` / `DeleteAsync` | そのまま | `Get` は未ロードで例外（今のまま。R2 の「`Get` は必須取得」と同じ意味） |
+| `GetEntries` | そのまま | 質問2 |
+| `SaveDataContent` / `SaveDataLoaderStrategy` / `PlayerPrefsSaveDataLoaderStrategy` / `SaveDataEntryInfo` / `SaveDataOperationEnum` / `SaveDataOperationException` | 名前はそのまま、名前空間だけ | 「セーブデータ」は概念の名前で、旧 Facade 名から派生した名前ではないため |
+
+### Sonority
+
+| 6.18.0 | 6.19.0 | 備考 |
+| --- | --- | --- |
+| `AudioManager` | `Sonority` | |
+| `VolumeSliderChanged(string, float)` | `SetVolume(string, float)` | 値は今と同じ 0〜1 の割合（内部で dB へ変換） |
+| `GetAudioSource(string)`（未登録は `null`） | 質問1 | |
+
+## 依頼者に決めてもらうこと
+
+1. **`GetAudioSource` の新しい形**: ⭐a. R2 の Partitura にそろえ、`GetSource`（未登録は例外）と `TryGetSource(string, out AudioSource)` の2つにする / b. `GetSource`（未登録は `null`）の1つだけにする（#225 の表どおり）
+2. **未初期化のときの `GetEntries`**: ⭐a. 今のまま空の一覧を返す（Editor のパネルやサンプルが Play 前に呼んでも落ちない） / b. 他の API と同じく `SymphonyNotInitializedException` を投げる
+3. **Editor の表示名**: ⭐a. Symphony Administrator のパネル名、Project Settings の項目名（今は `Save System`）、モジュール文書、サンプル名を `Manuscript` / `Sonority` にそろえる。型名の `SaveDataWindow` などは概念の名前なので変えない / b. 表示名も今のまま（`Save Data`、`Audio Manager`）にする
+
+## 互換とシリアライズ
+
+- `SaveDataConfig` は `[SerializeReference]` でローダーを保存している。`JsonUtilitySaveDataLoaderStrategy` などの `[MovedFrom]` は **6.15 の名前（`SymphonyFrameWork.System.SaveSystem`、アセンブリ `SymphonyFrameWork`）を指したまま**にする。6.16〜6.18 は単独で配布しないため、利用側に残るのは 6.15 の名前だけ。`[MovedFrom]` は移動元だけを書く属性なので、移動先の名前空間を変えても書き換えは要らない
+- 保存キー（`PlayerPrefs` のキー、ファイル名）は利用側のデータ型の `FullName` で、フレームワークの名前空間には依存しない。既存のセーブデータはそのまま読める
+- `AudioConfig` / `SaveDataConfig` は internal で、型名は変えない（`.meta` で引き継ぐ）
+- 旧名の転送（`SaveStore`、`AudioManager`、旧名前空間の `SaveDataContent` / `SaveDataLoaderStrategy` / `PlayerPrefsSaveDataLoaderStrategy`）は R6
+
+## 関連して変わる名前
+
+`SymphonyMcpTools.GetSaveDataJson` → `GetManuscriptJson`、`SymphonyDocumentPageEnum.SaveDataSystem` / `.AudioManager` → `.Manuscript` / `.Sonority`、モジュール文書（`SaveDataSystem.md` → `Manuscript.md`、`AudioManager.md` → `Sonority.md`）、サンプル（`SaveDataSystemSample` → `ManuscriptSample`、`AudioManagerSample` → `SonoritySample`）、`build_module_docs.py` のモジュール順。
+
+## 利用側（SymphonyKillChord）への影響の目安
+
+`SaveStore.` が 124 か所（`IsLoaded` 35、`Get<` 35、`LoadAsync` 31、`SaveAsync` 18）、`using SymphonyFramework.System.SaveSystem` が 30 か所、`SaveDataLoaderStrategy` を継承した独自ローダーが1つ（`EncryptedFileSaveDataLoaderStrategy`）。`AudioManager` は 0。**メソッド名は変わらないため、7.0.0 では R6 の転送で警告だけで動き、`SaveStore` → `Manuscript` と `using` の書き換えで警告が消える。** 独自ローダーは旧名前空間の `[Obsolete]` 型経由で継承が通る。
+
+## テスト
+
+- 既存テストを新しい名前へ置き換える（`SaveStore*Tests` → `Manuscript*Tests` など。公開型のテスト網羅の一覧も更新）
+- 追加: `Sonority.SetVolume` / `GetSource`（質問1 が a なら `TryGetSource` も）の未初期化・引数検証・未登録の扱い
+- `RuntimeFolderLayoutTests`: `Runtime/SaveData/` と `Runtime/Audio/` にあり、`Runtime/Service/` の旧置き場に残っていないこと
+- `JsonUtilitySaveDataLoaderStrategy` / `NewtonsoftSaveDataLoaderStrategy` の `[MovedFrom]` が 6.15 の名前を指していること（`CustomAttributeData` で確かめる）
+
+## 進め方
+
+R3 と同じ。改名スクリプトは R3 の振り返りどおり、型名を単語境界つきの完全一致に限り、置換後に重複 `using` と「同じ名前が2回並ぶ」文を grep する。
