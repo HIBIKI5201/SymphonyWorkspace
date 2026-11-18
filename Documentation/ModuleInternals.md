@@ -157,7 +157,7 @@ Facadeは利用側の入口、interfaceと抽象classは利用側が実装する
 
 ```mermaid
 flowchart TD
-    Request["SceneLoader.LoadScene"] --> Load["シーンを非同期ロード"]
+    Request["SceneLoader.LoadSceneAsync"] --> Load["シーンを非同期ロード"]
     Load --> Roots["ルートGameObjectを走査"]
     Roots --> Inject{"IInjectableを実装?"}
     Inject -- Yes --> Resolve["ServiceLocatorから依存を解決して注入"]

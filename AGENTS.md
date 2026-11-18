@@ -25,7 +25,7 @@
 
 | 正本 | 対象 |
 | --- | --- |
-| [Assets/SymphonyFrameWork/Documentation~/Modules/](./Assets/SymphonyFrameWork/Documentation~/Modules/) | モジュールごとの利用方法、実装時の注意、そのモジュールのEditor機能、内部構造 |
+| [Assets/SymphonyFrameWork/Documentation~/Modules/](./Assets/SymphonyFrameWork/Documentation~/Modules/) | モジュールごとの利用方法、失敗時の動き、守ること、そのモジュールのEditor機能（内部構造は `Documentation/ModuleInternals.md`） |
 | [Assets/SymphonyFrameWork/Documentation~/EditorTools.md](./Assets/SymphonyFrameWork/Documentation~/EditorTools.md) | Editor機能の索引と、単一モジュールに属さない横断的な仕組み（Symphony Administrator、アセット保護、設定アセットの自動生成、Editorの初期化） |
 | [Assets/SymphonyFrameWork/Documentation~/Deprecations.md](./Assets/SymphonyFrameWork/Documentation~/Deprecations.md) | 非推奨API（`[Obsolete]`）と、その削除予定 |
 
