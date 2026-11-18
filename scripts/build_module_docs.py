@@ -18,7 +18,7 @@ from pathlib import Path
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
-PACKAGE_ROOT = WORKSPACE_ROOT / "Assets" / "SymphonyFrameWork"
+PACKAGE_ROOT = WORKSPACE_ROOT / "Assets" / "SymphonyFramework"
 DOCUMENTATION_ROOT = PACKAGE_ROOT / "Documentation~"
 MODULES_ROOT = DOCUMENTATION_ROOT / "Modules"
 HTML_ROOT = DOCUMENTATION_ROOT / "Html"
@@ -40,9 +40,9 @@ REQUIRED_DIAGRAMS: dict[str, str] = {}
 # **索引そのものはMarkdownが正本であり、ここから生成しない。** この定数は
 # 「索引が全モジュール文書をこの順でリンクしているか」を検査するための期待値である。
 MODULE_ORDER = (
-    "ServiceLocator",
-    "SceneLoader",
-    "SceneBlock",
+    "Partitura",
+    "Attacca",
+    "Suite",
     "SaveDataSystem",
     "AudioManager",
     "PauseManager",
@@ -905,7 +905,7 @@ def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
     parser = argparse.ArgumentParser(
-        description="Assets/SymphonyFrameWork/ のMarkdownから Documentation~/Html/ を生成する。"
+        description="Assets/SymphonyFramework/ のMarkdownから Documentation~/Html/ を生成する。"
     )
     parser.add_argument(
         "--check",

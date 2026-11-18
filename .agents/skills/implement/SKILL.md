@@ -5,7 +5,7 @@ description: "設計書を書き、利用中のAIに応じたワーカーが実�
 
 # 実装フロー
 
-SymphonyFramework 本体（`Assets/SymphonyFrameWork/`）へ機能を追加・変更するときの標準フロー。
+SymphonyFramework 本体（`Assets/SymphonyFramework/`）へ機能を追加・変更するときの標準フロー。
 
 ```text
 1. 設計書を書く  →  2. ワーカーが実装する  →  3. 実装を確認する  →  4. バージョンを更新する  →  5. コミット・PR  →  6. 振り返る  →  7. 設計書へ実施レポートを書く

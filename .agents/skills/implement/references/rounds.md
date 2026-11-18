@@ -49,14 +49,14 @@ Issue が無い機能追加・変更でも、従来どおり `develop` から `f
 **削除・改名するメンバーがあるなら、その参照元を機械的に列挙し、同じ Round へ入れる。** メンバーが消えた時点で参照元はコンパイルが通らなくなるため、参照元だけを後の Round へ回すことはできない。「表示を変えるのは次の Round」と決めても、表示元のフィールドを今の Round で消すなら、表示の変更も今の Round に入る。
 
 ```bash
-rg -n "\.Mode\b|\.CreateZip\b|\.UsedDependencies\b" Assets/SymphonyFrameWork -g '*.cs'
+rg -n "\.Mode\b|\.CreateZip\b|\.UsedDependencies\b" Assets/SymphonyFramework -g '*.cs'
 ```
 
 目視で分割を決めない。**この検索は Round 分割を書く時点で実行する。** 実際に、確認ウィンドウの表示変更を Round 2 へ置いた設計書が、Round 1 でフィールドを削除する都合で Round 1 へ戻っている（Issue #124）。検索していれば着手前に分かった。
 
 ### ワークスペース側で古くなる記述も、同じ検索で洗い出す
 
-**パッケージ側の構造（ファイル配置、文書の分割、公開APIの入口）を変える Round は、ワークスペース側 `Documentation/` の記述も同時に古くする。** ワーカーの変更範囲は `Assets/SymphonyFrameWork/` に限定するため、その Round の中では直せない。**どの Round でワークスペース側を直すかを、分割を書く時点で決める。**
+**パッケージ側の構造（ファイル配置、文書の分割、公開APIの入口）を変える Round は、ワークスペース側 `Documentation/` の記述も同時に古くする。** ワーカーの変更範囲は `Assets/SymphonyFramework/` に限定するため、その Round の中では直せない。**どの Round でワークスペース側を直すかを、分割を書く時点で決める。**
 
 Round 分割を書くときに、次を検索して結果を設計書へ書く。
 

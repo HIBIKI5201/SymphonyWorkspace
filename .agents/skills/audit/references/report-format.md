@@ -37,7 +37,7 @@ Documentation/Audit/
 
 | 順 | 内容 | 場所 | 観点 |
 | --- | --- | --- | --- |
-| 1 | （何が起きるかを1行で。「〜が漏れている」ではなく「〜のため〜が起きる」） | [File.cs:123](../../Assets/SymphonyFrameWork/...) | 03 / 11 |
+| 1 | （何が起きるかを1行で。「〜が漏れている」ではなく「〜のため〜が起きる」） | [File.cs:123](../../Assets/SymphonyFramework/...) | 03 / 11 |
 
 - **「何が悪いか」ではなく「何が起きるか」を書く。** 着手順はリスクで決まる
 - 観点をまたぐものは観点番号を複数書く
@@ -63,7 +63,7 @@ Documentation/Audit/
 
 ## 【確定・最優先】（見出しは指摘の内容そのもの。「問題1」のような番号にしない）
 
-**場所**: [File.cs:258-274](../../Assets/SymphonyFrameWork/...)
+**場所**: [File.cs:258-274](../../Assets/SymphonyFramework/...)
 
 （該当コードの引用。省略した部分は `// ...` で示す）
 
@@ -81,7 +81,7 @@ Documentation/Audit/
 
 | 場所 | 内容 |
 | --- | --- |
-| `Assets/SymphonyFrameWork/...:12` | ... |
+| `Assets/SymphonyFramework/...:12` | ... |
 ```
 
 ### 規則
@@ -91,7 +91,7 @@ Documentation/Audit/
   「見ていないのか、見て問題が無かったのか」が後から区別できない
 - **件数だけ書いて場所を書かない指摘を作らない。** 全件を `file:line` で列挙した付録を末尾に置く。
   `audit_scan.py --format markdown --category <name>` の出力をそのまま貼れる形になっている
-- **リンクは `Documentation/Audit/` からの相対パス**（`../../Assets/SymphonyFrameWork/...`）。
+- **リンクは `Documentation/Audit/` からの相対パス**（`../../Assets/SymphonyFramework/...`）。
   書いたリンクは実際に辿れることを確認する
 - **公開APIに関わる指摘には、破壊的変更になるかどうかを必ず書く**
 

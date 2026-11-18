@@ -25,7 +25,7 @@ using UnityEngine;
 /// </remarks>
 public sealed class SymphonySampleImporter : EditorWindow
 {
-    private const string FRAMEWORK_PATH = "Assets/SymphonyFrameWork";
+    private const string FRAMEWORK_PATH = "Assets/SymphonyFramework";
     private const string PACKAGE_JSON_PATH = FRAMEWORK_PATH + "/package.json";
     private const string SAMPLES_ROOT = FRAMEWORK_PATH + "/Samples~";
     private const string DESTINATION_ROOT = "Assets/Samples/Symphony Framework";
@@ -139,7 +139,7 @@ public sealed class SymphonySampleImporter : EditorWindow
     ///     取り込み済みサンプルのシーンをBuild Settingsへ追加する。
     /// </summary>
     /// <remarks>
-    ///     **取り込みとは別の操作にしている。** Scene Loader と Scene Block のサンプルは
+    ///     **取り込みとは別の操作にしている。** Attacca と Suite のサンプルは
     ///     シーンが登録されていないと動かないが、Build Settings の変更は `SceneListEnum` の
     ///     再生成を伴うため、コピーの副作用にしない。
     /// </remarks>

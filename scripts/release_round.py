@@ -53,7 +53,7 @@ import build_module_docs
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
-SUBMODULE_PATH = "Assets/SymphonyFrameWork"
+SUBMODULE_PATH = "Assets/SymphonyFramework"
 SUBMODULE_ROOT = WORKSPACE_ROOT / SUBMODULE_PATH
 INTEGRATION_BRANCH = "origin/develop"
 
