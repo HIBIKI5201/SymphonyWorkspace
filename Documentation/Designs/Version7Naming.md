@@ -471,11 +471,11 @@ submodule 側は2コミット。
 
 ## 実施レポート（Round 3）
 
-実施日: 2026-11-18 / バージョン: 6.18.0 / PR: （R2 の #235 がマージされた後に作る）
+実施日: 2026-11-18 / バージョン: 6.18.0 / PR: HIBIKI5201/SymphonyFramework#236
 
 ### 実装した内容
 
-submodule 側は2コミット（R2 のブランチの上に積んでいる）。
+submodule 側は2コミット（#235 のマージ後、develop を取り込んで #236 へ）。
 
 1. `46a79b0` コード
    - `Runtime/Service/SceneLoader/` → `Runtime/Scenes/Attacca/`、`Runtime/Service/SceneBlock/` → `Runtime/Scenes/Suite/`（`.meta` は `git mv`）。名前空間は `SymphonyFramework.Scenes`
