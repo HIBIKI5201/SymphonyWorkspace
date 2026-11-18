@@ -257,3 +257,85 @@ submodule 側は3コミットに分けた。
 ### 振り返り
 
 - `[SerializeReference]` の型の洗い出しを、設計の時点で Runtime の `SaveDataConfig` だけに絞っていた。**ワークスペースのアセットに `asm:` で検索をかけていれば、設計の時点で見つかった。** 次の Round（型名と名前空間がさらに変わる）では、着手前に `git grep -n "asm: Symphony"` をワークスペースと利用側で実行して対象を確定する。implement スキルの `rounds.md` への追記を提案する
+
+---
+
+# Round 2: `ServiceLocator` + `ServiceInjector` → `Partitura`、入口の整理（#225、#233）
+
+> **状態: 設計中。下の「依頼者に決めてもらうこと」の回答待ち。** 版は 6.17.0。
+
+## 目的
+
+- `ServiceLocator` と `ServiceInjector` を1つの Facade `Partitura`（名前空間 `SymphonyFramework.Services`、フォルダ `Runtime/Services/`）へまとめる（#225）
+- 取得・解除の入口を減らし、インスタンスを渡すAPIの挙動をそろえる（#233）
+- `SymphonyConfigLocator` の「Locator」という紛らわしい名前をなくす（#233-4）
+
+## 公開API（6.16.0 → 6.17.0）
+
+| 6.16.0 | 6.17.0 | 備考 |
+| --- | --- | --- |
+| `ServiceLocator` / `ServiceInjector` | `Partitura` | `static class` |
+| `RegisterInstance<T>(T, LocateTypeEnum)` / `(Type, object, …)` | `Register<T>(T, ServiceLifetimeEnum)` / `Register(Type, object, …)` | |
+| `RegisterInstanceWithAutoDispose` | `RegisterWithAutoDispose` | |
+| `UnregisterInstance<T>()` / `(Type)` / `<T>(T)` | `Unregister<T>()` / `(Type)` / `<T>(T)` | `(T)` は同一参照のときだけ解除（6.15.2 と同じ） |
+| `DestroyInstance<T>()` / `<T>(T)` | `Destroy<T>()` / `<T>(T)` | **`(T)` を同一参照のときだけ破棄に変更**（質問2） |
+| `IsExistInstance<T>()` / `(Type)` / `<T>(T)` | `IsRegistered<T>()` / `(Type)` / `<T>(T)` | **`(T)` を同一参照の判定に変更**（質問2） |
+| `GetInstance<T>()`（無ければ null） | 削除（質問1） | `TryGet` へ移行 |
+| `GetRequiredInstance<T>()` | `Get<T>()`（無ければ `ServiceNotRegisteredException`） | 質問1 |
+| `TryGetInstance<T>(out T)` | `TryGet<T>(out T)` | |
+| `GetInstanceAsync` / `TryGetInstanceAsync` | `GetAsync` / `TryGetAsync` | |
+| `RegisterAfterLocate<T>(Action)` / `(Action<T>)` | `WhenRegistered<T>(Action<T>)` だけ | 質問3 |
+| `GetRegistrationInfos` / `TryGetRegistrationInfo` | 名前そのまま | デバッグ用 |
+| `ServiceInjector.Inject` / `CreateInstance` | `Partitura.Inject` / `Partitura.CreateInstance` | `TryAutoInject` は internal のまま |
+| `ServiceLocateComponent` | `ServiceComponent` | |
+| `SymphonyLocateObject<T>`（`GetInstance` / `GetInstanceAsync` …） | `ServiceReference<T>`（`Get` / `GetAsync` / `TryGet`） | 質問4。`Get` は `Partitura.Get` と同じく必須取得 |
+| `LocateTypeEnum.Singleton` / `.Locator` | `ServiceLifetimeEnum.Persistent` / `.Scene` | 質問5 |
+| `IInjectable<…>`、`ServiceNotRegisteredException`、`ServiceRegistrationInfo` | 名前そのまま、名前空間だけ `SymphonyFramework.Services` | |
+| `SymphonyConfigLocator`（public） | `internal` にして名前を `SymphonyConfigProvider` へ | 質問6 |
+
+### 入口の使い分け（ServiceLocator.md → Partitura.md に表で載せる）
+
+| したいこと | 使うAPI |
+| --- | --- |
+| 必ずあるはずのサービスを取る | `Get<T>()` |
+| 無いかもしれないサービスを取る | `TryGet<T>(out T)` |
+| 登録されるまで待って取る | `GetAsync<T>()` / `TryGetAsync<T>()` |
+| 登録されたら処理する（コールバック） | `WhenRegistered<T>(Action<T>)` |
+| フィールドに持って何度も取る | `ServiceReference<T>` |
+| 依存を注入する | `IInjectable` の自動注入、`Inject`、`CreateInstance` |
+
+## 依頼者に決めてもらうこと
+
+1. **取得APIの数**: ⭐a. `Get`＝必須（無ければ例外）、`TryGet`＝任意、`GetAsync`/`TryGetAsync`＝待つ。null を返す取得は無くす（6.x の `GetInstance` は R6 の互換層で従来どおり null を返す） / b. `Get`＝null を返す、`GetRequired`＝必須 として両方残す
+2. **インスタンスを渡すAPI**: ⭐a. `Unregister`・`Destroy`・`IsRegistered` の `(T instance)` をすべて同一参照の判定にそろえる / b. `Unregister(T)` 以外の `(T instance)` 版を削除する
+3. **`RegisterAfterLocate`**: ⭐a. `WhenRegistered<T>(Action<T>)` だけ残す（`Action` 版は `_ => …` で書ける） / b. 両方残す
+4. **`SymphonyLocateObject<T>`**: ⭐a. `ServiceReference<T>` として残す / b. 削除して `TryGet` に寄せる
+5. **`LocateTypeEnum` の値**: ⭐a. `Persistent`（Partitura の GameObject の子にして永続化）/ `Scene`（親子関係を変えない） / b. 値の名前は `Singleton` / `Locator` のまま
+6. **`SymphonyConfigLocator`**: ⭐a. `internal` にして `SymphonyConfigProvider` へ改名（SymphonyKillChord では未使用。Editor とテストは `InternalsVisibleTo` 済み） / b. public のまま改名だけ
+
+## 利用側（SymphonyKillChord）への影響の目安
+
+R6 の互換層が入るまでは移行不可（R2 の版は配布しない）。7.0.0 で旧名は `[Obsolete]` 警告になる。使用数: `TryGetInstance` 241、`RegisterInstance` 80、`UnregisterInstance` 74、`GetInstance` 約60、`LocateTypeEnum.Locator` 11、`DestroyInstance` 2。`SymphonyConfigLocator`・`SymphonyLocateObject`・`RegisterAfterLocate`・`ServiceInjector`・`ServiceLocateComponent`・`IInjectable` は 0。質問2a で挙動が変わるのは `DestroyInstance(instance)` の2か所だけで、R6 の移行ガイドに書く。
+
+## ファイル構成
+
+- `Runtime/Service/ServiceLocator/` → `Runtime/Services/`（`Internal/` の各層も同じ名前空間 `SymphonyFramework.Services.Internal.*` へ）
+- `ServiceLocator.cs` + `ServiceInjector.cs` → `Partitura.cs`（partial で `Partitura.Registration.cs` / `Partitura.Injection.cs` に分けてもよい。1ファイルが400行を超える場合）
+- `.meta` の GUID は `git mv` で保つ。新規ファイルの `.meta` は `generate_meta.py`
+- テスト（14ファイル）・Samples（4）・Editor（デバッグウィンドウ、ログ設定）・Orchestrator の参照を置き換える
+- `Documentation/Modules/ServiceLocator.md` → `Partitura.md`、生成HTML も
+
+## 互換
+
+R6 まで入れない（全体方針）。`ServiceLocateComponent` は MonoBehaviour なので、利用側シーンの参照は `.meta` GUID で保たれる。`[SerializeReference]` で保存される型はこの Round に無い。
+
+## テスト
+
+- 既存テストを新しい名前へ置き換える
+- 追加: `Destroy(instance)` と `IsRegistered(instance)` が別インスタンスでは false を返し、登録を消さないこと（質問2a）
+- 追加: `Get<T>()` が未登録で `ServiceNotRegisteredException`、破棄済み Unity Object でも同じ例外を出すこと
+- `PublicTypeTestCoverageTests` の公開型一覧を更新する
+
+## 動作確認
+
+Unity 検証は R6（決定事項3）。リモートでは R1 と同じ代替検査に加え、旧名（`ServiceLocator`、`GetInstance`、`LocateTypeEnum` など）がパッケージ内に残っていないことを grep で確かめる。
