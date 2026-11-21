@@ -777,7 +777,7 @@ submodule 側は2コミット（R4 の上に積んでいる）。
 
 # Round 6: 互換レイヤーと 7.0.0（#227）
 
-> **状態: 設計済み（回答は下の「決定事項」）。** 版は 7.0.0。R3〜R5 の PR がマージされてから実装し、PC の Unity で検証する。
+> **状態: 実装済み（手元）。PR は R5（#238）のマージ後に出す。** 版は 7.0.0。Unity での検証は PC で行う（下の「実施レポート（Round 6）」）。
 
 ## 目的
 
@@ -847,10 +847,54 @@ R1〜R5 の未実施リストに加え、#227 の「リリース前のチェッ�
 
 ## 利用側（SymphonyKillChord）への影響の目安
 
-`using SymphonyFrameWork.*` が約170行（`ServiceLocate` 77、`Attribute` 47、`SaveSystem` 30、`SceneLoad` 9 ほか）。`Attribute` の47ファイルのうち実際に属性を使うのは `DisplayText` の1か所で、残りは使われていない `using`。転送クラスと質問1 の a で、7.0.0 では警告だけになる見込み。
+`using SymphonyFrameWork.*` が約170行（`ServiceLocate` 77、`Attribute` 47、`SaveSystem` 30、`SceneLoad` 9 ほか）。~~`Attribute` の47ファイルのうち実際に属性を使うのは `DisplayText` の1か所~~ **（訂正、R6 実装時）: `Attribute` を `using` する47ファイルのうち45ファイルが `[SubclassSelector]` などの属性を使う。** 属性は転送クラスを置かない型（質問1 の a）なので、SKC は API Updater の書き換えに頼る（下の実施レポート）。
 
 ## 決定事項（2026-11-21、依頼者の回答）
 
 1. a: 旧名前空間ごとに目印の internal 型を置いて `using` を通し、名前空間だけ変わった型には 6.x の名前を指す `[MovedFrom]` を付けて API Updater に書き換えさせる。効かない分は移行ガイドの一括置換
 2. **b**: SKC は固定しない。7.0.0 が main に入った時点で、SKC は互換層の警告付きで動かす。**そのため、PC の検証 4.（SKC で 7.0.0 を指したときのコンパイル）は main へのマージ前に必ず行う**
 
+## 実施レポート（Round 6）
+
+### 実装した内容
+
+- **転送クラス**（`Runtime/Obsolete/<旧名前空間>/`、すべて `[Obsolete]`、削除は 8.0.0）
+  - Facade: `ServiceLocator`、`ServiceInjector`、`SceneLoader`、`SceneBlockLoader`、`SaveStore`、`AudioManager`、`PauseManager`。設計の7件に加え、`SymphonyLocateObject<T>`（→ `PartituraReference<T>`）も転送にした
+  - 6.x と戻り値を合わせたもの: `ServiceLocator.GetInstance` / `SymphonyLocateObject.GetInstance` / `AudioManager.GetAudioSource` は未登録で `null`、インスタンスを渡す `DestroyInstance` / `IsExistInstance` は型だけで処理、`RegisterAfterLocate(Action)` は `WhenRegistered` へ包む
+  - 継承させた旧型: `IInjectable` 5種、`PauseManager.IPausable`（`RegisterPauseManager` 付き）、`SaveDataContent`、`SaveDataLoaderStrategy`、`PlayerPrefsSaveDataLoaderStrategy`。`LocateTypeEnum` は値の順序で変換
+- **旧名前空間の目印**: 3アセンブリ（Runtime / Core / Editor）の `Obsolete/LegacyNamespaceMarkers.cs` に internal な空の型
+- **`[MovedFrom]`**: 80型（Runtime / Core / Editor）。改名した `SceneBlock*` → `Suite*`、`ServiceLocateComponent` → `ServiceComponent`、Editor ウィンドウ3種、`SymphonyEditorConfigLocator` → `SymphonyEditorConfigProvider` は旧型名も指す
+- テスト `Version7CompatibilityTests`（旧名前空間の存在、`[MovedFrom]` の値、転送の結果、旧ローダーの橋渡し）。公開型の網羅検査は `/Obsolete/` を対象外にした
+- 文書: `Documentation~/Migration7.md`（新規）、Deprecations の「7.0.0（6.x の名前からの転送）」、CHANGELOG 7.0.0、README / AGENTS / index / Architecture（Runtime のフォルダ一覧が古かったので現状へ直した）。ワークスペースの CodeGuidelines に旧名前空間の転送の置き方を足した
+
+### 設計から変えた点
+
+- **`IInitializeAsync` は継承した旧型を置かず、`[MovedFrom]` にした。** メンバーが `protected` で、実装は必ず明示的な実装（`Task IInitializeAsync.InitializeAsync()`）になる。旧型が新しい型を継承しても、明示的な実装の宣言元が合わずコンパイルできない（CS0539）
+- **旧ローダー2種は、旧 `SaveDataContent` を受け取る抽象メソッドへ橋渡しする形にした。** 6.x の派生型（SKC の `EncryptedFileSaveDataLoaderStrategy` もそう）は旧型を引数にした override を持つため、単に新しい型を継承させるだけでは override が合わない。新しい型だけを継承したデータを渡すと `InvalidOperationException`
+- **`PauseCategoryResolver` が旧 `PauseManager.IPausable` を既定カテゴリーとして扱うようにした。** 旧型は新しい `IPausable` を継承するため、何もしないと1つのカテゴリーに数えられ、6.x の書き方の対象が既定カテゴリーから外れる。旧 `PauseManager.SetPause<PauseManager.IPausable>` なども既定カテゴリーへ読み替える
+- 重複型名の除外リストへ、転送の4型と目印を足した
+
+### 検証結果（リモートの代替検査）
+
+- `release_round.py preflight`: 既知の2件（ブランチ名、Enter Play Mode Options）以外は OK（版 7.0.0、BOM、meta、asmdef、文書の同期）
+- `generate_meta.py --check`、`build_module_docs.py --check`、`sync_agent_skill_locators.py --check`: OK
+- 重複型名の検査（CI と同じコマンド）: OK
+- 公開型の網羅（`cov.py`、`/Obsolete/` を除外）: 欠落・残り・古い行なし
+- 変更した C# の構文検査（tree-sitter）: エラー 0。**意味のコンパイル（型の解決、override の一致、CS0618 以外の警告）は Unity でしか確かめられない**
+
+### 未実施リスト（PC の Unity で行う）
+
+1. ワークスペースのコンパイル 0 エラー（警告は `[Obsolete]` の自己参照が無いこと）、EditMode / PlayMode の全テスト、Play の開始と終了を2回
+2. `Version7CompatibilityTests` の全件
+3. 6.15.2 の状態からの更新（設計の「検証」2.）: PauseCategory の旧生成物が転送でコンパイルされ、Editor の起動時に移行されること
+4. API Updater: `using SymphonyFrameWork.Attribute;` と `[SubclassSelector]` を書いたスクリプトが書き換えられること。internal な目印だけの名前空間で `using` がコンパイルできること
+5. **SKC の PC クローンで 7.0.0 を指したときのコンパイル（決定事項 2.、main へのマージ前に必須）**
+
+### SKC への影響（決定事項 2. の前提の訂正）
+
+設計時は「`Attribute` を使うのは1か所」と見積もったが、実際は **45ファイルが属性を使い、ほかに6ファイルが名前空間だけ移った型（`SymphonyAwaitable`、`SymphonyDebugLogger`、`LogKindEnum` など）を使う。** これらは転送ではなく API Updater で直る型のため、SKC は 7.0.0 を初めて開いたときに API Updater が約51ファイルを書き換える。Editor では確認のダイアログが出る。**バッチモード（CI のビルド）では `-accept-apiupdate` が無いと書き換えずにコンパイルエラーになる。** 転送で直る `ServiceLocator` などの約120行は、警告だけで通る見込み。
+
+### 振り返り
+
+- 設計時の SKC の見積もりを、`using` の行数と1つの属性名だけで出していた。属性は `[SubclassSelector]` のように `Attribute` を省いて書くため、型名の検索では見つからなかった。互換の範囲を見積もるときは、`using` した名前空間の型すべてを短縮名（属性は `Attribute` を除いた名前）でも数える
+- 「継承した旧型を置けば実装側はそのまま動く」は、暗黙の実装だけの話だった。明示的な実装と、引数に旧型を持つ override は別に扱う必要がある（`IInitializeAsync`、ローダー）

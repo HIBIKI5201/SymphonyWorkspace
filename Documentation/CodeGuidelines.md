@@ -81,6 +81,8 @@ SymphonyFramework
   - `internal`なConfig用`ScriptableObject`は`Runtime/Configs/Internal/`へ置く。
   - `Internal/`の外には、利用側が使う公開エントリポイント、公開Component、拡張契約、Info、不変な値だけを残す。
 - `Runtime/Obsolete/`は、フォルダ構成と名前空間を一致させる唯一の例外とする。非推奨APIは移行先と同じ名前空間に置き、サブフォルダ名で対応する名前空間を示す。
+  - 名前空間ごと移った旧名の転送（7.0.0 の `SymphonyFrameWork.*`）は、旧名前空間に置き、サブフォルダ名を旧名前空間そのもの（例: `Runtime/Obsolete/SymphonyFrameWork.System.ServiceLocate/`）にする。旧名前空間の中では `System` が `SymphonyFrameWork.System` に隠されるため、BCL の型は `global::System` で書く。
+  - `Obsolete/` 以下の公開型は、公開型の網羅検査（`PublicTypeTestCoverageTests`）の対象外とし、転送の検証は専用のテスト（`Version7CompatibilityTests`）へまとめる。
 - 1ファイルには1つの公開型だけを定義し、ファイル名を型名と一致させる。
 - privateな入れ子型は、所有する型と密接に関係し、単独で再利用しない場合に限り同じファイルへ置ける。
 

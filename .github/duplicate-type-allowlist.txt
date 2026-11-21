@@ -6,3 +6,12 @@ IInjectable
 
 # partial class を Partitura.cs（登録・取得）と Partitura.Injection.cs（注入）に分けている（7.0.0、#225）
 Partitura
+
+# 6.x の名前空間（SymphonyFrameWork.*）に残した [Obsolete] の転送型。新しい型を継承する（7.0.0、#227）。8.0.0 で削除する
+IPausable
+PlayerPrefsSaveDataLoaderStrategy
+SaveDataContent
+SaveDataLoaderStrategy
+
+# 6.x の名前空間ごとに置いた、using を通すための internal な目印（7.0.0、#227）。8.0.0 で削除する
+LegacyNamespaceMarker
