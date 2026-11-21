@@ -27,7 +27,7 @@
 | `Core/` | RuntimeとEditorで共有する最小限の基盤と内部ヘルパー | 上位機能へ依存させない。`ReactiveProperty<T>`などの`internal`な型は`Core/AssemblyInfo.cs`の`InternalsVisibleTo`でRuntime／Editorへ公開する |
 | `Core/Editor/` | Editor APIを使う共有基盤（パス解決、Editor向け定数など） | `#if UNITY_EDITOR`で囲む。**Runtimeから参照しない**（Playerビルドで解決できなくなる）。参照してよいのはEditorアセンブリだけ |
 | `Runtime/` | Playerビルドに含まれる機能 | `UnityEditor` を参照しない |
-| `Runtime/Service/<Subsystem>/` | サブシステムの公開エントリポイント、公開Component、公開Strategy、Info、Value Object、Enum | 利用側が参照する型だけを直下へ置く |
+| `Runtime/<Subsystem>/` | サブシステムの公開エントリポイント、公開Component、公開Strategy、Info、Value Object、Enum | 利用側が参照する型だけを直下へ置く |
 | `*/Internal/` | 各フォルダのDomain、Application、Adaptor、View、Infrastructure、Compositionの内部実装 | `internal`なEntity、Service、Registry、Query、Dto、ViewModel、Unity API実装を置く。名前空間には`Internal`を含めない（→ `## 名前空間`） |
 | `Runtime/Obsolete/` | 代替APIへ移行済みの `[Obsolete]` シム | 移行期間のみ存在させ、メジャー更新で削除する |
 | `Editor/` | Inspector、設定画面、Generatorなど | `SymphonyFramework.Editor` asmdefに含める |
@@ -58,26 +58,25 @@ SymphonyFramework
 ├─ Orchestrator
 ├─ SaveData
 ├─ Scenes
+├─ Pause
 ├─ Services
-├─ System
-│  └─ Pause
 └─ Utility
 ```
 
-- 消費者向けの公開エントリポイントと公開Componentは、属するサブシステムの名前空間へ置く。例: `Manuscript`は`SymphonyFramework.SaveData`、`Sonority`は`SymphonyFramework.Audio`、`Attacca`と`Suite`は`SymphonyFramework.Scenes`、`Partitura`は`SymphonyFramework.Services`。
+- 消費者向けの公開エントリポイントと公開Componentは、属するサブシステムの名前空間へ置く。例: `Fermata`は`SymphonyFramework.Pause`、`Manuscript`は`SymphonyFramework.SaveData`、`Sonority`は`SymphonyFramework.Audio`、`Attacca`と`Suite`は`SymphonyFramework.Scenes`、`Partitura`は`SymphonyFramework.Services`。
 - Runtimeの`SymphonyOrchestrator`は`SymphonyFramework.Orchestrator`、Editorの`SymphonyEditorOrchestrator`は`SymphonyFramework.Editor`へ置く。Editor asmdefからRuntime asmdefへの一方向参照を維持する。
 - 特定サブシステムの専用例外は、その公開エントリポイントと同じ名前空間へ置く。複数サブシステムで共通する例外は`SymphonyFramework.Exception`へ置く。
 - 公開型と内部実装の区別は、名前空間ではなくフォルダで表す。Adaptorの公開エントリポイントとInfo、公開Strategyはサブシステム直下、Domain、Application、Adaptor Query／Dto、View、Infrastructureの内部実装は同じフォルダの`Internal/`配下へ置く。
 - Sampleは`SymphonyFramework.Samples.<SampleName>`とする。
 - ファイルの配置と名前空間を一致させる。
 - 名前空間はディレクトリ構成を反映する。並び順を示す数字など、コード上の責務を表さないディレクトリ名は除外する。
-- **`Runtime/Service/` の残り（Pause）だけは、フォルダ名と名前空間（`SymphonyFramework.System.*`）が一致しません。** Issue #106 でフォルダ名を `System` から `Service` へ変えた際、名前空間を揃えなかったためです。7.0.0 の命名整理（#227）で、Partitura は `Runtime/Services/`（`SymphonyFramework.Services`）、Attacca と Suite は `Runtime/Scenes/`（`SymphonyFramework.Scenes`）、Manuscript は `Runtime/SaveData/`（`SymphonyFramework.SaveData`）、Sonority は `Runtime/Audio/`（`SymphonyFramework.Audio`）へ揃えました。残りも同じ整理の中で移します。**新しいサブシステムは、フォルダと名前空間を一致させて置いてください。**
+- 7.0.0 の命名整理（#227）で、旧 `Runtime/Service/`（名前空間 `SymphonyFramework.System.*`）のサブシステムを、機能名のフォルダと名前空間へ揃えました: Partitura は `Runtime/Services/`（`SymphonyFramework.Services`）、Attacca と Suite は `Runtime/Scenes/`（`SymphonyFramework.Scenes`）、Manuscript は `Runtime/SaveData/`、Sonority は `Runtime/Audio/`、Fermata は `Runtime/Pause/`。**`SymphonyFramework.System` は .NET の `System` を隠すため、名前空間として使いません。新しいサブシステムも、フォルダと名前空間を一致させて置いてください。**
 - `internal`な型は、所属するフォルダ直下の`Internal/`へ置く。`Internal`と概念レイヤー名は名前空間には含めない。例: `Runtime/Scenes/Attacca/Internal/Application/SceneLoadService.cs`の名前空間は`SymphonyFramework.Scenes`。
   - 横断的で最小限の内部ヘルパーは`Core/Internal/`へ置く。
-  - Domain Entityは`Runtime/Service/<Subsystem>/Internal/Domain/`へ置く。
-  - ApplicationのServiceとRegistryは`Runtime/Service/<Subsystem>/Internal/Application/`、AdaptorのQueryとDtoは`Internal/Adaptor/`へ置く。
+  - Domain Entityは`Runtime/<Subsystem>/Internal/Domain/`へ置く。
+  - ApplicationのServiceとRegistryは`Runtime/<Subsystem>/Internal/Application/`、AdaptorのQueryとDtoは`Internal/Adaptor/`へ置く。
   - 利用側が継承するpublic abstractなStrategyはサブシステム直下、内部Strategyは`Internal/Application/`へ置く。Infrastructureの具象Loaderは`Internal/Infrastructure/`へ置く。
-  - ViewModelと内部表示Componentは`Runtime/Service/<Subsystem>/Internal/View/`へ置く。`View`は責務を表すフォルダだが、名前空間には追加しない。
+  - ViewModelと内部表示Componentは`Runtime/<Subsystem>/Internal/View/`へ置く。`View`は責務を表すフォルダだが、名前空間には追加しない。
   - RuntimeのComposition Rootとライフタイム用Componentは`Runtime/Orchestrator/Internal/`、EditorのComposition Rootは`Editor/Orchestrator/Internal/`へ置く。
   - `internal`なConfig用`ScriptableObject`は`Runtime/Configs/Internal/`へ置く。
   - `Internal/`の外には、利用側が使う公開エントリポイント、公開Component、拡張契約、Info、不変な値だけを残す。

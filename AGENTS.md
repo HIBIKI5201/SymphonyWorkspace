@@ -87,12 +87,11 @@
 ```text
 SymphonyFramework.Editor ──> SymphonyFramework ──> SymphonyFramework.Core
 （Editor専用）                     │        ▲
-                                   │        └── SymphonyFramework.PauseCategory（自動生成）
-                                   ├──> SymphonyFramework.Enum（自動生成・Assets/Scripts 配下）
+                                   │        └── SymphonyFramework.Enum（自動生成・Assets/Scripts 配下。ポーズカテゴリーも含む）
                                    └──> Unity.Addressables / Unity.ResourceManager
 ```
 
-- **`SymphonyFramework.PauseCategory` は参照の向きが逆です。** 生成物が `SymphonyFramework` を参照し、フレームワーク側はこれを参照しません。カテゴリーは `PauseManager.IPausable` を継承するため参照が要りますが、`SymphonyFramework.Enum` へ置くと循環するためです。`PauseManager.SetPause<TCategory>` はジェネリックで、フレームワークが具体的なカテゴリー型を名指しする必要が無いため片方向で成立します。
+- **`SymphonyFramework.Enum` は生成物から `SymphonyFramework` を参照し、フレームワーク側はこれを参照しません（6.20.0 から）。** ポーズカテゴリーは `IPausable` を継承するため参照が要ります。`Fermata.SetPause<TCategory>` はジェネリックで、フレームワークが具体的なカテゴリー型や生成enumを名指しする必要が無いため片方向で成立します。6.19.0 以前の専用 `SymphonyFramework.PauseCategory` asmdef は、Editor の起動時に削除されます。
 
 - ホスト側 `Assets/Scripts/` に新しい asmdef を作る場合は、`SymphonyFramework` を参照に追加してください。自動生成enumを直接使うなら `SymphonyFramework.Enum` も追加します。
 - **`SymphonyFramework.asmdef` の `SymphonyFramework.Enum` への参照は、`PackageInitializer` がEditor起動時に自動で注入します**（`AssemblyGenerator.AddAsssemblyReference`）。submodule に asmdef の差分が出ても手で戻さないでください。

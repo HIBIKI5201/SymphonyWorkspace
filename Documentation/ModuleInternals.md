@@ -134,10 +134,11 @@ classDiagram
         TryGetSource()
         SetVolume()
     }
-    class PauseManager {
+    class Fermata {
         <<static>>
         SetPause()
-        PausableWaitForSecondAsync()
+        Register()
+        WaitForSecondsAsync()
     }
     class IPausable {
         <<interface>>
@@ -154,7 +155,7 @@ classDiagram
     Suite ..> Attacca : 同じServiceでロード
     Manuscript --> SaveDataContent : 型単位でキャッシュ
     Manuscript --> SaveDataLoaderStrategy : 永続化を委譲
-    PauseManager --> IPausable : 状態を通知
+    Fermata --> IPausable : 状態を通知
 ```
 
 Facadeは利用側の入口、interfaceと抽象classは利用側が実装する拡張点です。ConfigとManagerの内部実装はFacadeの背後に隠し、利用側へ公開しません。
@@ -281,13 +282,13 @@ flowchart LR
 
 `AudioSourceHost`は**最初にAudioSourceを求められた時点で初めてGameObjectを生成します。** AudioMixerが未割り当てなどでAudioSourceを1つも作らない場合、GameObjectも作られません。
 
-## Pause Manager
+## Fermata
 
 Pauseも同じ形で、状態の保持、購読の管理、表示状態を分離しています。
 
 ```mermaid
 flowchart LR
-    Facade["PauseManager"] -->|Command| Service["PauseService"]
+    Facade["Fermata"] -->|Command| Service["PauseService"]
     Service --> State["PauseStateEntity"]
     Service --> Registry["PausableRegistry"]
     Facade -->|Query| Query["PauseQuery"]

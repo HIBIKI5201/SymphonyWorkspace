@@ -648,7 +648,7 @@ submodule 側は2コミット（R3 のブランチの上に積んでいる）。
 
 # Round 5: `PauseManager` → `Fermata`、旧APIの削除、`PauseCategory` の統合（#225、Deprecations.md）
 
-> **状態: 設計中（依頼者の回答待ち）。** 版は 6.20.0。上の「Round 5 の追加」はこの節で置き換える。
+> **状態: 実装済み（回答は下の「決定事項」）。** 版は 6.20.0。上の「Round 5 の追加」はこの節で置き換える。
 
 ## 目的
 
@@ -717,3 +717,58 @@ submodule 側は2コミット（R3 のブランチの上に積んでいる）。
 ## 進め方
 
 R4 と同じ。`System` 名前空間が無くなるため、R4 までテストで避けていた `System.` の完全修飾はそのまま使えるようになる（書き換えは不要）。置換後に `using SymphonyFramework.System;` が残っていないこと（今は20ファイル）を grep で確かめる。
+
+## 決定事項（2026-11-21、依頼者の回答）
+
+1. **カテゴリーを指定しない場合は全てを指定する。** カテゴリー無しの旧API8件は非推奨のまま転送へ回すのではなく、`Fermata` の正式なAPIとして残す。対象は全カテゴリーで、どれか1つでもポーズ中なら止まる（6.12.0 以降の非推奨版と同じ動き）。`Pause` プロパティは `SetPauseAll` / `IsPausedAny` と重なるため置かず、`OnPauseChanged` はカテゴリー無しの `AddPauseChangedHandler(Action<bool>)` / `RemovePauseChangedHandler(Action<bool>)` にする
+2. a: Logger 4件・Tween 2件を R5 で削除する
+3. a: `Fermata.Register(IPausable)` / `Fermata.Unregister(IPausable)`
+4. a: Editor の起動時に旧 asmdef を削除して移行する
+
+## 実施レポート（Round 5）
+
+実施日: 2026-11-21 / バージョン: 6.20.0 / PR: （R3 の #236、R4 の PR の後に作る）
+
+### 実装した内容
+
+submodule 側は2コミット（R4 の上に積んでいる）。
+
+1. `5992174` コード
+   - `Runtime/Service/Pause/` → `Runtime/Pause/`（`SymphonyFramework.Pause`）。`PauseManager.cs` → `Fermata.cs`（`.meta` は `git mv`）。`Runtime/Service/` は空になったため `.meta` ごと消した。`SymphonyFramework.System` 名前空間はパッケージから無くなった
+   - `IPausable` をトップレベルの `Runtime/Pause/IPausable.cs` へ（`.meta` は Unity なしで生成）。interface の static だった登録は `Fermata.Register` / `Unregister`
+   - 待機・遅延の改名（`NextFrameAsync` / `WaitForSeconds` / `WaitForSecondsAsync` / `WaitUntilAsync` / `DestroyAsync` / `InvokeAsync`）。カテゴリー無し版は `[Obsolete]` を外した。秒数の引数名を `time` / `t` から `seconds` にそろえた
+   - 削除: `Pause` プロパティ、`OnPauseChanged`、Logger 4件と専用の `DescribeNullKind`、Tween 2件、`ASSET_STORE_TOOLS_IGNORE_FILE` と `ignore.txt` の移行処理、`PackageModeEnum` / 旧 `Export` / `CreateStepsFromOptions` / `LEGACY_PIPELINE_NAME`、`AssetStoreToolsPackageContext`
+   - asmdef: パッケージの `SymphonyFramework.asmdef` から Enum の GUID を外した。`AssemblyGenerator.CreateEnumAssembly` は Enum → Framework の参照を入れる向きに変え、`RemoveAssemblyReference` を足した。`PackageInitializer.EnumInitialize` は起動時に「Framework → Enum の参照を外す」「Enum → Framework の参照を入れる」「旧 PauseCategory asmdef を移行する」を行う
+   - `PauseCategoryGenerator`: 専用 asmdef を作らない。`MigrateLegacyAssembly` は旧 asmdef（`SymphonyFramework.PauseCategory` と 6.15 の `SymphonyFrameWork.PauseCategory`）があれば、フォルダ内の全 `.cs` を `RewriteLegacySource` で書き換え（設定から消えたカテゴリーも含む）、asmdef を削除して警告を出す
+   - サンプル `PauseManagerSample` → `FermataSample`、パネル名 `Fermata`、`SymphonyDocumentPageEnum.Fermata`
+   - テスト: `FermataTests`（カテゴリー無しの購読2件を追加、`Pause` プロパティのテストを置き換え）、`FermataAwaitableRuntimeTests`、`PauseCategoryGeneratorTests`（生成先、旧 asmdef 名、`RewriteLegacySource` 3件、Framework asmdef が Enum を参照しないこと）、`RuntimeFolderLayoutTests`（`Runtime/Service/` が無いこと、`Runtime/Pause/`）。削除した `CheckComponentNull` のテスト3件を消した
+2. `34a5439` 文書: 6.20.0、CHANGELOG（対応表と削除一覧）、`Modules/Fermata.md`（旧 `PauseManager.md`）、`Deprecations.md`（削除予定を空にし、14行を「削除済み」へ）、各文書のリンク、生成HTML
+
+ワークスペース側: `AGENTS.md`（アセンブリ構成図）、CodeGuidelines（名前空間の木から `System` を消し `Pause` を足す、`Runtime/<Subsystem>/`）、DesignPhilosophy（`PackageModeEnum` の例）、ModuleInternals（`## Fermata`）、`build_module_docs.py` のモジュール順。
+
+### 設計から変えた点
+
+- 質問1 の回答により、カテゴリー無しのAPIは R6 の転送ではなく `Fermata` の正式なAPIになった
+- 秒数の引数名を `seconds` にそろえた（設計に書いていなかった。#225 の「最も自然な状態にする」に従った）
+- 移行は asmdef の削除だけでなく、旧生成物の本文の書き換えも行う。設定から消したカテゴリーのファイルも旧 `PauseManager.IPausable` を継承しており、asmdef を消すとコンパイルできなくなるため
+
+### 検証結果（リモートの代替検査）
+
+- `release_round.py preflight`: 既知の NG 2件以外は OK
+- `generate_meta.py --check`、`build_module_docs.py --check`、`sync_agent_skill_locators.py --check`: OK
+- 同名型の検査、公開型のテスト網羅の再現: OK
+- 重複 `using`、自分の名前空間の `using` の grep: 該当なし（`PauseCategoryGenerator` と、そのテストの文字列リテラルだけ）
+- 旧名の残り: パッケージの `.cs` / `.uxml` / `.json` に `PauseManager`、`SymphonyFramework.System`、`Pausable` で始まる旧待機API名が残っていない（移行処理の文字列と `RootFolderCaseMigrationTests` の 6.15 → 6.16 の検査値を除く）
+
+### 未実施リスト（R6 の検証へ追加）
+
+- コンパイルと全テスト。特に `PauseCategoryGeneratorTests.FrameworkAsmdef_DoesNotReferenceGeneratedAssembly`（Unity が `JsonUtility` で asmdef を読めること）、`FermataTests` の購読2件
+- 名前空間 `SymphonyFramework.Pause` が、`SymphonyFramework` 配下で `Pause()` を呼ぶコードを隠していないこと（メンバー参照なので隠れない見込み。grep で単純名の `Pause` は無し）
+- **既存プロジェクトの移行（PC の SKC 相当の構成で確かめる）**: ① Framework asmdef に Enum の参照が残っている状態からの起動で、参照が外れ、Enum → Framework が入ること ② 旧 `PauseCategory` asmdef と旧生成物がある状態で、書き換え・削除・再コンパイルが通ること。**ただし ② は旧生成物が `PauseManager.IPausable` を使っており、R6 の互換層が無いと最初のコンパイルが通らず Editor の起動処理が動かない。** R6 で `PauseManager.IPausable` の転送を入れてから確かめる
+- Administrator の Fermata パネル、`FermataSample`、Asset Store Tools のパイプライン出力（旧APIの削除後も動くこと）
+
+### 振り返り
+
+- 回答1 は推奨（転送クラスにだけ残す）と違う「全カテゴリー対象の正式API」だった。非推奨にした時点の理由（カテゴリー指定を促す）より、全体を対象にした待機の需要を優先した判断として記録する
+- 生成物の移行は「最初のコンパイルが通らないと Editor の移行処理が走らない」という順序の問題を持つ。互換層（R6）と移行処理の両方がそろって初めて検証できるため、R6 の検証項目に明記した
+

@@ -45,7 +45,7 @@ MODULE_ORDER = (
     "Suite",
     "Manuscript",
     "Sonority",
-    "PauseManager",
+    "Fermata",
     "Debug",
     "Utility",
     "InspectorAttributes",

@@ -356,7 +356,7 @@ Enumは、有限個の選択肢や状態を表す独立した型カテゴリで�
 
 - 型名は必ず`Enum`で終える。入れ子enumにも同じ規則を適用する。
 - 列挙値の追加・削除・数値変更がシリアライズ互換性へ影響する場合は、[バージョニング](#バージョニング)に従う。
-- 3.0.0で`LocateTypeEnum`（7.0.0で`ServiceLifetimeEnum`へ改名）、`SceneLoadStateEnum`、`SaveDataOperationEnum`、`LogKindEnum`、`InitializeTypeEnum`、`LoadTypeEnum`、`PackageModeEnum`へ統一済み。
+- 3.0.0で`LocateTypeEnum`（7.0.0で`ServiceLifetimeEnum`へ改名）、`SceneLoadStateEnum`、`SaveDataOperationEnum`、`LogKindEnum`、`InitializeTypeEnum`、`LoadTypeEnum`へ統一済み（`PackageModeEnum`は6.20.0で削除）。
 - 自動生成済みの`SceneListEnum`、`TagsEnum`、`LayersEnum`、`AudioGroupTypeEnum`は既に規則へ適合しているため変更しない。
 
 ### DTO
