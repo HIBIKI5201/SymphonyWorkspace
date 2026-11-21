@@ -110,7 +110,7 @@ classDiagram
         <<interface>>
         InitializeAsync()
     }
-    class SaveStore {
+    class Manuscript {
         <<static>>
         Get()
         LoadAsync()
@@ -128,10 +128,11 @@ classDiagram
         SerializeToJson()
         OverwriteFromJson()
     }
-    class AudioManager {
+    class Sonority {
         <<static>>
-        GetAudioSource()
-        VolumeSliderChanged()
+        GetSource()
+        TryGetSource()
+        SetVolume()
     }
     class PauseManager {
         <<static>>
@@ -151,8 +152,8 @@ classDiagram
     Attacca ..> Partitura : ルートへ自動注入
     Attacca --> IInitializeAsync : 完了を待機
     Suite ..> Attacca : 同じServiceでロード
-    SaveStore --> SaveDataContent : 型単位でキャッシュ
-    SaveStore --> SaveDataLoaderStrategy : 永続化を委譲
+    Manuscript --> SaveDataContent : 型単位でキャッシュ
+    Manuscript --> SaveDataLoaderStrategy : 永続化を委譲
     PauseManager --> IPausable : 状態を通知
 ```
 
@@ -236,13 +237,13 @@ flowchart LR
 
 起動時の Suite（`SceneLoadConfig` の「初期化時にロードするSuite」）も Orchestrator が組み立てます。シーン名の集合と、`Suite.LoadInitialAsync` を呼ぶ関数を `Attacca.AfterSceneLoad` へ渡し、`SceneLoadService` が「初期シーン → Suite → 残りの整理」の順に実行します。
 
-## Save Data System
+## Manuscript
 
 Save DataのRuntime内部も同じ形で、処理順、読み取り変換、表示状態を分離しています。
 
 ```mermaid
 flowchart LR
-    Facade["SaveStore"] -->|Command| Service["SaveDataService"]
+    Facade["Manuscript"] -->|Command| Service["SaveDataService"]
     Service --> Registry["SaveDataEntryRegistry"]
     Registry --> Entity["SaveDataEntryEntity"]
     Facade -->|Query| Query["SaveDataQuery"]
@@ -263,13 +264,13 @@ flowchart LR
 
 永続化データが存在するかどうか（`Exists`）はQueryに含めません。ローダーへのI/Oであり、状態が変わるたびに全型分の問い合わせが走るためです。
 
-## Audio Manager
+## Sonority
 
 Audioは読み取り経路の利用者（Editor WindowとMCP診断）が無いため、QueryとViewModelを持ちません。
 
 ```mermaid
 flowchart LR
-    Facade["AudioManager"] -->|Command| Service["AudioService"]
+    Facade["Sonority"] -->|Command| Service["AudioService"]
     Service --> Registry["AudioGroupRegistry"]
     Registry --> Entity["AudioGroupEntity"]
     Service --> HostContract["IAudioSourceHost"]

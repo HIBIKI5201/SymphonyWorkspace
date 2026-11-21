@@ -109,13 +109,13 @@ Domainの値と規則を組み合わせ、サブシステムが提供する処�
 
 利用側プロジェクトへ公開する唯一の操作面です。サービス名をそのまま型名にした静的な**公開エントリポイント**、InspectorやUnityライフサイクルを公開契約として受ける`Component`、読み取り結果を変換する`Query`が属します。
 
-- `Attacca`、`Suite`、`AudioPlayer`、`PauseController`、`Partitura`、`SaveStore`は、利用側がサブシステムを操作する入口になる。
+- `Attacca`、`Suite`、`AudioPlayer`、`PauseController`、`Partitura`、`Manuscript`、`Sonority`は、利用側がサブシステムを操作する入口になる。
 - 補助エントリポイントは、主エントリポイントと機能が重複せず、責務を分ける理由が明確な場合だけ設ける。7.0.0では、注入を担っていた`ServiceInjector`を、取得と同じ型を扱う`Partitura`へ統合した。
 - `ServiceComponent`のような公開Componentは、Unityコールバックを受けて登録・解除などの処理をApplicationへ委譲する。
 - CommandメソッドはApplicationのServiceを呼び、利用側向けの戻り値、例外、Try形式へ変換する。
 - QueryだけがRegistryとDomain Entityを読み取り、公開API向けInfoまたはViewModel向けDtoへ変換する。
 - 公開エントリポイントの管理状態照会メソッドはRegistryやEntityを直接読まず、Queryが返したInfoまたは公開payloadをそのまま返す。
-- `Partitura.Get<T>`や`SaveStore.Get<T>`のように、登録された公開payload自体の取得が契約であるQueryはpayloadを返せる。ただし、その登録を管理するEntityは返さない。
+- `Partitura.Get<T>`や`Manuscript.Get<T>`のように、登録された公開payload自体の取得が契約であるQueryはpayloadを返せる。ただし、その登録を管理するEntityは返さない。
 - 公開エントリポイントは累積する業務状態を保持しない。
 - 公開ComponentはUnityオブジェクトへの参照を保持できるが、サブシステムの規則を重複実装しない。
 - Domainの不変な値やQueryが生成したInfoを公開APIで受け渡してよい。
@@ -211,7 +211,7 @@ OrchestratorはComposition層に属し、UnityまたはEditorのホストライ�
 - 登録された公開payload自体を取得するQueryは、そのpayloadを返せるが、管理用Entityや内部コレクションを公開しない。
 - Compositionから注入されたService、Registryを保持しているかという初期化状態は持ってよい。
 - 累積状態とDomainの判断を持たない。
-- 例: `Attacca`、`Suite`、`Partitura`、`SaveStore`、`AudioPlayer`、`PauseController`。
+- 例: `Attacca`、`Suite`、`Partitura`、`Manuscript`、`Sonority`、`PauseController`。
 
 ### Service
 
@@ -538,7 +538,7 @@ Symphony Frameworkは他プロジェクトが依存するパッケージであ�
 
 `public`にしてよい型は次に限定します。それ以外は`internal`にします。
 
-- Adaptor層の公開エントリポイント。例: `Attacca`、`Suite`、`Partitura`、`SaveStore`、`AudioPlayer`、`PauseController`。
+- Adaptor層の公開エントリポイント。例: `Attacca`、`Suite`、`Partitura`、`Manuscript`、`Sonority`、`PauseController`。
 - Unity上で利用側が配置または生成するAdaptor層のComponent。例: `ServiceComponent`。
 - 利用側が実装・継承する契約。例: ApplicationのStrategy、`SaveDataLoaderStrategy`、`PlayerPrefsSaveDataLoaderStrategy`、`SaveDataContent`、`IInitializeAsync`、`IPausable`。
 - 公開エントリポイントの引数・戻り値として境界を越えるInfo、Value Object、Enum。

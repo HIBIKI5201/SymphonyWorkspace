@@ -532,7 +532,7 @@ R5 の設計時に詳しく書く。今の見通しだけを残す。
 
 # Round 4: `SaveStore` → `Manuscript`、`AudioManager` → `Sonority`（#225）
 
-> **状態: 設計中。下の「依頼者に決めてもらうこと」の回答待ち。** 版は 6.19.0。
+> **状態: 実装済み（回答は下の「決定事項」）。** 版は 6.19.0。
 
 ## 目的
 
@@ -589,3 +589,57 @@ R5 の設計時に詳しく書く。今の見通しだけを残す。
 ## 進め方
 
 R3 と同じ。改名スクリプトは R3 の振り返りどおり、型名を単語境界つきの完全一致に限り、置換後に重複 `using` と「同じ名前が2回並ぶ」文を grep する。
+
+## 決定事項（2026-11-21、依頼者の回答）
+
+1. a: `GetSource`（未登録は例外）と `TryGetSource` の2つにする
+2. **b**: 未初期化の `GetEntries` は他の API と同じく `SymphonyNotInitializedException` を投げる。**Play 前のパネルやサンプルは try-catch を加え、未初期化用の動きにする**
+3. a: パネル名、Project Settings の項目名、文書、サンプル名を `Manuscript` / `Sonority` にそろえる
+
+## 実施レポート（Round 4）
+
+実施日: 2026-11-21 / バージョン: 6.19.0 / PR: （R3 の #236 がマージされた後に作る）
+
+### 実装した内容
+
+submodule 側は2コミット（R3 のブランチの上に積んでいる）。
+
+1. `9db6c17` コード
+   - `Runtime/Service/SaveSystem/` → `Runtime/SaveData/`（`SymphonyFramework.SaveData`）、`Runtime/Service/Audio/` → `Runtime/Audio/`（`SymphonyFramework.Audio`）。`.meta` は `git mv`
+   - `SaveStore` → `Manuscript`、`AudioManager` → `Sonority`。`VolumeSliderChanged` → `SetVolume`。`GetAudioSource` は `GetSource`（空の名前・未登録は `ArgumentException`）と `TryGetSource`（空の名前・未登録は `false`）に分けた。Service 側の `GetAudioSource` は内部名のまま
+   - `Manuscript.GetEntries` は `EnsureInitialized` を通す。呼び出し側は、MCP ツールが元から `IsInitialized` と try-catch で守っていた。Manuscript Sample の `IsCacheLoaded` に `SymphonyNotInitializedException` の catch を加え、未初期化ではキャッシュ無しとして表示する。Administrator のパネルは `GetEntries` を使っていない（ViewModel 経由）
+   - Editor の表示名: パネルのタイトル `Save Data Registry` → `Manuscript`、Project Settings の `Save System` → `Manuscript`。型名（`SaveDataWindow`、`SaveDataSettingProvider`）は概念の名前なので変えていない
+   - `SymphonyMcpTools.GetManuscriptJson`、`SymphonyDocumentPageEnum.Manuscript` / `.Sonority`、サンプル（`ManuscriptSample`、`SonoritySample`）
+   - `JsonUtilitySaveDataLoaderStrategy` / `NewtonsoftSaveDataLoaderStrategy` の `[MovedFrom]` は 6.15 の名前のまま（既存の `RootFolderCaseMigrationTests` が値を検査している）
+   - テスト: 新規 `SonorityTests`（未初期化3件、未登録・空の名前、範囲外の音量、未登録グループの音量変更）。`RuntimeFolderLayoutTests` に置き場の検査
+2. `c808e50` 文書: 6.19.0、CHANGELOG（対応表）、`Modules/Manuscript.md`（旧 `SaveDataSystem.md`）、`Modules/Sonority.md`（旧 `AudioManager.md`）、各文書のリンク、生成HTML、`package.json` のサンプル名
+
+ワークスペース側: `Assets/Scripts/DebugScripts/DbugObj.cs`、`Documentation/` の規約文書（CodeGuidelines、DesignPhilosophy、ModuleInternals）、`scripts/build_module_docs.py` のモジュール順。
+
+### 設計から変えた点
+
+- `Manuscript.GetEntries` を例外にした（回答2）。設計の推奨（空の一覧）とは逆
+- R3 で直し漏れていた、パッケージの `AGENTS.md` の `SceneLoader.md` へのリンク（#236 の時点でリンク切れ）を R4 で直した。`build_module_docs.py --check` は `AGENTS.md` を検査対象にしていないため、R3 では見つからなかった
+- CHANGELOG の過去の版にあった `SaveDataSystem.md` へのリンクを `Manuscript.md` へ書き換えた（リンク検査が過去の版も見ているため）
+
+### 検証結果（リモートの代替検査）
+
+- `release_round.py preflight`: 既知の NG 2件以外は OK
+- `generate_meta.py --check`、`build_module_docs.py --check`: OK
+- 同名型の検査、公開型のテスト網羅の再現（`Sonority` を一覧から外した。`Manuscript` は残す。Editor の起動時に初期化されるため、EditMode で未初期化の状態を作れない）: OK
+- 重複 `using`、自分の名前空間の `using`、「同じ名前が2回並ぶ」文の grep: 該当なし
+- 旧名の残り: パッケージの `.cs` / `.uxml` / `.json` に `SaveStore`、`AudioManager`、`VolumeSliderChanged`、`SymphonyFramework.System.SaveSystem` が残っていない（`[MovedFrom]` の移動元を除く）
+
+### 未実施リスト（R6 の検証へ追加）
+
+- コンパイルと全テスト。特に `SonorityTests`（`Sonority.Initialize(null, factory)` で警告ログが出るだけで落ちないこと）、`ManuscriptAwaitableRuntimeTests`
+- `SymphonyFramework.Audio` / `SymphonyFramework.SaveData` の名前空間が、`SymphonyFramework` 配下のコードの単純名（`Audio`、`SaveData`）を隠していないこと（grep では該当なし）
+- Project Settings の `Manuscript` 項目と、既存の `SaveDataConfig` のローダーが読めること。Administrator の Manuscript パネル
+- サンプル `ManuscriptSample`（Play 前・直後の表示）と `SonoritySample`（空のグループ名を入れても例外にならない）
+
+### 振り返り
+
+- R3 の振り返りどおり、置換スクリプトを `\b` 付きにし、サンプル名だけは `_` で続く識別子（`ManuscriptSample_Controller`）があるため境界なしにした。置換後の重複 `using` の検査も手順に入れ、該当なしを確かめられた
+- `Audio` 系のテストが `using SymphonyFramework.System;` で内部型を参照していた。名前空間を分ける Round では、移す型を使うテストの `using` を名前空間の単位で洗い出す
+- `System.Collections.Generic.List` のように完全修飾を書くと、`SymphonyFramework.System` に隠されてコンパイルできない。R5 で `System` 名前空間が無くなるまでは、テストでも `using` を使う
+
