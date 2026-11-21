@@ -643,3 +643,77 @@ submodule 側は2コミット（R3 のブランチの上に積んでいる）。
 - `Audio` 系のテストが `using SymphonyFramework.System;` で内部型を参照していた。名前空間を分ける Round では、移す型を使うテストの `using` を名前空間の単位で洗い出す
 - `System.Collections.Generic.List` のように完全修飾を書くと、`SymphonyFramework.System` に隠されてコンパイルできない。R5 で `System` 名前空間が無くなるまでは、テストでも `using` を使う
 
+
+---
+
+# Round 5: `PauseManager` → `Fermata`、旧APIの削除、`PauseCategory` の統合（#225、Deprecations.md）
+
+> **状態: 設計中（依頼者の回答待ち）。** 版は 6.20.0。上の「Round 5 の追加」はこの節で置き換える。
+
+## 目的
+
+- `PauseManager` を `Fermata`（名前空間 `SymphonyFramework.Pause`、フォルダ `Runtime/Pause/`）へ改名する（#225 の表どおり）
+- これで `SymphonyFramework.System` 名前空間が空になり、無くなる。`System.Exception` などが隠される問題（R4 の振り返り）も解消する
+- `Deprecations.md` の「次のメジャー更新」の4行（Asset Store Tools 関連）を消す。「未定」の14行は質問1・2で決める
+- 自動生成の `SymphonyFramework.PauseCategory` asmdef をやめ、カテゴリーの interface を `SymphonyFramework.Enum` へ入れる（依頼者の提案）
+
+## 公開API（6.19.0 → 6.20.0）
+
+| 6.19.0 | 6.20.0 | 備考 |
+| --- | --- | --- |
+| `PauseManager` | `Fermata` | |
+| `PauseManager.IPausable`（入れ子） | `IPausable`（トップレベル） | `Pause()` / `Resume()` はそのまま |
+| `IPausable.RegisterPauseManager` / `UnregisterPauseManager`（interface の static） | 質問3 | 旧Facade名から派生した名前のため変える |
+| `SetPause<T>` / `IsPaused<T>` / `SetPauseAll` / `IsPausedAny` / `GetPauseInfo[<T>]` / `Add・RemovePauseChangedHandler<T>` | そのまま | |
+| `PausableNextFrameAsync<T>` | `NextFrameAsync<T>` | |
+| `PausableWaitForSecond<T>` / `PausableWaitForSecondAsync<T>` | `WaitForSeconds<T>` / `WaitForSecondsAsync<T>` | 単数形の誤りも直す |
+| `PausableWaitUntil<T>` | `WaitUntilAsync<T>` | `Awaitable` を返すため |
+| `PausableDestroy<T>` / `PausableInvoke<T>` | `DestroyAsync<T>` / `InvokeAsync<T>` | |
+| カテゴリー無しの旧API8件（`Pause`、`OnPauseChanged`、`Pausable*` の非ジェネリック版） | 質問1 | 6.12.0 から `[Obsolete]` |
+| `PauseInfo` | そのまま（名前空間だけ） | |
+
+内部型（`PauseService`、`PauseQuery`、`PauseViewModel`、`PausableRegistry` など）は `Internal/` ごと移し、型名は変えない。`PausableRegistry` は概念（ポーズ可能な対象の登録簿）の名前なので残す。
+
+## 旧APIの削除（Deprecations.md）
+
+- **「次のメジャー更新」の4行は R5 で消す。** `ASSET_STORE_TOOLS_IGNORE_FILE`（`ignore.txt` の移行処理ごと）、`PackageModeEnum`（`Combine` を含む）、`Export(string[], PackageModeEnum, bool, bool)`、`AssetStoreToolsPackageContext`。手順は Deprecations.md の「Combineの削除手順」の表どおり。`AssetStoreToolsCombinePackageStrategy` は残す
+- 消した行は「削除済み」へ移し、CHANGELOG の `### Breaking` に移行方法を書く
+- 「未定」のうち Logger 4件・Tween 2件は質問2、PauseManager 8件は質問1
+
+## `PauseCategory` を `SymphonyFramework.Enum` へ統合する
+
+- 生成先 `Assets/Scripts/SymphonyFramework/PauseCategory/` は Enum の asmdef と同じフォルダの下にある。**サブ asmdef を作らなければ、そのまま `SymphonyFramework.Enum` に含まれる。** `PauseCategoryGenerator` は asmdef を作る処理をやめ、interface だけを生成する（`using SymphonyFramework.Pause;`、`public interface X : IPausable`）
+- 依存の向きを逆にする: 今はパッケージの `SymphonyFramework.asmdef` が Enum の asmdef を参照している（`PackageInitializer.EnumInitialize` / `EnumGenerator` が GUID を書き込む）。Runtime / Editor / Core に生成 enum の利用は無い。**この参照と書き込み処理を消し、Enum の asmdef から `SymphonyFramework` を参照する**（interface が `IPausable` を使うため）。逆向きを残すと循環になる
+- Enum の asmdef は `autoReferenced: true` のまま。`Assembly-CSharp` からは今までどおり使える
+- 既存プロジェクトの移行: 質問4
+
+## 依頼者に決めてもらうこと
+
+1. **カテゴリー無しの旧ポーズAPI8件**（6.12.0 から非推奨）: ⭐a. `Fermata` には入れず、R6 で残す `[Obsolete]` の `PauseManager`（転送クラス）にだけ残す。旧コードは警告付きで動き、新しいコードには出てこない / b. 7.0.0 で完全に消す（転送クラスからも外す）
+2. **Logger 4件・Tween 2件の「未定」の旧API**（いつ非推奨にしたか記録が無いもの）: ⭐a. 7.0.0 で消す（R5 で削除。SKC の利用は0件） / b. 残し、削除予定を「未定」のままにする
+3. **`IPausable` の登録メソッド**: ⭐a. `Fermata.Register(IPausable)` / `Fermata.Unregister(IPausable)` にする（他の操作と同じく Facade に置く） / b. interface の static のまま `IPausable.Register` / `IPausable.Unregister` にする
+4. **既存の `PauseCategory` asmdef の移行**: ⭐a. Editor の起動時に、生成物の `SymphonyFramework.PauseCategory.asmdef`（6.15 の `SymphonyFrameWork.PauseCategory` も）を消し、interface を生成し直す。自前の asmdef がそれを参照していた場合は、`SymphonyFramework.Enum` を参照するよう警告で案内する / b. 自動では消さず、警告だけ出して利用者に生成し直してもらう
+
+## 互換とシリアライズ
+
+- `IPausable` を実装した MonoBehaviour の GUID は利用側のもので、影響しない。`PauseManager.cs` → `Fermata.cs` は `git mv`
+- `[SerializeReference]` でポーズ関連の型を保存している箇所は無い（grep で確認する）
+- ポーズの `ResetRuntimeState()` は名前を変えずに移す
+- 旧名の転送（`PauseManager`、入れ子の `PauseManager.IPausable` を新しい `IPausable` の派生として残す、`RegisterPauseManager`）は R6
+
+## 利用側（SymphonyKillChord）への影響の目安
+
+`PauseManager.IPausable` が `BarragePauseBridge.cs` の3か所（実装1、`RegisterPauseManager` / `UnregisterPauseManager` 各1）。旧ポーズAPI・Logger・Tween の旧APIは0件。`PauseCategory` は未使用で、SKC の asmdef は Enum を参照していない。**7.0.0 では R6 の転送で警告だけで動く。**
+
+## テスト
+
+- 既存の Pause 系テストを `Fermata` / `IPausable` へ置き換える。公開型の網羅一覧（`PauseManager` → `Fermata`、`IPausable`）
+- `PauseCategoryGeneratorTests`: 生成ソースが `SymphonyFramework.Pause` と `IPausable` を使うこと、asmdef を作らないこと、旧 asmdef の移行（質問4 が a の場合）
+- `PackageInitializer` / `EnumGenerator`: パッケージ asmdef へ Enum の参照を書き込まないこと、Enum の asmdef が `SymphonyFramework` を参照すること
+- `RuntimeFolderLayoutTests`: `Runtime/Pause/` にあり、`Runtime/Service/` が無くなっていること
+- 名前空間 `SymphonyFramework.System` がパッケージに残っていないこと（grep と、アセンブリの型の名前空間を列挙するテスト）
+- 削除した Asset Store Tools の旧APIを参照するテストを消す
+
+## 進め方
+
+R4 と同じ。`System` 名前空間が無くなるため、R4 までテストで避けていた `System.` の完全修飾はそのまま使えるようになる（書き換えは不要）。置換後に `using SymphonyFramework.System;` が残っていないこと（今は20ファイル）を grep で確かめる。
