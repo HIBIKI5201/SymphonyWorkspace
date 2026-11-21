@@ -772,3 +772,79 @@ submodule 側は2コミット（R4 の上に積んでいる）。
 - 回答1 は推奨（転送クラスにだけ残す）と違う「全カテゴリー対象の正式API」だった。非推奨にした時点の理由（カテゴリー指定を促す）より、全体を対象にした待機の需要を優先した判断として記録する
 - 生成物の移行は「最初のコンパイルが通らないと Editor の移行処理が走らない」という順序の問題を持つ。互換層（R6）と移行処理の両方がそろって初めて検証できるため、R6 の検証項目に明記した
 
+
+---
+
+# Round 6: 互換レイヤーと 7.0.0（#227）
+
+> **状態: 設計中（依頼者の回答待ち）。** 版は 7.0.0。R3〜R5 の PR がマージされてから実装し、PC の Unity で検証する。
+
+## 目的
+
+6.x（基準は main の 6.15.2）から 7.0.0 へ直接上げた利用側が、**まず警告付きでコンパイルでき**、シーン・アセット・設定・セーブデータが壊れない状態にする（#225 の「互換の保証範囲」、#227 の「リリース前のチェック」）。そのうえで移行ガイドに従えば警告が消える。
+
+## 前提: 6.x の名前はすべて `SymphonyFrameWork.*`
+
+6.x の公開型は、アセンブリ `SymphonyFrameWork`、名前空間 `SymphonyFrameWork.*` にあった。7.0.0 では全公開型（Runtime 約55、Editor 約50）の名前空間が変わる。互換の手段は型の種類で分かれる。
+
+| 種類 | 例 | 互換の手段 |
+| --- | --- | --- |
+| 名前と使い方が変わった Facade | `ServiceLocator`、`SceneLoader`、`SaveStore`、`AudioManager`、`PauseManager` など7件 | **旧名前空間・旧名の `[Obsolete]` 転送クラス**（#225 §5）。中身は新しい Facade を呼ぶだけ |
+| 利用者が実装・継承する型 | `IInjectable` 系、`IInitializeAsync`、`PauseManager.IPausable`、`SaveDataContent`、`SaveDataLoaderStrategy`、`PlayerPrefsSaveDataLoaderStrategy` | **旧名前空間に、新しい型を継承した `[Obsolete]` 型**（#225 §5） |
+| 旧Facadeの引数に出る型 | `LocateTypeEnum` | `[Obsolete]` で残し、転送クラスの中で `ServiceLifetimeEnum` へ変換する |
+| 名前空間だけ変わった型 | 属性、`SymphonyTween`、`SymphonyDebugLogger`、`SymphonyAwaitable`、例外など | 質問1 |
+| `[SerializeReference]` で保存される型 | ローダー3型 | R1 で付けた `[MovedFrom]`（6.15 の名前）のまま |
+| MonoBehaviour / ScriptableObject | `ServiceComponent`、`SuiteAsset`、Config | `.meta` の GUID で保たれている（R1〜R5） |
+
+## 転送クラスの一覧
+
+置き場は CodeGuidelines どおり `Runtime/Obsolete/<旧名前空間>/`。名前空間 `SymphonyFrameWork.*` の中では `System.X` が `SymphonyFrameWork.System` に隠されるため、`global::System` を使う。
+
+| 旧（6.15） | 転送先 | 変換が要るもの |
+| --- | --- | --- |
+| `SymphonyFrameWork.System.ServiceLocate.ServiceLocator` | `Partitura` | `GetInstance` は従来どおり null を返す（R2 の決定事項）。`LocateTypeEnum` → `ServiceLifetimeEnum` |
+| `SymphonyFrameWork.System.ServiceLocate.ServiceInjector` | `Partitura.Inject` / `CreateInstance` | |
+| `SymphonyFrameWork.System.SceneLoad.SceneLoader` | `Attacca` | `Action<float>` の進捗を `IProgress<float>` へ（R3 で残した `WrapProgress`）。単体・配列の旧メソッド名 |
+| `SymphonyFrameWork.System.SceneBlock.SceneBlockLoader` | `Suite` | 旧 `SceneBlockInfo` を返す API は、新しい `SuiteInfo` を返す（明示的に型を書いたコードは保証外） |
+| `SymphonyFrameWork.System.SaveSystem.SaveStore` | `Manuscript` | `GetEntries` の未初期化は例外になる（R4 の決定事項）。移行ガイドに書く |
+| `SymphonyFrameWork.System.AudioManager` | `Sonority` | `GetAudioSource` は従来どおり未登録で null（`TryGetSource` で実装） |
+| `SymphonyFrameWork.System.PauseManager` | `Fermata` | `Pause` プロパティ、`OnPauseChanged`、`Pausable*`（カテゴリー有無とも）、入れ子の `IPausable`（`RegisterPauseManager` 付き） |
+
+旧 `PauseManager.IPausable` は新しい `IPausable` を継承する。**R5 の PauseCategory 移行は、この型があって初めて旧生成物がコンパイルでき、Editor の移行処理が走る**（R5 の未実施リスト）。
+
+削除予定はすべて「次のメジャー更新（8.0.0）」とし、`Deprecations.md` へ行を足す。
+
+## 依頼者に決めてもらうこと
+
+1. **名前空間だけ変わった型（属性、Tween、Logger など約90型）の互換**: ⭐a. 旧名前空間ごとに空の目印（internal 型）を置いて `using SymphonyFrameWork.X;` の行だけはコンパイルを通し、型そのものには 6.x の名前を指す `[MovedFrom]` を付けて、Unity の API Updater に利用側スクリプトを書き換えさせる。効かない分は移行ガイドの一括置換（`SymphonyFrameWork` → `SymphonyFramework`）で直す / b. すべてに `[Obsolete]` の派生型を置く（`sealed` の属性、enum、struct は派生できないため、半分ほどしか効かない） / c. 移行ガイドの一括置換だけにする
+2. **SymphonyKillChord の扱い**: ⭐a. 7.0.0 を main へ入れる前に、SKC の参照を 6.15.2 に固定する PR を出す。7.0.0 のリリース後に、新しい名前へ書き換える PR を別に出す（警告0で移る） / b. 固定せず、7.0.0 が main に入った時点で SKC は転送クラスの警告付きで動かす
+
+## 移行ガイド
+
+`Documentation~/Migration7.md` を新しく書く。
+
+- 旧名 → 新名の対応表（CHANGELOG 6.16.0〜6.20.0 の表をまとめる）
+- 挙動が変わったもの: `Partitura.Destroy` の同一参照、`Attacca.UnloadAsync` が Suite の保持シーンで `false`、`Manuscript.GetEntries` の未初期化例外、`Sonority.GetSource` の例外、`PauseCategory` の asmdef
+- 保証しない範囲と書き換え方（#225 §5 の「保証しない」）
+- API Updater が書き換える範囲（PC で確かめた結果を書く）
+
+## 検証（PC の Unity）
+
+R1〜R5 の未実施リストに加え、#227 の「リリース前のチェック」を行う。
+
+1. ワークスペースでコンパイル 0/0、EditMode / PlayMode の全テスト、Play の開始と終了を2回
+2. **6.x の利用側を模した状態からの更新**: 一時プロジェクト（ワークスペースの別クローンは作らない方針のため、ワークスペースのブランチを 6.15.2 へ戻して生成物を作らせ、7.0.0 へ戻す手順）で、警告だけでコンパイルが通ること、設定・セーブデータ・Suite アセット・PauseCategory が移行されること
+3. API Updater の動作（質問1 が a の場合）
+4. SKC の PC クローンで、7.0.0 を指したときのコンパイル（質問2 の a でも、書き換え PR の前に一度確かめる）
+
+## テスト
+
+- 転送クラスごとに、旧APIが新しい Facade と同じ結果を返すこと（例: 旧 `ServiceLocator.GetInstance` が未登録で null、旧 `PauseManager.Pause = true` で全カテゴリーが止まる）
+- 旧 `IPausable` / `IInjectable` / `SaveDataContent` を実装した型が、新しい Facade で扱えること
+- `[MovedFrom]` の値が 6.15 の名前を指していること（`CustomAttributeData`。R1 のローダーと同じ形）
+- R2 の振り返りで取り下げた「旧名前空間に型が無いこと」のテストは、「旧名が解決できること」のテストとして入れ直す
+- 公開型の網羅: 転送クラスは `Runtime/Obsolete/` 以下に置き、網羅検査の対象から外す（旧名と新名でテストが二重になるため）。外す仕組みは検査側に足す
+
+## 利用側（SymphonyKillChord）への影響の目安
+
+`using SymphonyFrameWork.*` が約170行（`ServiceLocate` 77、`Attribute` 47、`SaveSystem` 30、`SceneLoad` 9 ほか）。`Attribute` の47ファイルのうち実際に属性を使うのは `DisplayText` の1か所で、残りは使われていない `using`。転送クラスと質問1 の a で、7.0.0 では警告だけになる見込み。
