@@ -898,3 +898,89 @@ R1〜R5 の未実施リストに加え、#227 の「リリース前のチェッ�
 
 - 設計時の SKC の見積もりを、`using` の行数と1つの属性名だけで出していた。属性は `[SubclassSelector]` のように `Attribute` を省いて書くため、型名の検索では見つからなかった。互換の範囲を見積もるときは、`using` した名前空間の型すべてを短縮名（属性は `Attribute` を除いた名前）でも数える
 - 「継承した旧型を置けば実装側はそのまま動く」は、暗黙の実装だけの話だった。明示的な実装と、引数に旧型を持つ override は別に扱う必要がある（`IInitializeAsync`、ローダー）
+
+---
+
+# Round 7: 旧名の書き換えツール（7.0.0 に含める）
+
+> **状態: 設計（2026-11-22、依頼者が「書き換えツールを足す」を選択）。**
+
+## 目的
+
+R6 は、名前空間だけ移った型と改名した型を `[MovedFrom]` に任せ、Unity の API Updater が利用側スクリプトを書き換える前提だった。PC で 6.15.0 のサンプル（`Assets/Samples/`）を入れたまま 3 回開いたが、**`-accept-apiupdate` を付けても API Updater は一度も動かず、82 ファイルは 1 つも書き換わらなかった。** ログに APIUpdater / ScriptUpdater の行は無く、`Library/Bee/artifacts/mvdfrm/` に SymphonyFramework 由来の抽出結果も無い。Assets 内のソースとしてコンパイルされるアセンブリの `[MovedFrom]` は、この Unity（6000.3.10f1）では書き換えに使われていないと判断する（推測。Unity の内部仕様は確認できていない）。
+
+そこで、**パッケージ自身が旧名を見つけて書き換えるツールを持つ。** 利用側（SKC を含む）は Editor のメニューから一括で書き換えられる。
+
+## 公開API
+
+無し。メニュー項目と起動時の通知だけを足し、型はすべて `internal`。
+
+- メニュー: `Tools/SymphonyFramework/Migrate 6.x Names`（`SymphonyConstant.TOOL_MENU_PATH` + 名前）
+  - 対象を走査し、書き換えるファイル数と置き換え件数をダイアログで示す。「書き換える」でファイルを書き、`AssetDatabase.Refresh()`
+  - 結果（ファイルごとの置き換え、追加した `using`、残った `[Obsolete]` 転送の利用）をログへ出す
+- 起動時の通知: `SymphonyEditorOrchestrator` の初期化の最後に、対象のスクリプトに旧表記 `SymphonyFrameWork` が残っていれば、メニューの場所を警告ログで1回知らせる（`SessionState` で1セッション1回）。**失敗しても初期化を止めない。**
+
+## 書き換えの規則
+
+対応表は**読み込み済みの `SymphonyFramework*` アセンブリから作る**（手書きの表を持たない。`[MovedFrom]` と食い違わないため）。
+
+1. `[MovedFrom]` を持つ型ごとに、(旧名前空間, 旧型名) → (新名前空間, 新型名) を得る。旧型名が省略されていれば新型名と同じ。属性型は `Attribute` を除いた短縮名も対象にする
+2. 旧名前空間に残した public な `[Obsolete]` 転送（`ServiceLocator` など）は**書き換えない**。名前もメンバーも変わるため、機械的に置き換えると別の API を呼ぶことになる。警告のまま残し、ログで移行ガイドを示す
+3. 1 ファイルずつ、コメントと文字列を除いた識別子を見て次を行う
+   - `using SymphonyFrameWork.X;` で取り込んだ旧名前空間の型が使われていれば、型名を新型名へ置き換え、新名前空間の `using` を足す
+   - 完全修飾（`SymphonyFrameWork.X.Old`）は新しい完全修飾へ置き換える
+   - 旧名前空間から移った型に拡張メソッドを持つ static クラスがあれば、その新名前空間も足す（`LogAndCheckComponentNull` など。型名が本文に現れないため）
+   - 旧 `using` は、その名前空間の転送をまだ使っていれば残し、使っていなければ消す
+   - **転送と同じ名前の新しい型**（`SaveDataContent` など）は、旧 `using` が残る場合に曖昧（CS0104）になるため、`global::` 付きの完全修飾で書く
+   - メンバー（`.` の直後）の識別子は置き換えない
+4. メンバー名の変更（`BlockName` → `SuiteName` など）は対象外。ログに `Migration7.md` を示す
+5. 文字コード（BOM の有無）と改行コードを保つ
+
+対象は `Assets/` 以下の `.cs`。パッケージ自身（`SymphonyFramework.Editor` の asmdef があるフォルダの親）を除く。
+
+## ファイル構成
+
+- `Editor/Migration/LegacyNameMap.cs`（`SymphonyFramework.Editor`、internal）: 対応表。アセンブリの一覧から作る `Create(IEnumerable<Assembly>)` と、テスト用に項目から作るコンストラクタ
+- `Editor/Migration/LegacyNameRewriter.cs`（internal static、Unity API に触れない）: `Rewrite(string source, LegacyNameMap map)` → `LegacyNameRewriteResult`
+- `Editor/Migration/LegacyNameMigration.cs`（internal static）: 走査、ダイアログ、書き込み、メニュー、起動時の通知
+- `Editor/Orchestrator/Internal/SymphonyEditorOrchestrator.cs`: 通知の呼び出しを足す
+- テスト: `Tests/Editor/LegacyNameRewriterTests.cs`、`Tests/Editor/LegacyNameMapTests.cs`
+
+## 依存方向
+
+Editor 内だけ。Runtime / Core の型は対応表を作るときにリフレクションで読むだけで、新しい参照は増えない。
+
+## エラー処理
+
+- 読み書きの失敗（IOException など）はファイルごとにログへ出して次へ進む。1 ファイルの失敗で全体を止めない
+- 起動時の通知は例外を握りつぶしてログへ出すだけにする（初期化を止めない）
+
+## 影響範囲
+
+公開 API とシリアライズ形式は変わらない。利用側のファイルは、メニューで確認したときだけ書き換える（自動では書き換えない）。
+
+## テストの置き場と種別（EditMode、`Tests/Editor/`）
+
+- `LegacyNameRewriterTests`: 文字列を入れて結果の文字列を比べる
+  - `Rewrite_RenamedType_ReplacesNameAndUsing`（`SceneBlockAsset` → `SuiteAsset` と `using SymphonyFramework.Scenes;`）
+  - `Rewrite_NamespaceOnlyMove_AddsNewUsingAndRemovesOldUsing`
+  - `Rewrite_AttributeShortName_Replaces`（`[SubclassSelector]`）
+  - `Rewrite_FullyQualifiedName_Replaces`
+  - `Rewrite_ForwarderStillUsed_KeepsOldUsing`（`ServiceLocator` は残る）
+  - `Rewrite_SameNameAsForwarder_UsesGlobalQualifiedName`
+  - `Rewrite_ExtensionMethodNamespace_AddsUsing`
+  - `Rewrite_CommentsStringsAndMemberAccess_AreUntouched`
+  - `Rewrite_NoLegacyName_ReturnsUnchanged`
+  - `Rewrite_PreservesLineEndings`
+- `LegacyNameMapTests`: 読み込み済みのアセンブリから作った表に、`SceneBlockAsset` → `SuiteAsset`、`SubclassSelectorAttribute` の短縮名、転送 `ServiceLocator` が含まれることを確かめる
+
+メニューとダイアログは自動で押せない（`--no-tests-reason` は使わない。ロジックはテストがある）。
+
+## 動作確認手順（PC）
+
+1. ワークスペース: 6.15.0 のサンプルを入れたまま開き、起動時の警告が出ること。メニューで書き換え、サンプルがコンパイルできること（残るのはメンバー名の変更だけで、件数を記録する）
+2. SKC の PC クローン: 7.0.0 を指してメニューで書き換え、コンパイルが通ること。書き換えた差分を SKC の PR にする（コミットはユーザーの確認後）
+
+## バージョン判断
+
+7.0.0 はまだ main へ出していないため、7.0.0 に含める（CHANGELOG 7.0.0 の Add へ追記）。版は変えない。
