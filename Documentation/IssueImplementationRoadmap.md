@@ -43,12 +43,12 @@
 
 ### #129 Roslynによる自動生成
 
-現在の主対象は`ServiceInjector.TryAutoInject`です。実装は対象型のinterface列挙、公開`Inject`メソッドの探索、`MakeGenericMethod().Invoke`をRuntimeで行っています。Unity 6はSource Generatorをサポートしますが、Generator DLLを.NET Standard 2.0で構築し、`RoslynAnalyzer`ラベルを設定する配布形態が必要です（[Unity 6公式マニュアル](https://docs.unity3d.com/ja/current/Manual/create-source-generator.html)）。
+現在の主対象は`Partitura.TryAutoInject`です。実装は対象型のinterface列挙、公開`Inject`メソッドの探索、`MakeGenericMethod().Invoke`をRuntimeで行っています。Unity 6はSource Generatorをサポートしますが、Generator DLLを.NET Standard 2.0で構築し、`RoslynAnalyzer`ラベルを設定する配布形態が必要です（[Unity 6公式マニュアル](https://docs.unity3d.com/ja/current/Manual/create-source-generator.html)）。
 
 | Round | 内容 | 完了条件 |
 | --- | --- | --- |
 | 129-1 | Generator DLLの配置、asmdefへの適用範囲、Unity/UPM配布、生成物のデバッグ方法を検証する最小プロトタイプ。固定入力から決定的なコードを生成し、PlayerビルドへGenerator本体を含めない | clean clone相当でUnityコンパイルが成功し、生成コードがRuntimeから利用できる。導入手順が手作業のAsset Label設定へ依存しない |
-| 129-2 | `IInjectable<T...>`実装型ごとの注入ディスパッチを生成し、`ServiceInjector`のRuntime反射を置き換える。未対応アリティ、重複interface、未登録サービスをcompile診断または既存例外へ割り当てる | 既存注入テスト、Sceneロード時の自動注入、IL2CPP/AOTを想定したコードパスが反射なしで通る |
+| 129-2 | `IInjectable<T...>`実装型ごとの注入ディスパッチを生成し、`Partitura`のRuntime反射を置き換える。未対応アリティ、重複interface、未登録サービスをcompile診断または既存例外へ割り当てる | 既存注入テスト、Sceneロード時の自動注入、IL2CPP/AOTを想定したコードパスが反射なしで通る |
 | 129-3 | 生成時間、Runtime割り当て、初回注入時間を現行と比較し、適用範囲を確定する。EnumGeneratorやSaveData型カタログなど、別責務は測定結果に基づいて個別Issueへ分離する | 「反射処理をすべて生成へ移す」という無制限な範囲を残さず、採用対象と非対象が文書化される |
 
 GeneratorのNuGet依存をRuntimeパッケージへ混ぜません。Unity公式手順上、Generatorは通常コードとは異なるPlugin/Analyzerとして配布されるため、package構成と`.meta`をRound 129-1で先に確定します。
@@ -62,7 +62,7 @@ GeneratorのNuGet依存をRuntimeパッケージへ混ぜません。Unity公式
 | 109-1 | 対象型の指定方法、コンストラクタ選択規則、複数候補・循環依存・未登録・非公開コンストラクタの診断契約を定義し、生成factoryを実装する | 正常系だけでなく曖昧なコンストラクタと循環依存が決定的に拒否される。利用側型ごとの生成コードをテストできる |
 | 109-2 | 公開入口、XML文書、Service Locatorモジュール文書、Sampleを追加し、既存`IInjectable`方式との使い分けと移行方針を示す | 既存注入APIを壊さず、生成可能な型だけをコンストラクタ注入できる。Player環境の動作確認手順が残る |
 
-API名はIssue本文の`Constructor<T>()`を確定事項にしません。生成コードが属するアセンブリ境界を検証してから、`ServiceInjector.Create<T>()`、生成factory、属性付きconstructorなどの候補を比較します。
+API名はIssue本文の`Constructor<T>()`を確定事項にしません。生成コードが属するアセンブリ境界を検証してから、`Partitura.Create<T>()`、生成factory、属性付きconstructorなどの候補を比較します。
 
 ## Phase 3: 型別Pauseカテゴリー
 
@@ -145,7 +145,7 @@ Round 113-1 完了。PR [#198](https://github.com/HIBIKI5201/SymphonyFramework/p
 2. 承認が得られない場合、`dotnet`を使わない代替（例: 既存CI環境で事前ビルドしたDLLを別途取得する運用、または本Roundを見送りリフレクション実装を維持する判断）を設計書へ追記してから再提示する。
 3. 実装後は設計書どおりEditModeテスト2件、`verify_round.py`、`release_round.py preflight`（本Roundはバージョン更新なしのため`--no-tests-reason`は不要な想定だが、preflightのバージョンチェックが空更新をどう扱うか要確認）を通す。
 
-2026-08-28（自律実行2回目）: ユーザー不在のスケジュール実行のため、上記1の承認判断（AGENTS.md §7の禁止事項の例外解釈）を代行せず、実装（`codex_runner.py`呼び出し・`dotnet build`実行）には着手しなかった。代わりに設計書へ「代替案（承認が得られない場合）」節を追加し、A. CI外部ビルド／B. 本Round見送り／C. AGENTS.md §7の明文改定 の3案を比較した（[RoslynSourceGeneratorPrototype.md](Designs/RoslynSourceGeneratorPrototype.md)参照）。Generator関連ファイル（`Assets/SymphonyFrameWork/Generators/`等）はまだ一切作成していないことを確認済み。
+2026-08-28（自律実行2回目）: ユーザー不在のスケジュール実行のため、上記1の承認判断（AGENTS.md §7の禁止事項の例外解釈）を代行せず、実装（`codex_runner.py`呼び出し・`dotnet build`実行）には着手しなかった。代わりに設計書へ「代替案（承認が得られない場合）」節を追加し、A. CI外部ビルド／B. 本Round見送り／C. AGENTS.md §7の明文改定 の3案を比較した（[RoslynSourceGeneratorPrototype.md](Designs/RoslynSourceGeneratorPrototype.md)参照）。Generator関連ファイル（`Assets/SymphonyFramework/Generators/`等）はまだ一切作成していないことを確認済み。
 
 次回引き継ぐ作業（更新）: 人が確認できるタイミングで、AGENTS.md §7の解釈または上記A/B/Cのいずれかを選択してから、Round 129-1の実装（ワーカー呼び出し）へ進む。それまで自律実行はこのRoundをスキップし、他の独立したRound（存在すれば）を優先するか、同じ確認待ち状態を再報告する。
 
@@ -165,7 +165,7 @@ Round 113-1 完了。PR [#198](https://github.com/HIBIKI5201/SymphonyFramework/p
 1. Unity Editorで`Window > Unity CLI Loop > Server`を手動起動し、`npx uloop-cli@2.2.0 get-logs`が接続できることを確認する（または`McpServerController`の自動復元が動かない原因を別途調査する）。
 2. サーバーへ接続できたら、`python scripts/verify_round.py`（またはuloopツール個別呼び出し）でコンパイル・EditModeテストを確認する。
 3. 検証が通れば`release_round.py preflight` → `bump`（6.4.0 → 6.4.1）→ `commit`を実行し、この節を実施レポートへ差し替える。
-4. 実装済みファイル（`Assets/SymphonyFrameWork/Runtime/Service/SceneBlock/Internal/Domain/`配下5件、`Assets/SymphonyFrameWork/Tests/Editor/SceneBlock*Tests.cs`3件）とワークスペース側`Documentation/CodeGuidelines.md`の変更は、submoduleの`feature/110-scene-block-dag-planner`ブランチの作業ツリーに未コミットのまま残っている。破棄せず、そのまま次回のセッションから継続する。
+4. 実装済みファイル（`Assets/SymphonyFramework/Runtime/Service/SceneBlock/Internal/Domain/`配下5件、`Assets/SymphonyFramework/Tests/Editor/SceneBlock*Tests.cs`3件）とワークスペース側`Documentation/CodeGuidelines.md`の変更は、submoduleの`feature/110-scene-block-dag-planner`ブランチの作業ツリーに未コミットのまま残っている。破棄せず、そのまま次回のセッションから継続する。
 
 2026-08-28（自律実行3回目、別セッション）: 引き続き検証未完了。今回は「起動タイミングの問題」という仮説をさらに切り分けた。
 

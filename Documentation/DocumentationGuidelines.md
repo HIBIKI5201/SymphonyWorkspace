@@ -52,7 +52,7 @@
 | 確かめ方 | 利用者が動作を確かめる手順（Symphony Administratorのパネル、Console、照会API） | フレームワーク本体のテストの実行手順 |
 | 関連 | 関連する文書へのリンク | 説明文 |
 
-- 機能一覧のIDの接頭辞はモジュールごとに固定する（例: Service Locator は `SL`、Scene Loader は `SCN`、Pause Manager は `PAUSE`）。IDは振り直さず、機能を消したときは欠番にする。
+- 機能一覧のIDの接頭辞はモジュールごとに固定する（例: Partitura は `SL`、Attacca は `SCN`、Suite は `BLK`、Pause Manager は `PAUSE`）。IDは振り直さず、機能を消したときは欠番にする。
 - 数値（既定値、上限）は、公開APIのXMLドキュメントか設定画面の表示と一致するものだけを書く。
 
 ## 3. 冒頭に置かないもの

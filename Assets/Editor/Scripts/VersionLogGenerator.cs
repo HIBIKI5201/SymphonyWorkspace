@@ -10,8 +10,8 @@ using UnityEngine;
 
 public class VersionLogGenerator : EditorWindow
 {
-    private const string LOG_PATH = "Assets/SymphonyFrameWork/CHANGELOG.md";
-    private const string PACKAGE_PATH = "Assets/SymphonyFrameWork/package.json";
+    private const string LOG_PATH = "Assets/SymphonyFramework/CHANGELOG.md";
+    private const string PACKAGE_PATH = "Assets/SymphonyFramework/package.json";
 
     private static List<LogData> logs = new();
 

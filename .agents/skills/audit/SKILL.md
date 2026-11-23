@@ -5,7 +5,7 @@ description: "SymphonyFramework 本体を全観点で一括監査し、Documenta
 
 # 監査フロー
 
-SymphonyFramework 本体（`Assets/SymphonyFrameWork/`）を**全観点で一度に監査し、レポートだけを出す**フロー。
+SymphonyFramework 本体（`Assets/SymphonyFramework/`）を**全観点で一度に監査し、レポートだけを出す**フロー。
 
 ```text
 1. 機械走査  →  2. Project Auditor  →  3. 読解と確度付け  →  4. レポート生成  →  5. 報告
@@ -24,7 +24,7 @@ SymphonyFramework 本体（`Assets/SymphonyFrameWork/`）を**全観点で一度
 
 ## 着手前: 差分の有無を確認する
 
-`git -C "Assets/SymphonyFrameWork" status` が clean であることを確認する。
+`git -C "Assets/SymphonyFramework" status` が clean であることを確認する。
 
 **未コミットの変更があるまま監査しない。** 指摘した `file:line` が、その後のコミットで動く。
 レポートは「あるコミット時点のスナップショット」として意味を持つので、**冒頭に対象コミットの
@@ -55,7 +55,7 @@ python scripts/audit_scan.py --format markdown --out Documentation/Audit/_raw/sc
 - **`CompilationMode.Editor` を使う。** `Player` は `AssemblyBuilder` の完了を
   `Thread.Sleep` で待つため、**メインスレッドから呼ぶと Unity ごと固まる**
 - **`AssemblyNames` を指定しても依存アセンブリの指摘が混ざる。** `RelativePath` が
-  `Assets/SymphonyFrameWork/` で始まるものへ必ず絞る
+  `Assets/SymphonyFramework/` で始まるものへ必ず絞る
 - **`IssueCategory.ProjectSetting` は使わない。** ホストプロジェクトの設定に対する指摘であり、
   パッケージの品質とは無関係。混ぜると指摘の大半がフレームワークと無関係な項目で埋まる
 - Unity が起動していなければ `uloop-launch`。実行前に `uloop-clear-console`
